@@ -5,8 +5,16 @@ from auth import load_logged_in_user, unread_notification_count
 from config import Config
 
 
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+
 def create_app():
-    app = Flask(__name__)
+    app = Flask(
+        "CampusConnect",
+        root_path=BASE_DIR,
+        static_folder=os.path.join(BASE_DIR, "static"),
+        static_url_path="/static",
+        template_folder=os.path.join(BASE_DIR, "templates")
+    )
     app.config.from_object(Config)
     app.config["SCHEMA_PATH"] = os.path.join(os.path.dirname(__file__), "schema.sql")
 
