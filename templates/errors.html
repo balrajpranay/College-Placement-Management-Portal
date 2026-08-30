@@ -4,19 +4,29 @@
 {% block body %}
 {% include "_navbar.html" %}
 
-<div class="container" style="min-height:60vh;display:flex;align-items:center;justify-content:center;">
-  <div class="card text-center" style="max-width:480px;padding:var(--space-10);">
-    <div class="empty-icon" style="width:64px;height:64px;border-radius:var(--radius-full);background:var(--slate-100);display:flex;align-items:center;justify-content:center;margin:0 auto var(--space-4);color:var(--brand-navy-600);">
-      {{ icon('alert', 28) }}
+<main class="page-body" style="min-height:75vh;display:flex;align-items:center;justify-content:center;padding:var(--space-12) var(--space-4);">
+  <div class="card text-center" style="max-width:540px;padding:40px 32px;box-shadow:var(--shadow-lg);border-radius:var(--radius-2xl);">
+    <div class="empty-icon-wrap mb-4" style="width:72px;height:72px;border-radius:var(--radius-full);background:rgba(0, 150, 255, 0.12);display:inline-flex;align-items:center;justify-content:center;color:var(--brand-600);">
+      {{ icon('alert', 32) }}
     </div>
-    <h1 style="font-size:3rem;margin-bottom:var(--space-2);color:var(--brand-navy-900);">{{ code }}</h1>
-    <h3 style="margin-bottom:var(--space-3);">{{ message }}</h3>
-    <p class="text-muted mb-6">The requested page could not be accessed. Check your URL or return to the main dashboard.</p>
-    <a href="{{ url_for('public.landing') }}" class="btn btn-primary">
-      {{ icon('home', 16) }} Return to Home
-    </a>
+
+    <div class="text-xs font-bold uppercase tracking-widest text-brand mb-2">Error {{ code }}</div>
+    <h1 class="h2 mb-3" style="font-size:1.85rem;line-height:1.2;">{{ message }}</h1>
+    
+    <p class="text-muted text-sm mb-6" style="line-height:1.6;">
+      The page or resource you are looking for might have been moved, updated, or is temporarily unavailable. Use the options below to navigate back into the platform.
+    </p>
+
+    <div class="flex-align-center justify-center" style="gap:12px;flex-wrap:wrap;">
+      <a href="{{ url_for('public.landing') }}" class="btn btn-primary">
+        {{ icon('home', 16) }} Return to Home
+      </a>
+      <a href="{{ url_for('public.jobs_hub') }}" class="btn btn-outline">
+        {{ icon('briefcase', 16) }} Explore Opportunities
+      </a>
+    </div>
   </div>
-</div>
+</main>
 
 {% include "_footer.html" %}
 {% endblock %}

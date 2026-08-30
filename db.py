@@ -1,17 +1,28 @@
 """
 Lightweight database access layer built on Python's stdlib sqlite3.
-No external ORM dependency is required (works offline / zero-install beyond Flask).
-All SQL is written in a portable style (standard types, explicit FKs, parameterized
-queries) so swapping the driver for MySQL/Postgres later is a config-level change,
-not a rewrite of the query logic.
+Compatible with standard local development and Vercel serverless environments.
 """
+import os
+import shutil
 import sqlite3
 from flask import g, current_app
 
 
 def get_db():
     if "db" not in g:
-        g.db = sqlite3.connect(current_app.config["DATABASE_PATH"])
+        db_path = current_app.config["DATABASE_PATH"]
+        
+        # Serverless cold start guard: Ensure database file exists in /tmp
+        if not os.path.exists(db_path):
+            bundled_db = os.path.join(os.path.dirname(__file__), "placement.db")
+            if os.path.exists(bundled_db):
+                try:
+                    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+                    shutil.copy2(bundled_db, db_path)
+                except Exception:
+                    pass
+
+        g.db = sqlite3.connect(db_path)
         g.db.row_factory = sqlite3.Row
         g.db.execute("PRAGMA foreign_keys = ON")
     return g.db

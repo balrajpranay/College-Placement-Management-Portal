@@ -21,7 +21,7 @@
     </div>
 
     <div style="display:flex;gap:var(--space-3);align-items:center;">
-      <form method="POST" action="{{ url_for('admin.toggle_user', user_id=student.user_id) }}">
+      <form method="POST" action="{{ url_for('admin.toggle_student_active', student_id=student.id) }}">
         <button type="submit" class="btn btn-sm {{ 'btn-danger-outline' if student.is_active else 'btn-primary' }}">
           {{ 'Deactivate Account' if student.is_active else 'Activate Account' }}
         </button>

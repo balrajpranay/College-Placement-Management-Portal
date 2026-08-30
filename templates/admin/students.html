@@ -9,7 +9,7 @@
     <h1 class="h2" style="margin:0 0 var(--space-1);">Student Roster & Verification</h1>
     <p class="text-muted" style="margin:0;">Manage {{ total }} registered students across all academic branches.</p>
   </div>
-  <a href="{{ url_for('admin.export_students') }}" class="btn btn-outline">
+  <a href="{{ url_for('admin.export_students_csv') }}" class="btn btn-outline">
     {{ icon('download', 16) }} Export CSV Roster
   </a>
 </div>
