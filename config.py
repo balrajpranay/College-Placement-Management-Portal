@@ -15,7 +15,7 @@ if IS_VERCEL:
     UPLOAD_FOLDER_RESUMES = os.path.join(TMP_DIR, "uploads", "resumes")
     UPLOAD_FOLDER_LOGOS = os.path.join(TMP_DIR, "uploads", "logos")
     
-    # Pre-seed placement.db from bundled repo database into /tmp if not already present
+    # Pre-seed placement.db into /tmp if not already present
     bundled_db = os.path.join(BASE_DIR, "placement.db")
     if os.path.exists(bundled_db) and not os.path.exists(DATABASE_PATH):
         try:
