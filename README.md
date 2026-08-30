@@ -6,29 +6,46 @@
 
 **Empowering Campus Talent · Launching Career Trajectories**
 
+### 🌐 Live Production Website:
+### 👉 [https://campus-connect-z4ib.onrender.com/](https://campus-connect-z4ib.onrender.com/)
+
+[![Live Production](https://img.shields.io/badge/🚀%20Live%20Website-campus--connect.onrender.com-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://campus-connect-z4ib.onrender.com/)
 [![Python Version](https://img.shields.io/badge/Python-3.11%2B%20%7C%203.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Framework](https://img.shields.io/badge/Framework-Flask%203.0%2B-000000?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![AI Engine](https://img.shields.io/badge/AI%20Engine-Google%20Gemini%203.5-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
-[![Deployment](https://img.shields.io/badge/Deploy-Vercel%20%7C%20Render-000000?style=for-the-badge)](https://vercel.com/)
+[![Docker](https://img.shields.io/badge/Container-Docker%20%2B%20Gunicorn-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-MIT-0096FF?style=for-the-badge)](LICENSE)
 
-[Explore 520+ Opportunities](http://127.0.0.1:5000/jobs) · [AI Career Suite](http://127.0.0.1:5000/ai)
+[🌐 Open Live Site](https://campus-connect-z4ib.onrender.com/) · [Explore 520+ Opportunities](https://campus-connect-z4ib.onrender.com/jobs) · [AI Career Suite](https://campus-connect-z4ib.onrender.com/ai)
 
 </div>
 
 ---
 
 ## 📖 Table of Contents
+- [Live Deployment](#-live-deployment)
 - [Executive Overview](#-executive-overview)
 - [Core Production Pillars](#-core-production-pillars)
 - [System Architecture](#-system-architecture)
 - [Technology Stack](#-technology-stack)
 - [Directory Structure](#-directory-structure)
 - [Local Quickstart & Setup](#-local-quickstart--setup)
-- [Deployment Guides (Vercel & Render)](#-deployment-guides)
+- [Production Deployment (Render & Vercel)](#-production-deployment)
 - [Demo Credentials](#-demo-credentials)
 - [Automated Testing & Link Health](#-automated-testing--link-health)
 - [License & Acknowledgments](#-license--acknowledgments)
+
+---
+
+## 🌐 Live Deployment
+
+The platform is deployed live on **Render** with a multi-worker Gunicorn container:
+
+- 🔗 **Main Portal**: **[`https://campus-connect-z4ib.onrender.com/`](https://campus-connect-z4ib.onrender.com/)**
+- 💼 **Jobs & Opportunities Hub (520+ Listings)**: **[`https://campus-connect-z4ib.onrender.com/jobs`](https://campus-connect-z4ib.onrender.com/jobs)**
+- 🎓 **Placements & Jobs (260 Listings)**: **[`https://campus-connect-z4ib.onrender.com/jobs?job_type=Full-time`](https://campus-connect-z4ib.onrender.com/jobs?job_type=Full-time)**
+- 🏢 **Internships & PM Scheme (260 Listings)**: **[`https://campus-connect-z4ib.onrender.com/jobs?job_type=Internship`](https://campus-connect-z4ib.onrender.com/jobs?job_type=Internship)**
+- 🤖 **Google Gemini AI Career Suite**: **[`https://campus-connect-z4ib.onrender.com/ai`](https://campus-connect-z4ib.onrender.com/ai)**
 
 ---
 
@@ -75,7 +92,7 @@
                                               v
 +------------------------------------------------------------------------------------------+
 |                              Campus Connect Application Server                           |
-|                                (Vercel Serverless / Gunicorn)                            |
+|                                (Render Container / Gunicorn)                             |
 |                                                                                          |
 |   +-----------------------+   +------------------------+   +-------------------------+   |
 |   | Public / Jobs Hub     |   | Auth & Session Guard   |   | Student & Admin Portals |   |
@@ -111,7 +128,7 @@
 | **Security** | Werkzeug Security, CSRF | Password hashing, session cookies, and role guards |
 | **Frontend** | HTML5, Modern CSS3, Vanilla JS | High-contrast Light/Dark mode, zero runtime JS framework overhead |
 | **Vector Graphics** | Custom Vector SVGs | 40+ local brand emblems and portal badges |
-| **Deployment** | Vercel Serverless / Docker on Render | Multi-platform production deployment readiness |
+| **Deployment** | Docker / Render Web Service | Multi-platform production deployment readiness |
 
 ---
 
@@ -128,10 +145,7 @@ Campus Connect/
 ├── requirements.txt           # Production Dependencies
 ├── Dockerfile                 # Multi-Stage Production Container
 ├── render.yaml                # 1-Click Render Deployment Blueprint
-├── vercel.json                # Vercel Serverless Routing Config
 ├── wsgi.py                    # WSGI Production Entry Point
-├── api/
-│   └── index.py               # Vercel Serverless WSGI Handler & Middleware
 ├── routes/
 │   ├── public_routes.py       # Landing, Jobs Hub (520+ Items), AI Suite, About
 │   ├── auth_routes.py         # Login, Registration, Logout
@@ -144,7 +158,7 @@ Campus Connect/
 ├── static/
 │   ├── css/style.css          # Design System, Themes, Components, Grid
 │   └── images/
-│       ├── logo.png           # Brand Logo & Multi-size Favicons
+│       ├── logo.png           # Brand Logo & Favicons (16x16, 32x32, 64x64)
 │       └── companies/         # 40+ Local Vector SVG Brand Emblems
 └── templates/
     ├── base.html              # Core Layout & Global Header/Footer
@@ -206,23 +220,6 @@ python seed_data.py
 python app.py
 ```
 Open your browser at **`http://127.0.0.1:5000`**.
-
----
-
-## ☁️ Deployment Guides
-
-### Option 1: Deploy on Vercel
-1. Import repository at **[vercel.com/new](https://vercel.com/new)**.
-2. Under **Environment Variables**, add:
-   - `GEMINI_API_KEY`: *(Your Google Gemini API Key)*
-   - `SECRET_KEY`: `campus-connect-production-secret-key-2026`
-3. Click **Deploy**.
-
-### Option 2: Deploy on Render
-1. Go to **[dashboard.render.com](https://dashboard.render.com/)**.
-2. Click **New +** &rarr; **Web Service** &rarr; select **`balrajpranay/Campus-Connect`**.
-3. Choose **Docker** environment and add your Environment Variables.
-4. Click **Deploy Web Service**.
 
 ---
 
