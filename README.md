@@ -1,24 +1,6 @@
 # 🎓 Campus Connect — Institutional Career & Placement Intelligence Platform
 
-<div align="center">
-
-![Campus Connect Logo](static/images/logo.png)
-
-**Empowering Campus Talent · Launching Career Trajectories**
-
-### 🌐 Live Production Website:
-### 👉 [https://campus-connect-z4ib.onrender.com/](https://campus-connect-z4ib.onrender.com/)
-
-[![Live Production](https://img.shields.io/badge/🚀%20Live%20Website-campus--connect.onrender.com-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://campus-connect-z4ib.onrender.com/)
-[![Python Version](https://img.shields.io/badge/Python-3.11%2B%20%7C%203.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![Framework](https://img.shields.io/badge/Framework-Flask%203.0%2B-000000?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
-[![AI Engine](https://img.shields.io/badge/AI%20Engine-Google%20Gemini%203.5-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
-[![Docker](https://img.shields.io/badge/Container-Docker%20%2B%20Gunicorn-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
-[![License](https://img.shields.io/badge/License-MIT-0096FF?style=for-the-badge)](LICENSE)
-
-[🌐 Open Live Site](https://campus-connect-z4ib.onrender.com/) · [Explore 520+ Opportunities](https://campus-connect-z4ib.onrender.com/jobs) · [AI Career Suite](https://campus-connect-z4ib.onrender.com/ai)
-
-</div>
+Live Link: https://campus-connect-z4ib.onrender.com
 
 ---
 
