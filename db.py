@@ -1,4 +1,5 @@
 import os
+import shutil
 import sqlite3
 from flask import g, current_app
 
@@ -6,15 +7,16 @@ from flask import g, current_app
 def get_db():
     if "db" not in g:
         db_path = current_app.config["DATABASE_PATH"]
+        
+        # Cold-start fallback for serverless environments
         if not os.path.exists(db_path):
-            os.makedirs(os.path.dirname(db_path), exist_ok=True)
-            schema_path = current_app.config.get("SCHEMA_PATH", os.path.join(os.path.dirname(__file__), "schema.sql"))
-            con = sqlite3.connect(db_path)
-            if os.path.exists(schema_path):
-                with open(schema_path, "r", encoding="utf-8") as f:
-                    con.executescript(f.read())
-            con.commit()
-            con.close()
+            bundled_db = os.path.join(os.path.dirname(__file__), "placement.db")
+            if os.path.exists(bundled_db):
+                try:
+                    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+                    shutil.copy2(bundled_db, db_path)
+                except Exception:
+                    pass
 
         g.db = sqlite3.connect(db_path)
         g.db.row_factory = sqlite3.Row

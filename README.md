@@ -6,14 +6,13 @@
 
 **Empowering Campus Talent · Launching Career Trajectories**
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-campus--connect.onrender.com-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://campus-connect-z4ib.onrender.com/)
 [![Python Version](https://img.shields.io/badge/Python-3.11%2B%20%7C%203.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Framework](https://img.shields.io/badge/Framework-Flask%203.0%2B-000000?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![AI Engine](https://img.shields.io/badge/AI%20Engine-Google%20Gemini%203.5-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
-[![Docker](https://img.shields.io/badge/Container-Docker%20%2B%20Gunicorn-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![Deployment](https://img.shields.io/badge/Deploy-Vercel%20%7C%20Render-000000?style=for-the-badge)](https://vercel.com/)
 [![License](https://img.shields.io/badge/License-MIT-0096FF?style=for-the-badge)](LICENSE)
 
-[🌐 Live Production Website](https://campus-connect-z4ib.onrender.com/) · [Explore Opportunities](https://campus-connect-z4ib.onrender.com/jobs) · [AI Career Suite](https://campus-connect-z4ib.onrender.com/ai)
+[Explore 520+ Opportunities](http://127.0.0.1:5000/jobs) · [AI Career Suite](http://127.0.0.1:5000/ai)
 
 </div>
 
@@ -26,7 +25,7 @@
 - [Technology Stack](#-technology-stack)
 - [Directory Structure](#-directory-structure)
 - [Local Quickstart & Setup](#-local-quickstart--setup)
-- [Production Deployment (Render)](#-production-deployment-render)
+- [Deployment Guides (Vercel & Render)](#-deployment-guides)
 - [Demo Credentials](#-demo-credentials)
 - [Automated Testing & Link Health](#-automated-testing--link-health)
 - [License & Acknowledgments](#-license--acknowledgments)
@@ -35,7 +34,7 @@
 
 ## 🌟 Executive Overview
 
-**Campus Connect** is a production-ready, full-stack collegiate career and opportunity ecosystem built with **Python (Flask)**, **SQLite**, and **Google Gemini AI**. Designed specifically for Indian collegiate institutions and engineering consortiums, it aggregates over **520+ live, verified opportunities** across full-time graduate placements and national internship schemes, with 100% direct-to-application deep links.
+**Campus Connect** is a production-grade, full-stack institutional placement and career intelligence portal built with **Python (Flask)**, **SQLite**, and **Google Gemini AI**. Designed specifically for collegiate ecosystems, it unifies over **520+ live, verified opportunities** across full-time graduate recruitment and national internship schemes, with 100% direct-to-application deep links.
 
 ---
 
@@ -75,8 +74,8 @@
                                               | HTTPS (Jinja2 / REST API)
                                               v
 +------------------------------------------------------------------------------------------+
-|                                    Render Web Service                                    |
-|                              (Gunicorn Multi-Worker Container)                           |
+|                              Campus Connect Application Server                           |
+|                                (Vercel Serverless / Gunicorn)                            |
 |                                                                                          |
 |   +-----------------------+   +------------------------+   +-------------------------+   |
 |   | Public / Jobs Hub     |   | Auth & Session Guard   |   | Student & Admin Portals |   |
@@ -106,13 +105,13 @@
 | Layer | Technologies | Description |
 |---|---|---|
 | **Backend** | Python 3.11+, Flask 3.0+ | Modular application architecture using Flask Blueprints |
-| **WSGI Server** | Gunicorn (Multi-threaded) | High-performance multi-worker production WSGI server |
+| **WSGI Server** | Gunicorn (Multi-threaded) | Production WSGI server with multi-worker support |
 | **AI Engine** | Google Gemini 3.5 Flash | Multi-turn reasoning, coding coaching, and career guidance |
 | **Database** | SQLite 3 | Relational database with parameterized queries and foreign keys |
 | **Security** | Werkzeug Security, CSRF | Password hashing, session cookies, and role guards |
 | **Frontend** | HTML5, Modern CSS3, Vanilla JS | High-contrast Light/Dark mode, zero runtime JS framework overhead |
 | **Vector Graphics** | Custom Vector SVGs | 40+ local brand emblems and portal badges |
-| **Deployment** | Docker / Render Web Service | Containerized cloud deployment with automated zero-downtime builds |
+| **Deployment** | Vercel Serverless / Docker on Render | Multi-platform production deployment readiness |
 
 ---
 
@@ -129,7 +128,10 @@ Campus Connect/
 ├── requirements.txt           # Production Dependencies
 ├── Dockerfile                 # Multi-Stage Production Container
 ├── render.yaml                # 1-Click Render Deployment Blueprint
+├── vercel.json                # Vercel Serverless Routing Config
 ├── wsgi.py                    # WSGI Production Entry Point
+├── api/
+│   └── index.py               # Vercel Serverless WSGI Handler & Middleware
 ├── routes/
 │   ├── public_routes.py       # Landing, Jobs Hub (520+ Items), AI Suite, About
 │   ├── auth_routes.py         # Login, Registration, Logout
@@ -207,18 +209,20 @@ Open your browser at **`http://127.0.0.1:5000`**.
 
 ---
 
-## ☁️ Production Deployment (Render)
+## ☁️ Deployment Guides
 
-Campus Connect is pre-configured with `Dockerfile` and `render.yaml` for **1-click Docker deployment**.
-
-1. Go to **[dashboard.render.com](https://dashboard.render.com/)**.
-2. Click **New +** &rarr; Select **Web Service**.
-3. Select your repository: **`balrajpranay/Campus-Connect`**.
-4. Set Environment to **`Docker`** and Plan to **`Free`**.
-5. Add your Environment Variables:
+### Option 1: Deploy on Vercel
+1. Import repository at **[vercel.com/new](https://vercel.com/new)**.
+2. Under **Environment Variables**, add:
    - `GEMINI_API_KEY`: *(Your Google Gemini API Key)*
    - `SECRET_KEY`: `campus-connect-production-secret-key-2026`
-6. Click **Deploy Web Service**.
+3. Click **Deploy**.
+
+### Option 2: Deploy on Render
+1. Go to **[dashboard.render.com](https://dashboard.render.com/)**.
+2. Click **New +** &rarr; **Web Service** &rarr; select **`balrajpranay/Campus-Connect`**.
+3. Choose **Docker** environment and add your Environment Variables.
+4. Click **Deploy Web Service**.
 
 ---
 
