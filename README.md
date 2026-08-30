@@ -6,13 +6,14 @@
 
 **Empowering Campus Talent · Launching Career Trajectories**
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-campus--connect.onrender.com-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://campus-connect-z4ib.onrender.com/)
 [![Python Version](https://img.shields.io/badge/Python-3.11%2B%20%7C%203.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Framework](https://img.shields.io/badge/Framework-Flask%203.0%2B-000000?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![AI Engine](https://img.shields.io/badge/AI%20Engine-Google%20Gemini%203.5-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
-[![Deployment](https://img.shields.io/badge/Deploy-Vercel%20Serverless-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com/)
+[![Docker](https://img.shields.io/badge/Container-Docker%20%2B%20Gunicorn-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-MIT-0096FF?style=for-the-badge)](LICENSE)
 
-[Explore Opportunities](http://127.0.0.1:5000/jobs) · [AI Career Suite](http://127.0.0.1:5000/ai) · [Deployment Guide](#-production-deployment-vercel)
+[🌐 Live Production Website](https://campus-connect-z4ib.onrender.com/) · [Explore Opportunities](https://campus-connect-z4ib.onrender.com/jobs) · [AI Career Suite](https://campus-connect-z4ib.onrender.com/ai)
 
 </div>
 
@@ -25,7 +26,7 @@
 - [Technology Stack](#-technology-stack)
 - [Directory Structure](#-directory-structure)
 - [Local Quickstart & Setup](#-local-quickstart--setup)
-- [Production Deployment (Vercel)](#-production-deployment-vercel)
+- [Production Deployment (Render)](#-production-deployment-render)
 - [Demo Credentials](#-demo-credentials)
 - [Automated Testing & Link Health](#-automated-testing--link-health)
 - [License & Acknowledgments](#-license--acknowledgments)
@@ -74,7 +75,8 @@
                                               | HTTPS (Jinja2 / REST API)
                                               v
 +------------------------------------------------------------------------------------------+
-|                                    Campus Connect Web Server                             |
+|                                    Render Web Service                                    |
+|                              (Gunicorn Multi-Worker Container)                           |
 |                                                                                          |
 |   +-----------------------+   +------------------------+   +-------------------------+   |
 |   | Public / Jobs Hub     |   | Auth & Session Guard   |   | Student & Admin Portals |   |
@@ -92,7 +94,7 @@
 |                                           v                                              |
 |   +-----------------------+   +------------------------+   +-------------------------+   |
 |   | Local SQLite Database |   | Google Gemini AI Suite |   | Verified External Portals|  |
-|   | (placement.db / /tmp) |   | (REST Model Proxy)     |   | (Direct Apply Deep Links)|  |
+|   | (placement.db)        |   | (REST Model Proxy)     |   | (Direct Apply Deep Links)|  |
 |   +-----------------------+   +------------------------+   +-------------------------+   |
 +------------------------------------------------------------------------------------------+
 ```
@@ -104,12 +106,13 @@
 | Layer | Technologies | Description |
 |---|---|---|
 | **Backend** | Python 3.11+, Flask 3.0+ | Modular application architecture using Flask Blueprints |
+| **WSGI Server** | Gunicorn (Multi-threaded) | High-performance multi-worker production WSGI server |
 | **AI Engine** | Google Gemini 3.5 Flash | Multi-turn reasoning, coding coaching, and career guidance |
 | **Database** | SQLite 3 | Relational database with parameterized queries and foreign keys |
 | **Security** | Werkzeug Security, CSRF | Password hashing, session cookies, and role guards |
 | **Frontend** | HTML5, Modern CSS3, Vanilla JS | High-contrast Light/Dark mode, zero runtime JS framework overhead |
 | **Vector Graphics** | Custom Vector SVGs | 40+ local brand emblems and portal badges |
-| **Deployment** | Vercel Serverless / Gunicorn | WSGI serverless configuration with `@vercel/python` |
+| **Deployment** | Docker / Render Web Service | Containerized cloud deployment with automated zero-downtime builds |
 
 ---
 
@@ -118,13 +121,14 @@
 ```
 Campus Connect/
 ├── app.py                     # Main Flask Application Factory
-├── config.py                  # Production & Serverless Configuration
+├── config.py                  # Production Configuration
 ├── db.py                      # Database Connector & Helpers
 ├── auth.py                    # Role Guards & User Loader
 ├── schema.sql                 # Complete Relational Database Schema
 ├── seed_data.py               # Database Seeder (Demo Users & Companies)
 ├── requirements.txt           # Production Dependencies
-├── vercel.json                # Vercel Serverless Function & Route Config
+├── Dockerfile                 # Multi-Stage Production Container
+├── render.yaml                # 1-Click Render Deployment Blueprint
 ├── wsgi.py                    # WSGI Production Entry Point
 ├── routes/
 │   ├── public_routes.py       # Landing, Jobs Hub (520+ Items), AI Suite, About
@@ -161,8 +165,8 @@ Campus Connect/
 
 ### 1. Clone the Repository & Navigate
 ```bash
-git clone https://github.com/your-username/campus-connect.git
-cd campus-connect
+git clone https://github.com/balrajpranay/Campus-Connect.git
+cd Campus-Connect
 ```
 
 ### 2. Set Up a Virtual Environment
@@ -187,7 +191,7 @@ Create a `.env` file in the project root:
 SECRET_KEY=campus-connect-production-secret-key-2026
 GEMINI_API_KEY=your-gemini-api-key-here
 GEMINI_MODEL=gemini-3.5-flash
-FLASK_ENV=development
+FLASK_ENV=production
 ```
 
 ### 5. Seed the Database
@@ -203,22 +207,18 @@ Open your browser at **`http://127.0.0.1:5000`**.
 
 ---
 
-## ☁️ Production Deployment (Vercel)
+## ☁️ Production Deployment (Render)
 
-Campus Connect is pre-configured with `vercel.json` for **1-click serverless deployment**.
+Campus Connect is pre-configured with `Dockerfile` and `render.yaml` for **1-click Docker deployment**.
 
-### Deploy via GitHub
-1. Push your repository to GitHub:
-   ```bash
-   git add .
-   git commit -m "Deploy Campus Connect to Vercel"
-   git push origin main
-   ```
-2. Navigate to **[vercel.com/new](https://vercel.com/new)** and import your repository.
-3. Configure the following **Environment Variables** in Vercel:
+1. Go to **[dashboard.render.com](https://dashboard.render.com/)**.
+2. Click **New +** &rarr; Select **Web Service**.
+3. Select your repository: **`balrajpranay/Campus-Connect`**.
+4. Set Environment to **`Docker`** and Plan to **`Free`**.
+5. Add your Environment Variables:
    - `GEMINI_API_KEY`: *(Your Google Gemini API Key)*
-   - `SECRET_KEY`: *(A random 32-character secret string)*
-4. Click **Deploy**. Vercel will build and assign your live production URL!
+   - `SECRET_KEY`: `campus-connect-production-secret-key-2026`
+6. Click **Deploy Web Service**.
 
 ---
 
@@ -228,7 +228,7 @@ Campus Connect is pre-configured with `vercel.json` for **1-click serverless dep
 |---|---|---|---|
 | 👨‍🎓 **Student** | `priya.sharma@student.edu` | `student123` | Student Dashboard, Applications, Profile, AI Suite |
 | 👨‍🎓 **Student (Alternative)** | `rahul.verma@student.edu` | `student123` | Student Profile & Application Tracking |
-| 🏛️ **Placement Admin** | `admin@campus.edu` | `admin123` | Institutional Analytics, Cohort Auditing, Drives |
+| 🏛️ **Placement Admin** | `admin@college.edu` | `admin123` | Institutional Analytics, Cohort Auditing, Drives |
 
 ---
 

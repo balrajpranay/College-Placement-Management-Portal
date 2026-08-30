@@ -1,9 +1,4 @@
-"""
-Lightweight database access layer built on Python's stdlib sqlite3.
-Compatible with standard local development and Vercel serverless environments.
-"""
 import os
-import shutil
 import sqlite3
 from flask import g, current_app
 
@@ -11,16 +6,15 @@ from flask import g, current_app
 def get_db():
     if "db" not in g:
         db_path = current_app.config["DATABASE_PATH"]
-        
-        # Serverless cold start guard: Ensure database file exists in /tmp
         if not os.path.exists(db_path):
-            bundled_db = os.path.join(os.path.dirname(__file__), "placement.db")
-            if os.path.exists(bundled_db):
-                try:
-                    os.makedirs(os.path.dirname(db_path), exist_ok=True)
-                    shutil.copy2(bundled_db, db_path)
-                except Exception:
-                    pass
+            os.makedirs(os.path.dirname(db_path), exist_ok=True)
+            schema_path = current_app.config.get("SCHEMA_PATH", os.path.join(os.path.dirname(__file__), "schema.sql"))
+            con = sqlite3.connect(db_path)
+            if os.path.exists(schema_path):
+                with open(schema_path, "r", encoding="utf-8") as f:
+                    con.executescript(f.read())
+            con.commit()
+            con.close()
 
         g.db = sqlite3.connect(db_path)
         g.db.row_factory = sqlite3.Row
