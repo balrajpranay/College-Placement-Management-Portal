@@ -1,0 +1,81 @@
+{% from "_icons.html" import icon %}
+<footer class="footer-institutional">
+  <div class="container">
+    <div class="footer-grid">
+      <!-- Col 1: Brand & Institutional Identity -->
+      <div class="footer-col-brand">
+        <a href="{{ url_for('public.landing') }}" class="brand-lockup mb-3">
+          <div class="brand-logo-wrap">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Campus Connect" class="brand-logo-img">
+          </div>
+          <div class="brand-text-block">
+            <span class="brand-name" style="color:#FFFFFF;">Campus Connect</span>
+            <span class="brand-sub">Placement Portal</span>
+          </div>
+        </a>
+        <p class="text-xs text-muted" style="line-height:1.6;max-width:290px;">
+          The official central placement & career intelligence portal. Empowering graduates, aggregating verified opportunities, and automating institutional drive workflows.
+        </p>
+        <div class="mt-3 flex-align-center" style="gap:8px;">
+          <span class="badge badge-brand" style="font-size:0.7rem;background:rgba(0,150,255,0.15);color:#38BDF8;border-color:rgba(0,150,255,0.3);">
+            Season 2025–2026 Live
+          </span>
+          <span class="badge badge-success" style="font-size:0.7rem;">
+            Gemini 3.5 AI
+          </span>
+        </div>
+      </div>
+
+      <!-- Col 2: Candidates & Portals -->
+      <div class="footer-col">
+        <h4 class="footer-heading">For Candidates</h4>
+        <ul class="footer-links">
+          <li><a href="{{ url_for('public.jobs_hub') }}">Jobs & Internships Hub</a></li>
+          <li><a href="{{ url_for('public.ai_suite') }}">AI Career Advisor</a></li>
+          <li><a href="{{ url_for('auth.login') }}">Student Portal Login</a></li>
+          <li><a href="{{ url_for('auth.register_student') }}">Candidate Registration</a></li>
+          <li><a href="{{ url_for('public.jobs_hub', job_type='PM Internship Scheme') }}">PM Internship Scheme</a></li>
+        </ul>
+      </div>
+
+      <!-- Col 3: Opportunities & Resources -->
+      <div class="footer-col">
+        <h4 class="footer-heading">Opportunities & Feeds</h4>
+        <ul class="footer-links">
+          <li><a href="{{ url_for('public.jobs_hub', job_type='Campus Placement Drive') }}">Campus Placement Drives</a></li>
+          <li><a href="{{ url_for('public.jobs_hub', job_type='Full-time') }}">Full-Time Tech Roles</a></li>
+          <li><a href="{{ url_for('public.jobs_hub', job_type='Internship') }}">Verified Internships</a></li>
+          <li><a href="{{ url_for('public.about') }}">Platform Overview</a></li>
+        </ul>
+      </div>
+
+      <!-- Col 4: Placement Cell & Official Contact -->
+      <div class="footer-col">
+        <h4 class="footer-heading">Placement Office</h4>
+        <div class="text-xs text-muted" style="line-height:1.7;">
+          <div><strong>Office:</strong> Career Guidance & Placement Cell</div>
+          <div><strong>Hours:</strong> Mon – Sat: 9:00 AM – 5:30 PM</div>
+          <div><strong>Email:</strong> placements@college.edu</div>
+          <div><strong>Helpline:</strong> +91 (080) 2846-1200</div>
+          <div class="mt-2 text-faint">Institutional Code: CC-ENG-2026</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Bottom Bar -->
+    <div class="footer-bottom flex-between mt-8 pt-6">
+      <div class="text-xs text-muted">
+        &copy; 2026 Campus Connect Placement Management System. All rights reserved.
+      </div>
+      <div class="footer-bottom-links">
+        <a href="{{ url_for('public.about') }}">About System</a>
+        <span class="text-faint">&bull;</span>
+        <a href="{{ url_for('public.contact') }}">Contact Office</a>
+        <span class="text-faint">&bull;</span>
+        <a href="javascript:void(0)">Placement Policy</a>
+        <span class="text-faint">&bull;</span>
+        <a href="javascript:void(0)">Privacy & Ethics</a>
+      </div>
+    </div>
+  </div>
+</footer>

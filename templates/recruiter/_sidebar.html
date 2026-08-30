@@ -1,0 +1,30 @@
+{% from "_icons.html" import icon %}
+<div class="sidebar-section-label">Overview</div>
+<a href="{{ url_for('recruiter.dashboard') }}" class="sidebar-link {{ 'active' if request.endpoint=='recruiter.dashboard' }}">
+  {{ icon('home', 18) }} Dashboard
+</a>
+<a href="{{ url_for('recruiter.profile') }}" class="sidebar-link {{ 'active' if request.endpoint=='recruiter.profile' }}">
+  {{ icon('building', 18) }} Corporate Profile
+</a>
+
+<div class="sidebar-section-label">Recruitment</div>
+<a href="{{ url_for('recruiter.create_drive') }}" class="sidebar-link {{ 'active' if request.endpoint=='recruiter.create_drive' }}">
+  {{ icon('plus', 18) }} Post Placement Drive
+</a>
+<a href="{{ url_for('recruiter.my_drives') }}" class="sidebar-link {{ 'active' if request.endpoint=='recruiter.my_drives' }}">
+  {{ icon('briefcase', 18) }} Managed Drives
+</a>
+<a href="{{ url_for('recruiter.applicants') }}" class="sidebar-link {{ 'active' if request.endpoint in ['recruiter.applicants','recruiter.schedule_interview'] }}">
+  {{ icon('users', 18) }} Candidate Pipeline
+</a>
+<a href="{{ url_for('recruiter.interview_schedule') }}" class="sidebar-link {{ 'active' if request.endpoint=='recruiter.interview_schedule' }}">
+  {{ icon('video', 18) }} Interview Schedule
+</a>
+<a href="{{ url_for('recruiter.results') }}" class="sidebar-link {{ 'active' if request.endpoint=='recruiter.results' }}">
+  {{ icon('award', 18) }} Placement Results
+</a>
+
+<div class="sidebar-section-label">Communication</div>
+<a href="{{ url_for('recruiter.notifications') }}" class="sidebar-link {{ 'active' if request.endpoint=='recruiter.notifications' }}">
+  {{ icon('bell', 18) }} Notifications
+</a>

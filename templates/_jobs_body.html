@@ -1,0 +1,276 @@
+{% from "_icons.html" import icon %}
+<div class="jobs-hub-container">
+  <!-- Top Hub Banner -->
+  <div class="card jobs-hub-header mb-6">
+    <div class="flex-between" style="flex-wrap:wrap;gap:16px;align-items:center;">
+      <div>
+        <div class="flex-align-center mb-2" style="gap:8px;">
+          <span class="live-pulse-dot"></span>
+          <span class="badge badge-accent" style="font-size:0.75rem;">Verified Opportunity Hub</span>
+        </div>
+        <h1 class="h2" style="margin:0 0 6px;">Jobs & Internships Hub</h1>
+        <p class="text-muted" style="margin:0;font-size:0.95rem;">
+          Verified on-campus placement drives, national AICTE portals, PM Internship Scheme, and corporate career tracks.
+        </p>
+      </div>
+
+      <!-- Segmented Category Switcher -->
+      <div class="category-segmented-control">
+        <a href="{{ url_for('public.jobs_hub') }}" class="seg-btn {{ 'active' if not job_type }}">
+          🌟 All ({{ total_all_count }})
+        </a>
+        <a href="{{ url_for('public.jobs_hub', job_type='Full-time') }}" class="seg-btn {{ 'active' if job_type in ['Full-time', 'Campus Placement Drive'] }}">
+          🎓 Placements & Jobs ({{ total_placements_count }})
+        </a>
+        <a href="{{ url_for('public.jobs_hub', job_type='Internship') }}" class="seg-btn {{ 'active' if job_type in ['Internship', 'PM Internship Scheme'] }}">
+          💼 Internships & PM Scheme ({{ total_internships_count }})
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search & Filter Bar -->
+  <div class="card p-4 mb-6" style="padding:16px 20px;">
+    <form method="GET" action="{{ url_for('public.jobs_hub') }}" class="jobs-search-form">
+      {% if job_type %}
+      <input type="hidden" name="job_type" value="{{ job_type }}">
+      {% endif %}
+
+      <div class="search-input-wrap" style="flex:1;">
+        <input type="text" name="q" value="{{ q }}" placeholder="Search by role, company, skills, or city..." class="form-control" style="width:100%;">
+      </div>
+
+      <div class="search-select-wrap">
+        <select name="work_mode" class="form-control">
+          <option value="">All Work Modes</option>
+          <option value="Remote" {{ 'selected' if work_mode=='Remote' }}>Remote</option>
+          <option value="Hybrid" {{ 'selected' if work_mode=='Hybrid' }}>Hybrid</option>
+          <option value="Onsite" {{ 'selected' if work_mode=='Onsite' }}>Onsite / Campus</option>
+        </select>
+      </div>
+
+      <div class="search-select-wrap">
+        <select name="category" class="form-control">
+          <option value="">All Categories</option>
+          {% for c in categories %}
+          <option value="{{ c }}" {{ 'selected' if category==c }}>{{ c }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-primary">
+        {{ icon('search', 16) }} Search
+      </button>
+
+      {% if q or work_mode or category or job_type %}
+      <a href="{{ url_for('public.jobs_hub') }}" class="btn btn-outline" title="Reset Filters">
+        Reset
+      </a>
+      {% endif %}
+    </form>
+
+    <!-- Source Provider Quick Filter Chips -->
+    <div class="source-chips-row mt-4 pt-3 flex-align-center" style="border-top:1px solid var(--border-subtle);gap:8px;flex-wrap:wrap;">
+      <span class="text-xs text-muted font-bold uppercase tracking-wider">Verified Sources:</span>
+      <a href="{{ url_for('public.jobs_hub', job_type='PM Internship Scheme') }}" class="source-chip {{ 'active' if job_type=='PM Internship Scheme' }}">
+        🇮🇳 PM Internship Scheme
+      </a>
+      <a href="{{ url_for('public.jobs_hub', q='AccioJob') }}" class="source-chip">
+        🚀 AccioJob Placements
+      </a>
+      <a href="{{ url_for('public.jobs_hub', q='AICTE') }}" class="source-chip">
+        🏛️ AICTE Portal
+      </a>
+      <a href="{{ url_for('public.jobs_hub', q='SJCE') }}" class="source-chip">
+        🎓 SJCE Consortium
+      </a>
+      <a href="{{ url_for('public.jobs_hub', q='NMAMIT') }}" class="source-chip">
+        🎓 NMAMIT Cell
+      </a>
+      <a href="{{ url_for('public.jobs_hub', q='Internshala') }}" class="source-chip">
+        ⭐ Internshala
+      </a>
+      <a href="{{ url_for('public.jobs_hub', q='Naukri') }}" class="source-chip">
+        💼 Naukri.com
+      </a>
+      <a href="{{ url_for('public.jobs_hub', q='LinkedIn') }}" class="source-chip">
+        🌐 LinkedIn
+      </a>
+    </div>
+  </div>
+
+    <!-- Top Reputed Companies & MNCs Showcase -->
+  <div class="featured-employers-section card mb-8">
+    <div class="flex-between mb-4" style="flex-wrap:wrap;gap:12px;align-items:flex-end;">
+      <div>
+        <div class="flex-align-center mb-1" style="gap:8px;">
+          <span class="badge badge-brand" style="font-size:0.7rem;">⭐ Verified Corporate Network</span>
+        </div>
+        <h2 class="h3" style="margin:0 0 4px;font-size:1.35rem;">Top Reputed Employers & Global MNCs</h2>
+        <p class="text-xs text-muted" style="margin:0;">
+          Direct deep links to live India job listings, student programs, and early-career portals.
+        </p>
+      </div>
+      <div class="text-xs text-faint font-semibold">
+        Direct-to-Joblist Verified Deep Links
+      </div>
+    </div>
+
+    <div class="featured-companies-grid">
+      {% for c in featured_companies %}
+      <div class="featured-company-card card">
+        <div class="flex-between mb-3" style="align-items:flex-start;">
+          <div class="featured-company-logo">
+            {% if c.logo %}
+              <img src="{{ c.logo }}" alt="{{ c.name }}" class="featured-logo-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+              <div class="featured-logo-fallback" style="display:none;">{{ c.name[0] }}</div>
+            {% else %}
+              <div class="featured-logo-fallback">{{ c.name[0] }}</div>
+            {% endif %}
+          </div>
+          <span class="badge badge-accent" style="font-size:0.65rem;">Featured</span>
+        </div>
+
+        <h3 class="featured-company-name font-bold text-sm" style="margin:0 0 2px;">{{ c.name }}</h3>
+        <div class="text-xs text-brand font-semibold mb-2">{{ c.tier }}</div>
+
+        <div class="featured-tracks-chips mb-3">
+          {% for t in c.hiring_tracks[:2] %}
+          <span class="featured-track-pill">{{ t }}</span>
+          {% endfor %}
+        </div>
+
+        <div class="mt-auto pt-3 flex-between" style="border-top:1px solid var(--border-subtle);">
+          <span class="text-xs text-faint">{{ c.location.split(',')[0] }}</span>
+          <a href="{{ c.url }}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm" style="font-size:0.75rem;padding:4px 10px;">
+            View Open Roles {{ icon('external-link', 11) }}
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Showing Results Counter -->
+  <div class="flex-between mb-4">
+    <div class="text-xs text-muted font-bold uppercase tracking-wider">
+      Showing {{ (page - 1) * 12 + 1 }}–{{ (page - 1) * 12 + jobs|length }} of {{ total_jobs }} verified opportunities
+    </div>
+    <div class="text-xs text-muted font-semibold">
+      Page {{ page }} of {{ total_pages }}
+    </div>
+  </div>
+
+  <!-- Opportunities Grid -->
+  <div class="opportunities-grid-wrapper">
+    {% if jobs %}
+    <div class="cards-grid">
+      {% for j in jobs %}
+      <div class="card opportunity-card {{ 'drive-highlight' if j.job_type=='Campus Placement Drive' }}">
+        <div class="card-top-row flex-between mb-3" style="align-items:flex-start;">
+          <div class="flex-align-center" style="gap:12px;">
+            <div class="card-company-logo-badge">
+              {% if j.logo %}
+                <img src="{{ j.logo }}" alt="{{ j.company_name }}" class="card-company-logo-img">
+              {% else %}
+                <div class="card-logo-fallback">{{ j.company_name[0] }}</div>
+              {% endif %}
+            </div>
+            <div>
+              <div class="text-xs text-muted font-bold" style="letter-spacing:0.02em;">{{ j.company_name }}</div>
+              <span class="source-badge-tag">{{ j.source }}</span>
+            </div>
+          </div>
+
+          <span class="badge {{ 'badge-brand' if j.job_type=='Campus Placement Drive' else ('badge-warning' if j.job_type=='PM Internship Scheme' else 'badge-success') }}">
+            {{ j.job_type }}
+          </span>
+        </div>
+
+        <h3 class="h4 opportunity-title" style="margin:0 0 6px;font-size:1.1rem;line-height:1.3;">
+          {{ j.title }}
+        </h3>
+
+        <p class="opportunity-desc text-xs text-muted mb-3" style="line-height:1.5;">
+          {{ j.description[:140] }}{{ '...' if j.description|length > 140 else '' }}
+        </p>
+
+        <div class="opportunity-meta-chips mb-4">
+          <span class="meta-pill">{{ icon('dollar', 13) }} {{ j.salary }}</span>
+          <span class="meta-pill">{{ icon('map-pin', 13) }} {{ j.location }}</span>
+          <span class="meta-pill">{{ icon('briefcase', 13) }} {{ j.work_mode }}</span>
+        </div>
+
+        <!-- Skills / Tags -->
+        <div class="tags-row mb-4" style="display:flex;gap:4px;flex-wrap:wrap;">
+          {% if j.tags is iterable and j.tags is not string %}
+            {% for t in j.tags[:3] %}
+            <span class="skill-tag" style="font-size:0.75rem;padding:2px 8px;">{{ t }}</span>
+            {% endfor %}
+          {% endif %}
+        </div>
+
+                        <!-- Card Footer CTA -->
+        <div class="card-footer-cta mt-auto pt-3 flex-between" style="border-top:1px solid var(--border-subtle);">
+          <span class="text-xs text-faint">{{ j.posted_at }}</span>
+          {% if j.application_url %}
+            <a href="{{ j.application_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm apply-external-trigger" style="white-space:nowrap;">
+              Apply on {{ j.source.split(' ')[0] }} {{ icon('external-link', 12) }}
+            </a>
+          {% else %}
+            <button class="btn btn-outline btn-sm" disabled style="opacity:0.5;cursor:not-allowed;">
+              Link Unavailable
+            </button>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Pagination Bar Component -->
+    {% if total_pages > 1 %}
+    <nav class="pagination-bar mt-8 flex-between" aria-label="Opportunities pagination">
+      <div>
+        {% if page > 1 %}
+        <a href="{{ url_for('public.jobs_hub', page=page-1, q=q, job_type=job_type, category=category, work_mode=work_mode) }}" class="btn btn-outline btn-sm">
+          &larr; Previous
+        </a>
+        {% else %}
+        <button class="btn btn-outline btn-sm" disabled style="opacity:0.4;cursor:not-allowed;">&larr; Previous</button>
+        {% endif %}
+      </div>
+
+      <div class="pagination-pages-list">
+        {% for p in range(1, total_pages + 1) %}
+          {% if p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+            <a href="{{ url_for('public.jobs_hub', page=p, q=q, job_type=job_type, category=category, work_mode=work_mode) }}" class="page-num-btn {{ 'active' if p == page }}">
+              {{ p }}
+            </a>
+          {% elif p == page - 3 or p == page + 3 %}
+            <span class="page-num-dots">...</span>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      <div>
+        {% if page < total_pages %}
+        <a href="{{ url_for('public.jobs_hub', page=page+1, q=q, job_type=job_type, category=category, work_mode=work_mode) }}" class="btn btn-outline btn-sm">
+          Next &rarr;
+        </a>
+        {% else %}
+        <button class="btn btn-outline btn-sm" disabled style="opacity:0.4;cursor:not-allowed;">Next &rarr;</button>
+        {% endif %}
+      </div>
+    </nav>
+    {% endif %}
+
+    {% else %}
+    <div class="card empty-state p-12 text-center">
+      <div class="empty-icon mb-3">{{ icon('briefcase', 32) }}</div>
+      <h3 class="h4">No matching opportunities found</h3>
+      <p class="text-muted text-sm mb-4">Try clearing your filters or searching with different keywords.</p>
+      <a href="{{ url_for('public.jobs_hub') }}" class="btn btn-outline">Clear All Filters</a>
+    </div>
+    {% endif %}
+  </div>
+</div>

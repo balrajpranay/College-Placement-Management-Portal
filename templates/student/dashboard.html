@@ -1,0 +1,246 @@
+{% extends "base_dashboard.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Student Dashboard — Campus Connect{% endblock %}
+{% block sidebar_nav %}{% include "student/_sidebar.html" %}{% endblock %}
+
+{% block content %}
+<div class="dashboard-page-wrapper">
+  <!-- Welcome Banner -->
+  <div class="card dashboard-welcome-banner mb-6">
+    <div class="flex-between" style="flex-wrap:wrap;gap:16px;align-items:center;">
+      <div class="welcome-text-col">
+        <div class="flex-align-center mb-2" style="gap:8px;">
+          <span class="live-pulse-dot"></span>
+          <span class="badge badge-accent" style="font-size:0.75rem;">Placement Season 2025–2026</span>
+        </div>
+        <h1 class="h2" style="margin:0 0 6px;">Welcome back, {{ student.name.split(' ')[0] }}! 👋</h1>
+        <p class="text-muted" style="margin:0;font-size:0.95rem;">
+          {{ student.department }} · Class of {{ student.grad_year }} · Verified Candidate
+        </p>
+      </div>
+
+      <div class="welcome-actions-col" style="display:flex;gap:10px;flex-wrap:wrap;">
+        <a href="{{ url_for('public.jobs_hub') }}" class="btn btn-primary">
+          {{ icon('briefcase', 16) }} Browse Opportunities
+        </a>
+        <a href="{{ url_for('public.ai_suite') }}" class="btn btn-outline">
+          {{ icon('award', 16) }} AI Career Advisor
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Performance Indicators -->
+  <div class="stats-grid mb-6">
+    <div class="stat-card">
+      <div class="stat-card-top flex-between">
+        <div class="stat-icon brand">{{ icon('clipboard', 20) }}</div>
+        <span class="text-xs text-muted font-semibold">Total</span>
+      </div>
+      <div class="stat-value mt-2">{{ app_count }}</div>
+      <div class="stat-label">Applications Submitted</div>
+      <div class="text-xs text-faint mt-1">Across institutional drives</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-card-top flex-between">
+        <div class="stat-icon warning">{{ icon('trending-up', 20) }}</div>
+        <span class="text-xs text-warning font-semibold">Active</span>
+      </div>
+      <div class="stat-value mt-2">{{ shortlisted }}</div>
+      <div class="stat-label">Shortlisted & In Review</div>
+      <div class="text-xs text-faint mt-1">Pending next rounds</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-card-top flex-between">
+        <div class="stat-icon success">{{ icon('award', 20) }}</div>
+        <span class="text-xs text-success font-semibold">Confirmed</span>
+      </div>
+      <div class="stat-value mt-2">{{ selected|length }}</div>
+      <div class="stat-label">Offers Secured</div>
+      <div class="text-xs text-faint mt-1">Institutional placements</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-card-top flex-between">
+        <div class="stat-icon accent">{{ icon('user', 20) }}</div>
+        <span class="text-xs text-accent font-semibold">{{ completion }}%</span>
+      </div>
+      <div class="stat-value mt-2">{{ completion }}%</div>
+      <div class="stat-label">Profile Strength</div>
+      <div class="progress mt-2" style="height:6px;border-radius:4px;background:var(--border-color);">
+        <div class="progress-bar" style="width: {{ completion }}%;background:linear-gradient(90deg, #0096FF, #38BDF8);"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Placed Confirmation Ribbon (if selected) -->
+  {% if selected %}
+  <div class="card mb-6" style="background:rgba(16, 185, 129, 0.1);border-color:rgba(16, 185, 129, 0.3);padding:var(--space-6);">
+    <div class="flex-between" style="flex-wrap:wrap;gap:14px;">
+      <div>
+        <div class="badge badge-success mb-2">Offer Confirmed</div>
+        <h3 style="color:var(--success-700);margin:0 0 var(--space-1);">Congratulations! Placement Offer Confirmed 🎉</h3>
+        <p class="text-sm text-muted" style="margin:0;">You have received verified placement offers through Campus Connect.</p>
+      </div>
+      <div style="display:flex;gap:var(--space-3);flex-wrap:wrap;">
+        {% for s in selected %}
+        <div class="badge badge-success" style="font-size:0.875rem;padding:8px 16px;">
+          <strong>{{ s.company_name }}</strong> &ndash; {{ s.title }} (₹{{ s.package }} LPA)
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- 2-Column Main Dashboard Grid -->
+  <div class="dashboard-split-grid mb-6">
+    <!-- Left Column: Academic Credentials & AI Insights -->
+    <div style="display:flex;flex-direction:column;gap:var(--space-6);">
+      <!-- Academic & Profile Snapshot -->
+      <div class="card" style="padding:var(--space-6);">
+        <div class="flex-between mb-4">
+          <div class="flex-align-center" style="gap:10px;">
+            <div class="stat-icon brand" style="width:36px;height:36px;">{{ icon('graduation', 18) }}</div>
+            <h3 class="h4" style="margin:0;font-size:1.05rem;">Academic & Profile Snapshot</h3>
+          </div>
+          <a href="{{ url_for('student.profile') }}" class="text-sm font-semibold text-brand">Edit Profile &rarr;</a>
+        </div>
+        
+        <div class="grid-2 mb-4" style="gap:var(--space-4);">
+          <div class="card" style="padding:12px 14px;background:var(--bg-surface-alt);border:1px solid var(--border-color);">
+            <div class="text-xs text-muted font-semibold">DEPARTMENT & BATCH</div>
+            <div class="font-bold text-sm mt-1" style="color:var(--text-main);">{{ student.department }}</div>
+            <div class="text-xs text-faint">Class of {{ student.grad_year }}</div>
+          </div>
+          <div class="card" style="padding:12px 14px;background:var(--bg-surface-alt);border:1px solid var(--border-color);">
+            <div class="text-xs text-muted font-semibold">CURRENT CGPA</div>
+            <div class="font-bold text-sm mt-1 text-brand">{{ student.cgpa }} / 10.0</div>
+            <div class="text-xs text-success font-semibold">0 Active Backlogs</div>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <div class="text-xs text-muted font-semibold mb-2">VERIFIED TECHNICAL SKILLS</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            {% if skills %}
+              {% for s in skills %}
+              <span class="skill-tag" style="font-size:0.8125rem;padding:4px 10px;">{{ s }}</span>
+              {% endfor %}
+            {% else %}
+              <span class="text-sm text-muted">No skills listed yet. <a href="{{ url_for('student.profile') }}" class="text-brand">Add skills</a></span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div style="border-top:1px solid var(--border-subtle);padding-top:var(--space-4);" class="flex-between">
+          <span class="text-sm text-muted">Verified Resume:</span>
+          {% if student.resume_filename %}
+            <span class="badge badge-success">{{ student.resume_original_name or 'Resume.pdf' }}</span>
+          {% else %}
+            <a href="{{ url_for('student.profile') }}" class="btn btn-outline btn-sm">Upload Resume</a>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- AI Career Advisor Smart Widget -->
+      <div class="card" style="padding:var(--space-6);background:radial-gradient(circle at top right, rgba(0, 150, 255, 0.1), var(--bg-surface));">
+        <div class="flex-between mb-3">
+          <div class="flex-align-center" style="gap:10px;">
+            <div class="stat-icon brand" style="width:36px;height:36px;">{{ icon('award', 18) }}</div>
+            <div>
+              <h3 class="h4" style="margin:0;font-size:1.05rem;">AI Career Advisor</h3>
+              <div class="text-xs text-muted">Google Gemini Placement Intelligence</div>
+            </div>
+          </div>
+          <a href="{{ url_for('public.ai_suite') }}" class="btn btn-primary btn-sm">Open Workspace</a>
+        </div>
+
+        <div class="card" style="padding:14px;background:var(--bg-surface-alt);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);margin-bottom:var(--space-3);">
+          <div class="text-xs text-muted" style="line-height:1.5;">
+            💡 <strong>Placement Tip for {{ student.name.split(' ')[0] }}:</strong> Your <strong>{{ student.cgpa }} CGPA</strong> unlocks all Tier-1 drives. Ensure your GitHub projects demonstrate REST APIs and Data Structures before Friday's rounds.
+          </div>
+        </div>
+
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <a href="{{ url_for('public.ai_suite') }}" class="skill-tag" style="text-decoration:none;cursor:pointer;">
+            🎯 Check TechNova Prep
+          </a>
+          <a href="{{ url_for('public.ai_suite') }}" class="skill-tag" style="text-decoration:none;cursor:pointer;">
+            🏛️ PM Internship Guide
+          </a>
+          <a href="{{ url_for('public.ai_suite') }}" class="skill-tag" style="text-decoration:none;cursor:pointer;">
+            💻 Practice Binary Trees
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Upcoming Interviews & Live Notifications -->
+    <div style="display:flex;flex-direction:column;gap:var(--space-6);">
+      <!-- Upcoming Interviews -->
+      <div class="card" style="padding:var(--space-6);">
+        <div class="flex-between mb-4">
+          <div class="flex-align-center" style="gap:10px;">
+            <div class="stat-icon accent" style="width:36px;height:36px;">{{ icon('video', 18) }}</div>
+            <h3 class="h4" style="margin:0;font-size:1.05rem;">Interview Schedule</h3>
+          </div>
+          <a href="{{ url_for('student.interviews') }}" class="text-sm font-semibold text-brand">All Interviews &rarr;</a>
+        </div>
+
+        {% if upcoming_interviews %}
+          <div style="display:flex;flex-direction:column;gap:var(--space-3);">
+            {% for i in upcoming_interviews %}
+            <div style="padding:14px 16px;background:var(--bg-surface-alt);border:1px solid var(--border-color);border-radius:var(--radius-lg);display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div class="font-bold text-sm" style="color:var(--text-main);">{{ i.company_name }} &ndash; {{ i.drive_title }}</div>
+                <div class="text-xs text-muted mt-1">{{ i.round_name }} · {{ i.interview_type }}</div>
+              </div>
+              <div class="text-right">
+                <div class="badge badge-accent">{{ i.scheduled_date }}</div>
+                <div class="text-xs text-muted mt-1">{{ i.scheduled_time }}</div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state" style="padding:var(--space-8) var(--space-4);">
+            <div class="empty-icon">{{ icon('calendar', 24) }}</div>
+            <h4 class="text-sm font-semibold" style="margin:8px 0 4px;">No interviews currently scheduled</h4>
+            <p class="text-xs text-muted" style="margin:0;">You will be notified once a recruiter schedules your interview slots.</p>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Recent Notifications Feed -->
+      <div class="card" style="padding:var(--space-6);">
+        <div class="flex-between mb-4">
+          <div class="flex-align-center" style="gap:10px;">
+            <div class="stat-icon warning" style="width:36px;height:36px;">{{ icon('bell', 18) }}</div>
+            <h3 class="h4" style="margin:0;font-size:1.05rem;">Placement Updates & Notices</h3>
+          </div>
+          <a href="{{ url_for('student.notifications') }}" class="text-sm font-semibold text-brand">View All &rarr;</a>
+        </div>
+
+        {% if recent_notifications %}
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            {% for n in recent_notifications %}
+            <div style="padding:10px 12px;background:var(--bg-surface-alt);border-radius:var(--radius-md);border:1px solid var(--border-subtle);display:flex;align-items:flex-start;gap:12px;">
+              <div class="stat-icon brand" style="width:28px;height:28px;font-size:0.75rem;flex-shrink:0;">{{ icon('bell', 13) }}</div>
+              <div style="flex:1;">
+                <div class="text-sm" style="color:var(--text-main);line-height:1.4;">{{ n.message }}</div>
+                <div class="text-xs text-faint mt-1">{{ n.created_at[:16] if n.created_at else 'Recent' }}</div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="text-sm text-muted" style="margin:0;">No new notices. You are completely up to date with institutional announcements.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

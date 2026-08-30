@@ -1,0 +1,32 @@
+{% extends "base_dashboard.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Notifications — Campus Connect{% endblock %}
+{% block sidebar_nav %}{% include "student/_sidebar.html" %}{% endblock %}
+{% block content %}
+
+<div class="mb-8">
+  <h1 class="h2" style="margin:0 0 var(--space-1);">Candidate Notifications</h1>
+  <p class="text-muted" style="margin:0;">Placement announcements, drive updates, and interview notifications.</p>
+</div>
+
+<div class="card card-flush">
+  {% if items %}
+    {% for n in items %}
+    <div style="padding:16px 24px;border-bottom:1px solid var(--border-subtle);display:flex;gap:14px;align-items:flex-start;">
+      <div class="stat-icon brand" style="width:36px;height:36px;flex-shrink:0;">{{ icon('bell', 16) }}</div>
+      <div style="flex:1;">
+        <div class="text-sm font-medium" style="line-height:1.5;">{{ n.message }}</div>
+        <div class="text-xs text-faint mt-1">{{ n.created_at }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">{{ icon('bell', 24) }}</div>
+    <h4>All caught up</h4>
+    <p>You have no unread notifications at this time.</p>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

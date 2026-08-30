@@ -1,0 +1,86 @@
+{% extends "base_dashboard.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Company Profile — Campus Connect{% endblock %}
+{% block sidebar_nav %}{% include "recruiter/_sidebar.html" %}{% endblock %}
+{% block content %}
+
+<div class="mb-8">
+  <h1 class="h2" style="margin:0 0 var(--space-1);">Corporate Profile & Branding</h1>
+  <p class="text-muted" style="margin:0;">Manage company details visible to students and placement officers.</p>
+</div>
+
+<form method="POST" enctype="multipart/form-data">
+  <div class="grid-2 mb-6">
+    <div class="card">
+      <h3 class="h4 mb-4">Company Overview</h3>
+
+      <div class="form-group">
+        <label class="form-label">Company Name <span class="required">*</span></label>
+        <input type="text" name="name" value="{{ company.name }}" required>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Industry Domain</label>
+          <input type="text" name="industry" value="{{ company.industry or '' }}" placeholder="e.g. Software / Fintech / Manufacturing">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Website URL</label>
+          <input type="url" name="website" value="{{ company.website or '' }}" placeholder="https://company.com">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Headquarters / Location</label>
+        <input type="text" name="location" value="{{ company.location or '' }}" placeholder="e.g. Bengaluru, India">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Company Description</label>
+        <textarea name="description" placeholder="Brief summary of company products, culture, and career opportunities.">{{ company.description or '' }}</textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 class="h4 mb-4">Contact & Branding</h3>
+
+      <div class="form-group">
+        <label class="form-label">HR / Recruiter Contact Name</label>
+        <input type="text" name="hr_contact" value="{{ company.hr_contact or '' }}" placeholder="HR Lead / Recruiter Name">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Contact Phone</label>
+        <input type="tel" name="phone" value="{{ company.phone or '' }}" placeholder="+91 98765 43210">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Account Work Email</label>
+        <input type="email" value="{{ company.email }}" disabled>
+        <div class="form-hint">Corporate email is used for official system authentication.</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Company Logo</label>
+        {% if company.logo_filename %}
+        <div class="flex-align-center mb-3">
+          <div class="drive-logo" style="width:50px;height:50px;">
+            <img src="{{ url_for('static', filename='uploads/logos/' ~ company.logo_filename) }}" alt="{{ company.name }}">
+          </div>
+          <span class="text-sm text-muted">Current Logo</span>
+        </div>
+        {% endif %}
+        <input type="file" name="logo" accept="image/*">
+        <div class="form-hint">Recommended: Square PNG / JPG, max 2MB.</div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <button type="submit" class="btn btn-primary btn-lg">
+      {{ icon('check', 16) }} Save Corporate Profile
+    </button>
+  </div>
+</form>
+
+{% endblock %}

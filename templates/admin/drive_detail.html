@@ -1,0 +1,92 @@
+{% extends "base_dashboard.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}{{ drive.title }} — Placement Office — Campus Connect{% endblock %}
+{% block sidebar_nav %}{% include "admin/_sidebar.html" %}{% endblock %}
+{% block content %}
+
+<a href="{{ url_for('admin.drives') }}" class="text-sm font-semibold text-muted" style="display:inline-flex;align-items:center;gap:6px;margin-bottom:var(--space-4);">
+  &larr; Back to Placement Drives
+</a>
+
+<div class="card mb-6">
+  <div class="flex-between" style="align-items:flex-start;flex-wrap:wrap;">
+    <div>
+      <div class="badge badge-accent mb-2">{{ drive.company_name }}</div>
+      <h1 class="h3" style="margin:0 0 var(--space-2);">{{ drive.title }}</h1>
+      <div class="drive-meta">
+        <span class="drive-meta-chip">{{ icon('dollar', 13) }} ₹{{ drive.ctc }} LPA</span>
+        <span class="drive-meta-chip">{{ icon('map-pin', 13) }} {{ drive.location or "Various" }}</span>
+        <span class="drive-meta-chip">{{ icon('calendar', 13) }} Deadline: {{ drive.deadline }}</span>
+        <span class="drive-meta-chip">{{ icon('users', 13) }} {{ drive.openings }} Openings</span>
+      </div>
+    </div>
+    <div>
+      <span class="badge {{ 'badge-success' if drive.status=='active' else 'badge-gray' }}" style="font-size:0.875rem;padding:6px 14px;">
+        {{ drive.status|capitalize }}
+      </span>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="grid-2">
+    <div>
+      <div class="text-xs font-semibold text-muted mb-1">ELIGIBILITY CRITERIA</div>
+      <div class="text-sm"><strong>Min CGPA:</strong> {{ drive.min_cgpa }} / 10.0 · <strong>Max Backlogs:</strong> {{ drive.max_backlogs }}</div>
+    </div>
+    <div>
+      <div class="text-xs font-semibold text-muted mb-1">ELIGIBLE BRANCHES</div>
+      <div class="text-sm">{{ branches|join(', ') if branches else 'All Academic Departments' }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="card card-flush">
+  <div class="card-header">
+    <h3 class="h4" style="margin:0;">Registered Applicants ({{ apps|length }})</h3>
+  </div>
+
+  {% if apps %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Candidate</th>
+          <th>Student ID</th>
+          <th>Department</th>
+          <th>CGPA</th>
+          <th>Application Stage</th>
+          <th>Resume</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in apps %}
+        <tr>
+          <td class="cell-primary font-semibold">{{ a.name }}</td>
+          <td class="cell-muted font-mono text-xs">{{ a.student_no }}</td>
+          <td class="cell-muted">{{ a.department }}</td>
+          <td class="cell-muted font-semibold">{{ a.cgpa }}</td>
+          <td><span class="badge status-{{ a.status.replace(' ', '_') }}">{{ a.status }}</span></td>
+          <td>
+            {% if a.resume_filename %}
+            <a href="{{ url_for('student.download_resume', student_id=a.student_id) }}" target="_blank" class="btn btn-sm btn-outline">
+              {{ icon('download', 12) }} PDF
+            </a>
+            {% else %}
+            <span class="text-xs text-faint">No file</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">{{ icon('users', 24) }}</div>
+    <h4>No candidate applications submitted yet</h4>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

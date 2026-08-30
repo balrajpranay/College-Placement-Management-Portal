@@ -1,0 +1,9 @@
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div style="display:none;" id="flash-message-store">
+      {% for category, message in messages %}
+        <div class="flash-msg-data" data-category="{{ category }}" data-message="{{ message }}"></div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}

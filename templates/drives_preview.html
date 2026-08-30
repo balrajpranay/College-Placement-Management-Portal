@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Active Placement Drives — Campus Connect{% endblock %}
+{% block body %}
+{% include "_navbar.html" %}
+
+<section class="section container">
+  <div class="flex-between mb-8" style="flex-wrap:wrap;">
+    <div>
+      <div class="eyebrow" style="color:var(--accent-cyan-600);font-weight:700;font-size:0.8125rem;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:var(--space-1);">Opportunities</div>
+      <h1 class="h2" style="margin:0;">Placement Drives Directory</h1>
+    </div>
+    
+    <div style="max-width:280px;width:100%;">
+      <input type="text" id="drive-search-input" placeholder="Filter by company or role..." class="table-search-input">
+    </div>
+  </div>
+
+  {% if drives %}
+  <div class="drive-grid" id="drives-list-container">
+    {% for d in drives %}
+    <div class="drive-card">
+      <div>
+        <div class="drive-card-top">
+          <div class="drive-logo">
+            {% if d.logo_filename %}
+              <img src="{{ url_for('static', filename='uploads/logos/' ~ d.logo_filename) }}" alt="{{ d.company_name }}">
+            {% else %}
+              {{ d.company_name[0] }}
+            {% endif %}
+          </div>
+          <div>
+            <div style="font-weight:700;font-size:1.05rem;line-height:1.3;">{{ d.title }}</div>
+            <div class="text-sm text-muted">{{ d.company_name }}</div>
+          </div>
+        </div>
+
+        <div class="drive-meta">
+          <span class="drive-meta-chip">{{ icon('dollar', 13) }} ₹{{ d.ctc }} LPA</span>
+          <span class="drive-meta-chip">{{ icon('map-pin', 13) }} {{ d.location or "Various" }}</span>
+          <span class="drive-meta-chip">{{ icon('calendar', 13) }} Deadline: {{ d.deadline }}</span>
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <a href="{{ url_for('auth.login', role='student') }}" class="btn btn-outline btn-sm btn-block">
+          View Eligibility & Apply &rarr;
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card">
+    <div class="empty-state">
+      <div class="empty-icon">{{ icon('briefcase', 24) }}</div>
+      <h4>No active placement drives currently open</h4>
+      <p>New recruitment drives are published regularly by our corporate network. Check back shortly.</p>
+    </div>
+  </div>
+  {% endif %}
+</section>
+
+{% include "_footer.html" %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  if (window.liveFilterCards) {
+    window.liveFilterCards('drive-search-input', 'drives-list-container', '.drive-card');
+  }
+});
+</script>
+{% endblock %}

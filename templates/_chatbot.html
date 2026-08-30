@@ -1,0 +1,105 @@
+{% from "_icons.html" import icon %}
+<!-- Floating AI Career Advisor Chatbot -->
+<div id="campus-chatbot-widget" class="chatbot-widget">
+  <!-- Chatbot Floating Button -->
+  <button id="chatbot-toggle-btn" class="chatbot-trigger-btn" aria-label="Open Campus Connect AI Advisor" title="Campus Connect AI Career Advisor">
+    <div class="chatbot-trigger-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        <circle cx="9" cy="10" r="1" fill="currentColor"></circle>
+        <circle cx="15" cy="10" r="1" fill="currentColor"></circle>
+      </svg>
+    </div>
+    <span class="chatbot-trigger-label">AI Advisor</span>
+    <span class="chatbot-status-pulse" title="Gemini AI Online"></span>
+  </button>
+
+  <!-- Chatbot Modal Window -->
+  <div id="chatbot-modal" class="chatbot-modal" aria-hidden="true">
+    <div class="chatbot-header">
+      <div class="flex-align-center" style="gap:10px;">
+        <div class="chatbot-avatar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+            <polyline points="2 17 12 22 22 17"></polyline>
+            <polyline points="2 12 12 17 22 12"></polyline>
+          </svg>
+        </div>
+        <div>
+          <div class="chatbot-title" id="chatbot-header-title">Campus Connect AI</div>
+          <div class="chatbot-subtitle">
+            <span class="chatbot-dot"></span> Powered by Google Gemini
+          </div>
+        </div>
+      </div>
+      <div class="chatbot-header-actions">
+        <a href="{{ url_for('public.ai_suite') }}" class="chatbot-icon-btn" title="Open Full AI Suite" target="_blank" aria-label="Open Full AI Suite">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <line x1="10" y1="14" x2="21" y2="3"></line>
+          </svg>
+        </a>
+        <button id="chatbot-clear-btn" class="chatbot-icon-btn" title="Clear chat" aria-label="Clear chat">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        </button>
+        <button id="chatbot-close-btn" class="chatbot-icon-btn" title="Close chat" aria-label="Close chat">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Quick Mode Selector Inside Widget -->
+    <div class="chatbot-mode-bar">
+      <button class="widget-mode-btn active" data-mode="advisor">Advisor</button>
+      <button class="widget-mode-btn" data-mode="tutor">Tutor / Mock</button>
+      <button class="widget-mode-btn" data-mode="chat">General Chat</button>
+    </div>
+
+    <!-- Quick Starter Chips -->
+    <div id="chatbot-starter-chips" class="chatbot-chips-bar">
+      <button class="chat-chip" data-prompt="How do I check my placement drive eligibility?">Check Drive Eligibility</button>
+      <button class="chat-chip" data-prompt="Explain the PM Internship Scheme stipend and eligibility.">PM Internship Scheme</button>
+      <button class="chat-chip" data-prompt="Give me a mock interview coding question with constraints.">Mock Coding Question</button>
+      <button class="chat-chip" data-prompt="Give me 3 actionable tips to improve my resume.">Resume Polish Tips</button>
+    </div>
+
+    <!-- Chat Messages Log -->
+    <div id="chatbot-messages" class="chatbot-messages-body">
+      <div class="chat-msg chat-msg-bot">
+        <div class="chat-msg-bubble">
+          👋 <strong>Hello! I'm your Campus Connect AI Career Advisor.</strong>
+          <p style="margin:6px 0 0;font-size:0.875rem;line-height:1.45;">
+            Ask me anything about placement drives, eligibility rules, technical coding tutor help, or the PM Internship Scheme!
+          </p>
+        </div>
+        <div class="chat-msg-time">Just now</div>
+      </div>
+    </div>
+
+    <!-- Typing Indicator -->
+    <div id="chatbot-typing" class="chatbot-typing" style="display:none;">
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+      <span class="text-xs text-muted" style="margin-left:6px;" id="widget-typing-label">Gemini AI is thinking...</span>
+    </div>
+
+    <!-- Chat Input Form -->
+    <form id="chatbot-form" class="chatbot-input-form">
+      <input type="text" id="chatbot-input" class="chatbot-input" placeholder="Ask advisor, tutor, or chat..." autocomplete="off" required>
+      <button type="submit" id="chatbot-send-btn" class="chatbot-send-btn" aria-label="Send message">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </form>
+  </div>
+</div>

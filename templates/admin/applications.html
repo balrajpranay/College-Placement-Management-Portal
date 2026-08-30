@@ -1,0 +1,88 @@
+{% extends "base_dashboard.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}All Applications — Campus Connect{% endblock %}
+{% block sidebar_nav %}{% include "admin/_sidebar.html" %}{% endblock %}
+{% block content %}
+
+<div class="flex-between mb-8" style="flex-wrap:wrap;">
+  <div>
+    <h1 class="h2" style="margin:0 0 var(--space-1);">Master Application Log</h1>
+    <p class="text-muted" style="margin:0;">Institutional visibility into every application submitted across the portal.</p>
+  </div>
+  {% if apps %}
+  <div style="max-width:260px;width:100%;">
+    <input type="text" id="master-app-search" placeholder="Search applications..." class="table-search-input">
+  </div>
+  {% endif %}
+</div>
+
+<div class="card mb-6" style="padding:var(--space-4);">
+  <form method="GET" class="toolbar" style="margin-bottom:0;">
+    <div class="toolbar-filters" style="flex:1;">
+      <div class="input-group" style="max-width:320px;">
+        <input type="text" name="q" value="{{ search }}" placeholder="Filter by candidate, company, role...">
+      </div>
+      <select name="status" class="filter-select" onchange="this.form.submit()">
+        <option value="">All Application Stages</option>
+        {% for s in ['Applied','Under Review','Shortlisted','Interview Scheduled','Selected','Rejected'] %}
+        <option value="{{ s }}" {{ 'selected' if status==s }}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary btn-sm" type="submit">Filter</button>
+      {% if search or status %}
+      <a href="{{ url_for('admin.applications') }}" class="btn btn-ghost btn-sm">Reset</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<div class="card card-flush">
+  {% if apps %}
+  <div class="table-wrap">
+    <table class="data-table" id="master-apps-table">
+      <thead>
+        <tr>
+          <th>Candidate</th>
+          <th>Department</th>
+          <th>Recruiter Company</th>
+          <th>Role Title</th>
+          <th>Applied Date</th>
+          <th>Current Stage</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in apps %}
+        <tr>
+          <td class="cell-primary font-semibold">{{ a.student_name }}</td>
+          <td class="cell-muted">{{ a.department }}</td>
+          <td class="cell-muted font-medium">{{ a.company_name }}</td>
+          <td>{{ a.title }}</td>
+          <td class="cell-muted font-mono text-xs">{{ a.applied_at[:10] }}</td>
+          <td><span class="badge status-{{ a.status.replace(' ', '_') }}">{{ a.status }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">{{ icon('clipboard', 24) }}</div>
+    <h4>No application records found</h4>
+    <p>Applications matching your filter parameters will be listed here.</p>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  if (window.liveFilterTable) {
+    window.liveFilterTable('master-app-search', 'master-apps-table');
+  }
+});
+</script>
+{% endblock %}

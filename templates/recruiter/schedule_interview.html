@@ -1,0 +1,55 @@
+{% extends "base_dashboard.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Schedule Interview — Campus Connect{% endblock %}
+{% block sidebar_nav %}{% include "recruiter/_sidebar.html" %}{% endblock %}
+{% block content %}
+
+<a href="{{ url_for('recruiter.applicants') }}" class="text-sm font-semibold text-muted" style="display:inline-flex;align-items:center;gap:6px;margin-bottom:var(--space-4);">
+  &larr; Back to Pipeline
+</a>
+
+<div class="card" style="max-width:540px;">
+  <h2 class="mb-1">Schedule Interview Round</h2>
+  <p class="text-muted mb-6">Candidate: <strong>{{ app.name }}</strong> ({{ app.student_no }}) &ndash; {{ app.drive_title }}</p>
+
+  <form method="POST">
+    <div class="form-group">
+      <label class="form-label">Round Name / Stage <span class="required">*</span></label>
+      <input type="text" name="round_name" placeholder="e.g. Technical Round 1 / System Design / HR Discussion" required autofocus>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Scheduled Date <span class="required">*</span></label>
+        <input type="date" name="scheduled_date" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Scheduled Time <span class="required">*</span></label>
+        <input type="time" name="scheduled_time" required>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Interview Format <span class="required">*</span></label>
+      <select name="interview_type" required>
+        <option value="Online">Online Video Conference</option>
+        <option value="In-Person">In-Person Campus Interview</option>
+        <option value="Coding Assessment">Online Coding Assessment</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Meeting Link / Physical Venue</label>
+      <input type="text" name="venue" placeholder="e.g. Google Meet link or Seminar Hall B">
+    </div>
+
+    <div class="mt-6 flex-between">
+      <a href="{{ url_for('recruiter.applicants') }}" class="btn btn-outline">Cancel</a>
+      <button type="submit" class="btn btn-primary">
+        {{ icon('check', 16) }} Confirm & Notify Candidate
+      </button>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

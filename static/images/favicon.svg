@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0B2545" />
+      <stop offset="100%" stop-color="#133E87" />
+    </linearGradient>
+    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0096FF" />
+      <stop offset="100%" stop-color="#38BDF8" />
+    </linearGradient>
+  </defs>
+  <!-- Background Circle -->
+  <rect width="64" height="64" rx="16" fill="url(#brandGrad)" />
+  <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="1.5" />
+  
+  <!-- Graduation Cap -->
+  <polygon points="32,14 48,22 32,30 16,22" fill="url(#cyanGrad)" />
+  <path d="M22,26 L22,34 Q32,40 42,34 L42,26" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" />
+  <!-- Cap Tassel -->
+  <path d="M44,24 L47,33" stroke="url(#cyanGrad)" stroke-width="2" stroke-linecap="round" />
+  <circle cx="47" cy="34" r="1.5" fill="#0096FF" />
+
+  <!-- Upward Trajectory Arrow -->
+  <path d="M22,46 L32,36 L38,41 L46,31" fill="none" stroke="url(#cyanGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+  <polyline points="40,31 46,31 46,37" fill="none" stroke="url(#cyanGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+
+  <!-- Connection Nodes -->
+  <circle cx="22" cy="46" r="2" fill="#FFFFFF" />
+  <circle cx="32" cy="36" r="2" fill="#FFFFFF" />
+  <circle cx="38" cy="41" r="2" fill="#FFFFFF" />
+  <circle cx="46" cy="31" r="2.5" fill="#0096FF" />
+</svg>

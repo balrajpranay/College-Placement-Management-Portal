@@ -1,0 +1,57 @@
+{% extends "base_dashboard.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Placement Drives — Campus Connect{% endblock %}
+{% block sidebar_nav %}{% include "admin/_sidebar.html" %}{% endblock %}
+{% block content %}
+
+<div class="flex-between mb-8" style="flex-wrap:wrap;">
+  <div>
+    <h1 class="h2" style="margin:0 0 var(--space-1);">All Placement Drives</h1>
+    <p class="text-muted" style="margin:0;">Institutional governance across open, closed, and completed recruitment drives.</p>
+  </div>
+</div>
+
+<div class="card card-flush">
+  {% if drives %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Company</th>
+          <th>Drive Role</th>
+          <th>CTC (LPA)</th>
+          <th>Min CGPA</th>
+          <th>Deadline</th>
+          <th>Applicants</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in drives %}
+        <tr>
+          <td class="cell-primary font-semibold">{{ d.company_name }}</td>
+          <td>{{ d.title }}</td>
+          <td class="cell-muted font-medium">₹{{ d.ctc }} LPA</td>
+          <td class="cell-muted font-semibold">{{ d.min_cgpa }}</td>
+          <td class="cell-muted">{{ d.deadline }}</td>
+          <td><span class="badge badge-brand">{{ d.applicant_count }} candidates</span></td>
+          <td><span class="badge {{ 'badge-success' if d.status=='active' else 'badge-gray' }}">{{ d.status|capitalize }}</span></td>
+          <td>
+            <a href="{{ url_for('admin.drive_detail', drive_id=d.id) }}" class="btn btn-sm btn-outline">Details &rarr;</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">{{ icon('briefcase', 24) }}</div>
+    <h4>No placement drives found</h4>
+    <p>Recruiter postings will appear here for institutional monitoring.</p>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

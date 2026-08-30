@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Sign In — Campus Connect{% endblock %}
+{% block body %}
+<div class="auth-shell">
+  <div class="auth-visual">
+    <div class="auth-visual-top">
+      <a href="{{ url_for('public.landing') }}" class="brand-lockup" style="align-self:flex-start;">
+        <div class="brand-logo-wrap">
+          <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Campus Connect" class="brand-logo-img">
+        </div>
+        <div class="brand-text-block">
+          <span class="brand-name" style="color:#FFFFFF;">Campus Connect</span>
+          <span class="brand-sub">Placement Portal</span>
+        </div>
+      </a>
+      <div class="auth-visual-body">
+        <h2>Your Career Path Starts Here</h2>
+        <p>A unified placement portal connecting students and placement officers with automated eligibility and AI coaching.</p>
+        
+        <div class="auth-visual-features">
+          <div class="auth-visual-feat">
+            {{ icon('check', 18) }}
+            <span>Real-time CGPA and backlog eligibility checking</span>
+          </div>
+          <div class="auth-visual-feat">
+            {{ icon('check', 18) }}
+            <span>1-click application to institutional and national drives</span>
+          </div>
+          <div class="auth-visual-feat">
+            {{ icon('check', 18) }}
+            <span>Live Google Gemini AI Career & Interview coaching</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="auth-visual-footer">
+      &copy; 2026 Campus Connect Placement Portal. All rights reserved.
+    </div>
+  </div>
+
+  <div class="auth-form-col">
+    <div class="auth-card">
+      <a href="{{ url_for('public.landing') }}" class="text-sm text-muted" style="display:inline-flex;align-items:center;gap:6px;margin-bottom:var(--space-4);">
+        &larr; Back to Public Site
+      </a>
+      
+      <h2>Sign in to Campus Connect</h2>
+      <p class="text-muted mb-6">Select your portal role and enter your credentials.</p>
+
+      <div class="role-toggle mb-6">
+        <a href="{{ url_for('auth.login', role='student') }}" class="{{ 'active' if role!='admin' }}">Student</a>
+        <a href="{{ url_for('auth.login', role='admin') }}" class="{{ 'active' if role=='admin' }}">Placement Admin</a>
+      </div>
+
+      <form method="POST">
+        <input type="hidden" name="role" value="{{ role }}">
+        
+        <div class="form-group">
+          <label for="login-email" class="form-label">Email Address <span class="required">*</span></label>
+          <input type="email" id="login-email" name="email" value="{{ email }}" placeholder="name@student.edu or admin@college.edu" required autofocus>
+        </div>
+
+        <div class="form-group">
+          <div class="flex-between">
+            <label for="login-password" class="form-label" style="margin-bottom:0;">Password <span class="required">*</span></label>
+          </div>
+          <input type="password" id="login-password" name="password" placeholder="••••••••" style="margin-top:var(--space-2);" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block btn-lg mt-6">
+          Sign In as {{ 'Placement Admin' if role=='admin' else 'Student' }} &rarr;
+        </button>
+      </form>
+
+      <!-- 1-Click Demo Credentials Helper -->
+      <div class="demo-credentials-card mt-6">
+        <div class="text-xs font-semibold text-muted mb-2">QUICK DEMO ACCOUNTS (1-CLICK LOAD)</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" class="demo-pill-btn" onclick="fillCredentials('student', 'priya.sharma@student.edu', 'student123')">
+            {{ icon('user', 12) }} Student (Priya)
+          </button>
+          <button type="button" class="demo-pill-btn" onclick="fillCredentials('admin', 'admin@college.edu', 'admin123')">
+            {{ icon('shield', 12) }} Placement Admin
+          </button>
+        </div>
+      </div>
+
+      <div class="mt-6 pt-4 text-center" style="border-top:1px solid var(--border-subtle);font-size:0.875rem;">
+        <span class="text-muted">New student?</span>
+        <div class="mt-2">
+          <a href="{{ url_for('auth.register_student') }}" class="text-brand font-semibold">Register as Student &rarr;</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

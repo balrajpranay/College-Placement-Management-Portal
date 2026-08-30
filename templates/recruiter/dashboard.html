@@ -1,0 +1,107 @@
+{% extends "base_dashboard.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Recruiter Dashboard — Campus Connect{% endblock %}
+{% block sidebar_nav %}{% include "recruiter/_sidebar.html" %}{% endblock %}
+{% block content %}
+
+<div class="flex-between mb-8" style="flex-wrap:wrap;">
+  <div>
+    <h1 class="h2" style="margin:0 0 var(--space-1);">{{ company.name }} &ndash; Hiring Dashboard</h1>
+    <p class="text-muted" style="margin:0;">Overview of active recruitment drives, applications, and selection stages.</p>
+  </div>
+  <a href="{{ url_for('recruiter.create_drive') }}" class="btn btn-primary">
+    {{ icon('plus', 16) }} Post New Placement Drive
+  </a>
+</div>
+
+<!-- KPI Stats Grid -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-card-top">
+      <div class="stat-icon brand">{{ icon('briefcase', 20) }}</div>
+    </div>
+    <div class="stat-value">{{ active_drives }}</div>
+    <div class="stat-label">Active Job Drives</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-card-top">
+      <div class="stat-icon accent">{{ icon('users', 20) }}</div>
+    </div>
+    <div class="stat-value">{{ total_applicants }}</div>
+    <div class="stat-label">Total Applicants</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-card-top">
+      <div class="stat-icon warning">{{ icon('trending-up', 20) }}</div>
+    </div>
+    <div class="stat-value">{{ shortlisted }}</div>
+    <div class="stat-label">Shortlisted Candidates</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-card-top">
+      <div class="stat-icon success">{{ icon('award', 20) }}</div>
+    </div>
+    <div class="stat-value">{{ selected }}</div>
+    <div class="stat-label">Final Selects (Placed)</div>
+  </div>
+</div>
+
+<!-- Recent Drives Table -->
+<div class="card card-flush mb-6">
+  <div class="card-header">
+    <h3 class="h4" style="margin:0;">Active & Recent Placement Drives</h3>
+    <a href="{{ url_for('recruiter.my_drives') }}" class="text-sm font-semibold text-brand">View All Drives &rarr;</a>
+  </div>
+
+  {% if recent_drives %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Drive Title</th>
+          <th>Role Type</th>
+          <th>Package (CTC)</th>
+          <th>Application Deadline</th>
+          <th>Applicant Count</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in recent_drives %}
+        <tr>
+          <td class="cell-primary font-semibold">{{ d.title }}</td>
+          <td>{{ d.job_type }}</td>
+          <td class="cell-muted font-medium">₹{{ d.ctc }} LPA</td>
+          <td class="cell-muted">{{ d.deadline }}</td>
+          <td>
+            <span class="badge badge-brand">{{ d.applicant_count }} candidates</span>
+          </td>
+          <td>
+            <span class="badge {{ 'badge-success' if d.status=='active' else 'badge-gray' }}">{{ d.status|capitalize }}</span>
+          </td>
+          <td>
+            <div style="display:flex;gap:6px;">
+              <a href="{{ url_for('recruiter.applicants', drive_id=d.id) }}" class="btn btn-outline btn-sm">Applicants</a>
+              <a href="{{ url_for('recruiter.edit_drive', drive_id=d.id) }}" class="btn btn-ghost btn-sm">Edit</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">{{ icon('briefcase', 24) }}</div>
+    <h4>No recruitment drives posted yet</h4>
+    <p>Post your first job opening to begin accepting applications from qualified campus students.</p>
+    <a href="{{ url_for('recruiter.create_drive') }}" class="btn btn-primary mt-4">Post a Placement Drive</a>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

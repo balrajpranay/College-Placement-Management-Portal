@@ -1,0 +1,121 @@
+{% extends "base_dashboard.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}{{ drive.title }} — {{ drive.company_name }} — Campus Connect{% endblock %}
+{% block sidebar_nav %}{% include "student/_sidebar.html" %}{% endblock %}
+{% block content %}
+
+<a href="{{ url_for('student.drives') }}" class="text-sm font-semibold text-muted" style="display:inline-flex;align-items:center;gap:6px;margin-bottom:var(--space-4);">
+  &larr; Back to Placement Drives
+</a>
+
+<div class="card mb-6">
+  <div class="flex-between" style="align-items:flex-start;flex-wrap:wrap;">
+    <div class="flex-align-center" style="gap:16px;">
+      <div class="drive-logo" style="width:64px;height:64px;font-size:1.5rem;">
+        {% if drive.logo_filename %}
+          <img src="{{ url_for('static', filename='uploads/logos/' ~ drive.logo_filename) }}" alt="{{ drive.company_name }}">
+        {% else %}
+          {{ drive.company_name[0] }}
+        {% endif %}
+      </div>
+      <div>
+        <h1 class="h2" style="margin:0 0 var(--space-1);">{{ drive.title }}</h1>
+        <div class="text-muted font-medium">{{ drive.company_name }}{{ ' · ' + drive.industry if drive.industry }}</div>
+      </div>
+    </div>
+
+    <div>
+      {% if applied %}
+        <span class="badge status-{{ applied.status.replace(' ', '_') }}" style="font-size:0.875rem;padding:8px 16px;">
+          Applied &ndash; {{ applied.status }}
+        </span>
+      {% elif eligible %}
+        <span class="badge badge-success badge-dot" style="font-size:0.875rem;padding:8px 16px;">
+          You are Eligible to Apply
+        </span>
+      {% else %}
+        <span class="badge badge-danger badge-dot" style="font-size:0.875rem;padding:8px 16px;">
+          Not Eligible
+        </span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="drive-meta">
+    <span class="drive-meta-chip">{{ icon('dollar', 13) }} CTC: ₹{{ drive.ctc }} LPA</span>
+    <span class="drive-meta-chip">{{ icon('map-pin', 13) }} Location: {{ drive.location or "Various" }}</span>
+    <span class="drive-meta-chip">{{ icon('briefcase', 13) }} Role Type: {{ drive.job_type }}</span>
+    <span class="drive-meta-chip">{{ icon('users', 13) }} {{ drive.openings }} Total Openings</span>
+    <span class="drive-meta-chip">{{ icon('calendar', 13) }} Apply Before: {{ drive.deadline }}</span>
+    {% if drive.drive_date %}
+    <span class="drive-meta-chip">{{ icon('clock', 13) }} Drive Date: {{ drive.drive_date }}</span>
+    {% endif %}
+  </div>
+
+  {% if not eligible and not applied %}
+  <div class="card mt-4" style="background:var(--danger-50);border-color:var(--danger-100);box-shadow:none;padding:var(--space-4);">
+    <div style="font-weight:700;color:var(--danger-700);margin-bottom:6px;">
+      {{ icon('alert', 16) }} Eligibility Mismatch Criteria:
+    </div>
+    <ul class="reason-list">
+      {% for r in reasons %}
+      <li>{{ r }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <div class="mt-6">
+    {% if applied %}
+      <button class="btn btn-outline" disabled>
+        {{ icon('check', 16) }} Already Applied (Status: {{ applied.status }})
+      </button>
+    {% elif eligible %}
+      <form method="POST" action="{{ url_for('student.apply', drive_id=drive.id) }}" data-confirm="Are you sure you want to submit your application for {{ drive.title }} at {{ drive.company_name }}?">
+        <button type="submit" class="btn btn-primary btn-lg">
+          {{ icon('check', 16) }} Submit Application Now
+        </button>
+      </form>
+    {% else %}
+      <button class="btn btn-outline" disabled>Application Ineligible</button>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid-2 mb-6">
+  <div class="card">
+    <h3 class="h4 mb-4">Job Description & Responsibilities</h3>
+    <div class="text-muted" style="line-height:1.65;font-size:0.9375rem;white-space:pre-line;">
+      {{ drive.description or "No specific job description provided." }}
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 class="h4 mb-4">Eligibility Requirements</h3>
+    <div class="text-sm mb-3"><strong>Minimum CGPA:</strong> {{ drive.min_cgpa }} / 10.0</div>
+    <div class="text-sm mb-3"><strong>Maximum Active Backlogs:</strong> {{ drive.max_backlogs }}</div>
+    <div class="text-sm mb-4"><strong>Eligible Branches:</strong> {{ branches|join(', ') if branches else 'All departments eligible' }}</div>
+    
+    <h4 class="text-sm mb-2">Required Skills</h4>
+    <div>
+      {% if skills %}
+        {% for s in skills %}
+        <span class="skill-tag">{{ s }}</span>
+        {% endfor %}
+      {% else %}
+        <span class="text-sm text-faint">General candidate profile</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h3 class="h4 mb-3">About {{ drive.company_name }}</h3>
+  <p class="text-muted mb-0" style="line-height:1.6;">
+    {{ drive.company_desc or "Recruiter profile verified by the College Placement Office." }}
+  </p>
+</div>
+
+{% endblock %}

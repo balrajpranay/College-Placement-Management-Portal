@@ -1,0 +1,94 @@
+{% extends "base_dashboard.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}{{ company.name }} — Corporate Profile — Campus Connect{% endblock %}
+{% block sidebar_nav %}{% include "admin/_sidebar.html" %}{% endblock %}
+{% block content %}
+
+<a href="{{ url_for('admin.companies') }}" class="text-sm font-semibold text-muted" style="display:inline-flex;align-items:center;gap:6px;margin-bottom:var(--space-4);">
+  &larr; Back to Corporate Directory
+</a>
+
+<div class="card mb-6">
+  <div class="flex-between" style="align-items:flex-start;flex-wrap:wrap;">
+    <div class="flex-align-center" style="gap:16px;">
+      <div class="drive-logo" style="width:64px;height:64px;font-size:1.5rem;">
+        {% if company.logo_filename %}
+          <img src="{{ url_for('static', filename='uploads/logos/' ~ company.logo_filename) }}" alt="{{ company.name }}">
+        {% else %}
+          {{ company.name[0] }}
+        {% endif %}
+      </div>
+      <div>
+        <h1 class="h3" style="margin:0 0 var(--space-1);">{{ company.name }}</h1>
+        <div class="text-muted font-medium">{{ company.industry or 'Corporate Partner' }} · {{ company.location or 'India' }}</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:var(--space-3);">
+      {% if not company.approved %}
+      <form method="POST" action="{{ url_for('admin.approve_company', company_id=company.id) }}">
+        <button type="submit" class="btn btn-primary">
+          {{ icon('check', 16) }} Approve Account
+        </button>
+      </form>
+      {% else %}
+      <span class="badge badge-success" style="font-size:0.875rem;padding:6px 14px;">Verified Recruiter</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="grid-3">
+    <div>
+      <div class="text-xs font-semibold text-muted">HR CONTACT PERSON</div>
+      <div class="font-semibold text-main mt-1">{{ company.hr_contact or '—' }}</div>
+    </div>
+    <div>
+      <div class="text-xs font-semibold text-muted">WORK EMAIL</div>
+      <div class="font-semibold text-main mt-1"><a href="mailto:{{ company.email }}" class="text-brand">{{ company.email }}</a></div>
+    </div>
+    <div>
+      <div class="text-xs font-semibold text-muted">PHONE NUMBER</div>
+      <div class="font-semibold text-main mt-1">{{ company.phone or '—' }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-6">
+  <h3 class="h4 mb-4">Associated Placement Drives ({{ drives|length }})</h3>
+  {% if drives %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Drive Title</th>
+          <th>Package CTC</th>
+          <th>Deadline</th>
+          <th>Openings</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in drives %}
+        <tr>
+          <td class="cell-primary font-semibold">{{ d.title }}</td>
+          <td class="cell-muted font-medium">₹{{ d.ctc }} LPA</td>
+          <td class="cell-muted">{{ d.deadline }}</td>
+          <td>{{ d.openings }}</td>
+          <td><span class="badge {{ 'badge-success' if d.status=='active' else 'badge-gray' }}">{{ d.status|capitalize }}</span></td>
+          <td>
+            <a href="{{ url_for('admin.drive_detail', drive_id=d.id) }}" class="btn btn-sm btn-outline">Manage Drive</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-sm text-muted">No placement drives published by this company yet.</p>
+  {% endif %}
+</div>
+
+{% endblock %}
