@@ -7,6 +7,18 @@ const PlacementResultSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
+  student: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Student'
+  },
+  drive: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Drive'
+  },
+  company: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Company'
+  },
   package: {
     type: Number
   },
@@ -22,4 +34,4 @@ const PlacementResultSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('PlacementResult', PlacementResultSchema);
+module.exports = mongoose.models.PlacementResult || mongoose.model('PlacementResult', PlacementResultSchema);

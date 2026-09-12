@@ -616,6 +616,42 @@ function formatAdminApplication(a) {
   };
 }
 
+// Helper: Format Placement Result for admin reporting
+function formatAdminPlacementResult(r) {
+  if (!r) return null;
+  const app = r.application && typeof r.application === 'object' ? r.application : {};
+  const student = r.student && typeof r.student === 'object'
+    ? r.student
+    : (app.student && typeof app.student === 'object' ? app.student : {});
+  const drive = r.drive && typeof r.drive === 'object'
+    ? r.drive
+    : (app.drive && typeof app.drive === 'object' ? app.drive : {});
+  const company = r.company && typeof r.company === 'object'
+    ? r.company
+    : (drive.company && typeof drive.company === 'object' ? drive.company : {});
+
+  const dateStr = r.placementDate instanceof Date
+    ? r.placementDate.toISOString().split('T')[0]
+    : (r.placement_date ? String(r.placement_date).split('T')[0] : '');
+
+  const idStr = r._id ? r._id.toString() : String(r.id || '');
+
+  return {
+    id: idStr,
+    _id: idStr,
+    studentId: student._id ? student._id.toString() : (student.id ? String(student.id) : '1'),
+    studentName: student.name || 'Candidate',
+    studentNo: student.studentNo || student.student_no || 'CS2023001',
+    department: student.department || 'Computer Science',
+    driveId: drive._id ? drive._id.toString() : (drive.id ? String(drive.id) : '1'),
+    driveTitle: drive.title || 'Placement Drive',
+    companyName: company.name || 'Corporate Partner',
+    package: r.package !== undefined ? Number(r.package) : 12.0,
+    placementDate: dateStr,
+    status: r.status || 'Selected'
+  };
+}
+
 // GET /api/admin/dashboard
 exports.getDashboard = async (req, res) => {
   try {
@@ -624,6 +660,9 @@ exports.getDashboard = async (req, res) => {
     let activeDrivesCount = institutionalDrives.length;
     let recentDrivesList = institutionalDrives.slice(0, 5);
     let totalAppsCount = 20;
+    let placedCount = 5;
+    let highestPkg = '18.00';
+    let avgPkg = '11.20';
 
     if (mongoose.connection.readyState === 1) {
       try {
@@ -636,6 +675,18 @@ exports.getDashboard = async (req, res) => {
 
         const appCount = await Application.countDocuments({ status: { $ne: 'Withdrawn' } });
         if (appCount > 0) totalAppsCount = appCount;
+
+        if (PlacementResult) {
+          const placedDocs = await PlacementResult.find({ status: 'Selected' }).lean();
+          if (placedDocs && placedDocs.length > 0) {
+            placedCount = placedDocs.length;
+            const pkgs = placedDocs.map(p => Number(p.package || 0)).filter(p => p > 0);
+            if (pkgs.length > 0) {
+              highestPkg = Math.max(...pkgs).toFixed(2);
+              avgPkg = (pkgs.reduce((a, b) => a + b, 0) / pkgs.length).toFixed(2);
+            }
+          }
+        }
       } catch (err) {
         console.warn('[Admin Mongo Dashboard Warning]:', err.message);
       }
@@ -646,10 +697,10 @@ exports.getDashboard = async (req, res) => {
       totalCompanies: institutionalCompanies.length, // 8 companies
       activeDrives: activeDrivesCount,
       totalApplications: totalAppsCount,
-      placedStudents: 5,
-      placementRate: '38.5%',
-      avgPackage: '11.20',
-      highestPackage: '18.00',
+      placedStudents: placedCount,
+      placementRate: `${((placedCount / 13) * 100).toFixed(1)}%`,
+      avgPackage: avgPkg,
+      highestPackage: highestPkg,
       pendingCompanies: pendingCount,
       recentDrives: recentDrivesList
     };
@@ -1197,8 +1248,40 @@ exports.markAllNotificationsRead = async (req, res) => {
 };
 
 exports.getReports = async (req, res) => {
-  return res.status(200).json({
-    success: true,
-    message: 'Institutional placement reports generated.'
-  });
+  try {
+    let results = [];
+    if (mongoose.connection.readyState === 1 && PlacementResult) {
+      try {
+        const docs = await PlacementResult.find()
+          .populate({
+            path: 'application',
+            populate: [
+              { path: 'student' },
+              { path: 'drive', populate: { path: 'company' } }
+            ]
+          })
+          .populate('student')
+          .populate({ path: 'drive', populate: { path: 'company' } })
+          .populate('company')
+          .sort({ updatedAt: -1, createdAt: -1 })
+          .lean();
+
+        if (docs && docs.length > 0) {
+          results = docs.map(formatAdminPlacementResult);
+        }
+      } catch (err) {
+        console.warn('[Admin Mongo Get Reports Warning]:', err.message);
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Institutional placement reports generated.',
+      total: results.length,
+      data: results,
+      results
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
 };

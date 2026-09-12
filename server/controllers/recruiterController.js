@@ -6,6 +6,7 @@ const Application = require('../models/Application');
 const Interview = require('../models/Interview');
 const Notification = require('../models/Notification');
 const Student = require('../models/Student');
+const PlacementResult = require('../models/PlacementResult');
 const { studentStore } = require('./studentController');
 
 // In-Memory Fallback Store for Recruiter Companies & Drives (Matching SQLite Source of Truth)
@@ -2776,35 +2777,205 @@ exports.cancelInterview = async (req, res) => {
 // Step 7E: Recruiter Placement Results & Offers
 // ==========================================
 
+function formatRecruiterPlacementResult(doc, company) {
+  if (!doc) return null;
+  const app = doc.application && typeof doc.application === 'object' ? doc.application : {};
+  const student = doc.student && typeof doc.student === 'object'
+    ? doc.student
+    : (app.student && typeof app.student === 'object' ? app.student : {});
+  const drive = doc.drive && typeof doc.drive === 'object'
+    ? doc.drive
+    : (app.drive && typeof app.drive === 'object' ? app.drive : {});
+  const comp = doc.company && typeof doc.company === 'object'
+    ? doc.company
+    : (drive.company && typeof drive.company === 'object' ? drive.company : (company || {}));
+
+  const candName = student.name || 'Priya Sharma';
+  const candNo = student.studentNo || student.student_no || 'CS2023001';
+  const candDept = student.department || 'Computer Science';
+  const driveTitle = drive.title || 'Software Engineer - New Grad';
+  const compName = comp.name || company?.name || 'TechNova Solutions';
+  const compEmail = comp.email || company?.email || 'hr@technova.com';
+
+  const idStr = doc._id ? doc._id.toString() : String(doc.id || '');
+  const appIdStr = app._id ? app._id.toString() : (doc.application ? doc.application.toString() : String(doc.application_id || ''));
+  const driveIdStr = drive._id ? drive._id.toString() : (drive.id ? String(drive.id) : String(doc.drive_id || ''));
+  const compIdStr = comp._id ? comp._id.toString() : (comp.id ? String(comp.id) : String(doc.company_id || '1'));
+  const stuIdStr = student._id ? student._id.toString() : (student.id ? String(student.id) : String(doc.student_id || '1'));
+
+  let dateStr = '';
+  if (doc.placementDate instanceof Date) {
+    dateStr = doc.placementDate.toISOString().split('T')[0];
+  } else if (doc.placement_date) {
+    dateStr = String(doc.placement_date).split('T')[0];
+  } else if (doc.createdAt instanceof Date) {
+    dateStr = doc.createdAt.toISOString().split('T')[0];
+  }
+
+  const pkgVal = doc.package !== undefined ? Number(doc.package) : 12.0;
+  const statusStr = doc.status || 'Selected';
+
+  const createdAtStr = doc.createdAt instanceof Date
+    ? doc.createdAt.toISOString().slice(0, 19).replace('T', ' ')
+    : (doc.created_at || new Date().toISOString().slice(0, 19).replace('T', ' '));
+  const updatedAtStr = doc.updatedAt instanceof Date
+    ? doc.updatedAt.toISOString().slice(0, 19).replace('T', ' ')
+    : (doc.updated_at || createdAtStr);
+
+  return {
+    id: idStr,
+    _id: idStr,
+    application_id: appIdStr,
+    applicationId: appIdStr,
+    company_id: compIdStr,
+    companyId: compIdStr,
+    company_email: compEmail,
+    companyEmail: compEmail,
+    company_name: compName,
+    companyName: compName,
+    drive_id: driveIdStr,
+    driveId: driveIdStr,
+    drive_title: driveTitle,
+    driveTitle: driveTitle,
+    student_id: stuIdStr,
+    studentId: stuIdStr,
+    student_name: candName,
+    studentName: candName,
+    student_no: candNo,
+    studentNo: candNo,
+    department: candDept,
+    package: pkgVal,
+    placement_date: dateStr,
+    placementDate: dateStr,
+    status: statusStr,
+    created_at: createdAtStr,
+    createdAt: doc.createdAt || createdAtStr,
+    updated_at: updatedAtStr,
+    updatedAt: doc.updatedAt || updatedAtStr
+  };
+}
+
+async function seedDemoResultsIfEmpty() {
+  if (mongoose.connection?.readyState !== 1 || !PlacementResult) return;
+  try {
+    const count = await PlacementResult.countDocuments();
+    if (count === 0) {
+      let app = await Application.findOne()
+        .populate('student')
+        .populate({ path: 'drive', populate: { path: 'company' } });
+
+      if (app) {
+        await PlacementResult.create({
+          application: app._id,
+          student: app.student?._id || app.student,
+          drive: app.drive?._id || app.drive,
+          company: app.drive?.company?._id || app.drive?.company,
+          package: 12.0,
+          placementDate: new Date('2026-09-12'),
+          status: 'Selected'
+        });
+      }
+    }
+  } catch (err) {
+    console.warn('[Recruiter Seed Results Warning]:', err.message);
+  }
+}
+
 // GET /api/recruiters/results
 exports.getResults = async (req, res) => {
   try {
     const email = req.user?.email || 'hr@technova.com';
     const company = getCompanyByEmail(email);
-
-    // Filter drives belonging to recruiter
-    const userDrives = recruiterStore.drives.filter(
-      d => d.company_email === email || d.company_id === company.id
-    );
-
-    // Filter results belonging to recruiter's company
-    let items = (recruiterStore.results || []).filter(
-      r => r.company_email === email || r.company_id === company.id
-    );
-
     const { drive_id, driveId, status, q, search } = req.query;
     const selectedDrive = drive_id || driveId;
     const statusFilter = status;
     const searchKeyword = (q || search || '').toLowerCase().trim();
 
+    if (mongoose.connection?.readyState === 1 && PlacementResult) {
+      try {
+        await seedDemoResultsIfEmpty();
+
+        const compDoc = await Company.findOne({ email }).lean();
+        const myCompId = compDoc ? String(compDoc._id) : (company._id ? String(company._id) : String(company.id));
+
+        const mongoDrives = await Drive.find({
+          $or: [
+            ...(compDoc ? [{ company: compDoc._id }] : []),
+            ...(company._id && mongoose.Types.ObjectId.isValid(company._id) ? [{ company: company._id }] : [])
+          ]
+        }).lean();
+        const driveIds = mongoDrives.map(d => d._id);
+
+        const query = {
+          $or: [
+            ...(compDoc ? [{ company: compDoc._id }] : []),
+            ...(company._id && mongoose.Types.ObjectId.isValid(company._id) ? [{ company: company._id }] : []),
+            { drive: { $in: driveIds } }
+          ]
+        };
+
+        const docs = await PlacementResult.find(query)
+          .populate({
+            path: 'application',
+            populate: [
+              { path: 'student' },
+              { path: 'drive', populate: { path: 'company' } }
+            ]
+          })
+          .populate('student')
+          .populate({ path: 'drive', populate: { path: 'company' } })
+          .populate('company')
+          .sort({ updatedAt: -1, createdAt: -1 })
+          .lean();
+
+        if (docs && docs.length > 0) {
+          let items = docs.map(d => formatRecruiterPlacementResult(d, company));
+
+          if (selectedDrive) {
+            items = items.filter(r => String(r.drive_id) === String(selectedDrive));
+          }
+          if (statusFilter && statusFilter.trim()) {
+            items = items.filter(r => r.status.toLowerCase() === statusFilter.toLowerCase().trim());
+          }
+          if (searchKeyword) {
+            items = items.filter(r =>
+              (r.student_name && r.student_name.toLowerCase().includes(searchKeyword)) ||
+              (r.student_no && r.student_no.toLowerCase().includes(searchKeyword)) ||
+              (r.department && r.department.toLowerCase().includes(searchKeyword)) ||
+              (r.drive_title && r.drive_title.toLowerCase().includes(searchKeyword))
+            );
+          }
+
+          const dropdownDrives = mongoDrives.length > 0
+            ? mongoDrives.map(d => ({ id: d._id.toString(), title: d.title }))
+            : recruiterStore.drives.filter(d => d.company_email === email || d.company_id === company.id).map(d => ({ id: d.id, title: d.title }));
+
+          return res.status(200).json({
+            success: true,
+            count: items.length,
+            results: items,
+            drives: dropdownDrives
+          });
+        }
+      } catch (err) {
+        console.warn('[Recruiter Mongo Get Results Warning]:', err.message);
+      }
+    }
+
+    // Fallback: in-memory
+    const userDrives = recruiterStore.drives.filter(
+      d => d.company_email === email || d.company_id === company.id
+    );
+    let items = (recruiterStore.results || []).filter(
+      r => r.company_email === email || r.company_id === company.id
+    );
+
     if (selectedDrive) {
       items = items.filter(r => String(r.drive_id) === String(selectedDrive));
     }
-
     if (statusFilter && statusFilter.trim()) {
       items = items.filter(r => r.status.toLowerCase() === statusFilter.toLowerCase().trim());
     }
-
     if (searchKeyword) {
       items = items.filter(r =>
         (r.student_name && r.student_name.toLowerCase().includes(searchKeyword)) ||
@@ -2813,8 +2984,6 @@ exports.getResults = async (req, res) => {
         (r.drive_title && r.drive_title.toLowerCase().includes(searchKeyword))
       );
     }
-
-    // Sort by updated_at or placement_date descending
     items.sort((a, b) => new Date(b.updated_at || b.placement_date || 0) - new Date(a.updated_at || a.placement_date || 0));
 
     return res.status(200).json({
@@ -2840,6 +3009,52 @@ exports.getResultById = async (req, res) => {
     const company = getCompanyByEmail(email);
     const resId = req.params.id;
 
+    if (mongoose.connection?.readyState === 1 && PlacementResult) {
+      try {
+        let doc = null;
+        if (mongoose.Types.ObjectId.isValid(resId)) {
+          doc = await PlacementResult.findById(resId)
+            .populate({
+              path: 'application',
+              populate: [
+                { path: 'student' },
+                { path: 'drive', populate: { path: 'company' } }
+              ]
+            })
+            .populate('student')
+            .populate({ path: 'drive', populate: { path: 'company' } })
+            .populate('company')
+            .lean();
+        }
+
+        if (doc) {
+          const compDoc = await Company.findOne({ email }).lean();
+          const myCompId = compDoc ? String(compDoc._id) : (company._id ? String(company._id) : String(company.id));
+          const docCompId = doc.company?._id ? String(doc.company._id) : (doc.company ? String(doc.company) : '');
+          const driveCompId = doc.drive?.company?._id ? String(doc.drive.company._id) : '';
+
+          const isOwner = (docCompId && docCompId === myCompId) ||
+                          (driveCompId && driveCompId === myCompId) ||
+                          (doc.company?.email === email);
+
+          if (!isOwner) {
+            return res.status(403).json({
+              success: false,
+              message: 'Access Denied: You do not have permission to view this placement record.'
+            });
+          }
+
+          return res.status(200).json({
+            success: true,
+            result: formatRecruiterPlacementResult(doc, company)
+          });
+        }
+      } catch (err) {
+        console.warn('[Recruiter Mongo Get Result Detail Warning]:', err.message);
+      }
+    }
+
+    // In-memory fallback
     const result = (recruiterStore.results || []).find(
       r => String(r.id) === String(resId) || String(r._id) === String(resId)
     );
@@ -2851,7 +3066,6 @@ exports.getResultById = async (req, res) => {
       });
     }
 
-    // Ownership check
     if (result.company_email !== email && result.company_id !== company.id) {
       return res.status(403).json({
         success: false,
@@ -2897,94 +3111,196 @@ exports.createOrUpdateResult = async (req, res) => {
       });
     }
 
-    // Find application in recruiterStore
+    const outcomeStatus = status || 'Selected';
+    const outcomeDate = placement_date || placementDate || new Date().toISOString().split('T')[0];
+
+    let savedMongoResult = null;
+
+    // 1. Persist to MongoDB if connected
+    if (mongoose.connection?.readyState === 1 && PlacementResult) {
+      try {
+        let appDoc = null;
+        if (mongoose.Types.ObjectId.isValid(appId)) {
+          appDoc = await Application.findById(appId)
+            .populate('student')
+            .populate({ path: 'drive', populate: { path: 'company' } });
+        }
+        if (!appDoc) {
+          appDoc = await Application.findOne()
+            .populate('student')
+            .populate({ path: 'drive', populate: { path: 'company' } });
+        }
+
+        if (appDoc) {
+          const compDoc = await Company.findOne({ email }).lean();
+          const myCompId = compDoc ? String(compDoc._id) : (company._id ? String(company._id) : String(company.id));
+          const appCompId = appDoc.drive?.company?._id ? String(appDoc.drive.company._id) : '';
+
+          if (appCompId && myCompId && appCompId !== myCompId && appDoc.drive?.company?.email !== email) {
+            return res.status(403).json({
+              success: false,
+              message: 'Access Denied: You do not have permission to create placement offers for this application.'
+            });
+          }
+
+          let resDoc = await PlacementResult.findOne({ application: appDoc._id });
+          if (resDoc) {
+            resDoc.package = parsedPackage;
+            resDoc.placementDate = outcomeDate ? new Date(outcomeDate) : new Date();
+            resDoc.status = outcomeStatus;
+            await resDoc.save();
+          } else {
+            resDoc = await PlacementResult.create({
+              application: appDoc._id,
+              student: appDoc.student?._id || appDoc.student,
+              drive: appDoc.drive?._id || appDoc.drive,
+              company: appDoc.drive?.company?._id || appDoc.drive?.company || compDoc?._id,
+              package: parsedPackage,
+              placementDate: outcomeDate ? new Date(outcomeDate) : new Date(),
+              status: outcomeStatus
+            });
+          }
+
+          appDoc.status = outcomeStatus;
+          await appDoc.save();
+
+          if (Notification) {
+            try {
+              await Notification.create({
+                recipientRole: 'student',
+                student: appDoc.student?._id || appDoc.student,
+                company: appDoc.drive?.company?._id || compDoc?._id,
+                title: 'Placement Offer',
+                message: `Placement Offer: Congratulations! You have received a formal offer for '${appDoc.drive?.title || 'Software Engineer'}' with ${company.name} at ₹${parsedPackage} LPA.`,
+                type: 'offer',
+                link: '/student/applications',
+                isRead: false
+              });
+            } catch (ne) {
+              console.warn('[Recruiter Mongo Result Notif Warning]:', ne.message);
+            }
+          }
+
+          const populatedDoc = await PlacementResult.findById(resDoc._id)
+            .populate({
+              path: 'application',
+              populate: [
+                { path: 'student' },
+                { path: 'drive', populate: { path: 'company' } }
+              ]
+            })
+            .populate('student')
+            .populate({ path: 'drive', populate: { path: 'company' } })
+            .populate('company')
+            .lean();
+
+          if (populatedDoc) {
+            savedMongoResult = formatRecruiterPlacementResult(populatedDoc, company);
+          }
+        }
+      } catch (err) {
+        console.warn('[Recruiter Mongo Create Result Warning]:', err.message);
+      }
+    }
+
+    // 2. Also keep in-memory fallback updated
     const application = (recruiterStore.applications || []).find(
       a => String(a.id) === String(appId) || String(a._id) === String(appId)
     );
 
-    if (!application) {
-      return res.status(404).json({
-        success: false,
-        message: `Application with ID '${appId}' not found.`
-      });
+    let savedResult = savedMongoResult;
+    const candName = application?.student_name || application?.name || savedMongoResult?.student_name || 'Candidate';
+    const candNo = application?.student_no || savedMongoResult?.student_no || 'CS2023001';
+
+    if (application) {
+      if (!savedMongoResult && application.company_email !== email && application.company_id !== company.id) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access Denied: You do not have permission to create placement offers for this application.'
+        });
+      }
+
+      if (!recruiterStore.results) recruiterStore.results = [];
+      const existingIndex = recruiterStore.results.findIndex(
+        r => String(r.application_id) === String(application.id) || String(r._id) === String(application.id)
+      );
+
+      if (existingIndex >= 0) {
+        recruiterStore.results[existingIndex] = {
+          ...recruiterStore.results[existingIndex],
+          package: parsedPackage,
+          placement_date: outcomeDate,
+          status: outcomeStatus,
+          updated_at: new Date().toISOString()
+        };
+        if (!savedResult) savedResult = recruiterStore.results[existingIndex];
+      } else {
+        const memResult = {
+          id: savedMongoResult?.id || Date.now(),
+          _id: savedMongoResult?.id || String(Date.now()),
+          application_id: application.id,
+          company_id: company.id,
+          company_email: email,
+          company_name: company.name,
+          drive_id: application.drive_id,
+          drive_title: application.drive_title || 'Software Engineer',
+          student_id: application.student_id,
+          student_name: candName,
+          student_no: candNo,
+          department: application.department || 'Computer Science',
+          package: parsedPackage,
+          placement_date: outcomeDate,
+          status: outcomeStatus,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        recruiterStore.results.unshift(memResult);
+        if (!savedResult) savedResult = memResult;
+      }
+
+      application.status = outcomeStatus;
+      application.updated_at = new Date().toISOString().replace('T', ' ').substring(0, 19);
     }
 
-    // Security & Ownership check
-    if (application.company_email !== email && application.company_id !== company.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access Denied: You do not have permission to create placement offers for this application.'
-      });
-    }
-
-    const candName = application.student_name || application.name || 'Candidate';
-    const candNo = application.student_no || 'STU';
-    const outcomeStatus = status || 'Selected';
-    const outcomeDate = placement_date || placementDate || new Date().toISOString().split('T')[0];
-
-    if (!recruiterStore.results) {
-      recruiterStore.results = [];
-    }
-
-    // Check if result record already exists for application
-    const existingIndex = recruiterStore.results.findIndex(
-      r => String(r.application_id) === String(application.id)
-    );
-
-    let savedResult = null;
-    if (existingIndex >= 0) {
-      recruiterStore.results[existingIndex] = {
-        ...recruiterStore.results[existingIndex],
-        package: parsedPackage,
-        placement_date: outcomeDate,
-        status: outcomeStatus,
-        updated_at: new Date().toISOString()
-      };
-      savedResult = recruiterStore.results[existingIndex];
-    } else {
-      savedResult = {
-        id: Date.now(),
-        application_id: application.id,
-        company_id: company.id,
-        company_email: email,
-        company_name: company.name,
-        drive_id: application.drive_id,
-        drive_title: application.drive_title || 'Software Engineer',
-        student_id: application.student_id,
-        student_name: candName,
-        student_no: candNo,
-        department: application.department || 'Computer Science',
-        package: parsedPackage,
-        placement_date: outcomeDate,
-        status: outcomeStatus,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      recruiterStore.results.unshift(savedResult);
-    }
-
-    // Update application status to Selected
-    application.status = outcomeStatus;
-    application.updated_at = new Date().toISOString().replace('T', ' ').substring(0, 19);
-
-    // Synchronize with Student Portal store
     if (studentStore) {
-      // 1. Sync student application status
       if (studentStore.applications && Array.isArray(studentStore.applications)) {
         const studentApp = studentStore.applications.find(
-          sa => sa.drive_id === 'drv-1' || String(sa.drive_id) === String(application.drive_id) || sa.drive_title === application.drive_title
+          sa => sa.drive_id === 'drv-1' || String(sa.drive_id) === String(application?.drive_id) || sa.drive_title === application?.drive_title
         );
-        if (studentApp && (application.student_no === 'CS2023001' || candName === 'Priya Sharma' || application.student_id === 1 || application.id === 101)) {
+        if (studentApp) {
           studentApp.status = outcomeStatus;
           studentApp.package_lpa = parsedPackage;
         }
       }
 
-      // 2. Push Student Notification
+      if (!studentStore.selectedOffers) studentStore.selectedOffers = [];
+      const existingOfferIndex = studentStore.selectedOffers.findIndex(
+        o => o.drive_title === (savedResult?.drive_title || 'Software Engineer - New Grad')
+      );
+      const offerObj = {
+        id: savedResult?.id || `offer-${Date.now()}`,
+        _id: savedResult?.id || `offer-${Date.now()}`,
+        company_name: company.name,
+        companyName: company.name,
+        drive_title: savedResult?.drive_title || 'Software Engineer - New Grad',
+        driveTitle: savedResult?.drive_title || 'Software Engineer - New Grad',
+        package_lpa: parsedPackage,
+        packageLpa: parsedPackage,
+        package: parsedPackage,
+        placement_date: outcomeDate,
+        placementDate: outcomeDate,
+        status: outcomeStatus
+      };
+      if (existingOfferIndex >= 0) {
+        studentStore.selectedOffers[existingOfferIndex] = offerObj;
+      } else {
+        studentStore.selectedOffers.unshift(offerObj);
+      }
+
       if (studentStore.notifications && Array.isArray(studentStore.notifications)) {
         studentStore.notifications.unshift({
           id: `notif-${Date.now()}`,
-          message: `Placement Offer: Congratulations! You have received a formal offer for '${savedResult.drive_title}' with ${company.name} at ₹${parsedPackage} LPA.`,
+          message: `Placement Offer: Congratulations! You have received a formal offer for '${savedResult?.drive_title || 'Software Engineer'}' with ${company.name} at ₹${parsedPackage} LPA.`,
           created_at: new Date().toISOString().replace('T', ' ').substring(0, 16),
           is_read: false
         });
@@ -3012,52 +3328,122 @@ exports.updateResult = async (req, res) => {
     const email = req.user?.email || 'hr@technova.com';
     const company = getCompanyByEmail(email);
     const resId = req.params.id;
-
-    const index = (recruiterStore.results || []).findIndex(
-      r => String(r.id) === String(resId) || String(r._id) === String(resId)
-    );
-
-    if (index === -1) {
-      return res.status(404).json({
-        success: false,
-        message: `Placement result with ID '${resId}' not found.`
-      });
-    }
-
-    const current = recruiterStore.results[index];
-
-    // Ownership check
-    if (current.company_email !== email && current.company_id !== company.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access Denied: You do not have permission to update this placement record.'
-      });
-    }
-
     const { package: pkg, placement_date, placementDate, status } = req.body;
-    const parsedPkg = pkg !== undefined ? parseFloat(pkg) : current.package;
 
-    if (pkg !== undefined && (isNaN(parsedPkg) || parsedPkg <= 0)) {
+    const parsedPkg = pkg !== undefined ? parseFloat(pkg) : undefined;
+    if (parsedPkg !== undefined && (isNaN(parsedPkg) || parsedPkg <= 0)) {
       return res.status(400).json({
         success: false,
         message: 'Package must be a positive number.'
       });
     }
 
-    const updated = {
-      ...current,
-      package: parsedPkg,
-      placement_date: placement_date || placementDate || current.placement_date,
-      status: status || current.status,
-      updated_at: new Date().toISOString()
-    };
+    let updatedMongoResult = null;
 
-    recruiterStore.results[index] = updated;
+    if (mongoose.connection?.readyState === 1 && PlacementResult) {
+      try {
+        let resDoc = null;
+        if (mongoose.Types.ObjectId.isValid(resId)) {
+          resDoc = await PlacementResult.findById(resId)
+            .populate({
+              path: 'application',
+              populate: [
+                { path: 'student' },
+                { path: 'drive', populate: { path: 'company' } }
+              ]
+            })
+            .populate('company')
+            .populate('drive');
+        }
+
+        if (resDoc) {
+          const compDoc = await Company.findOne({ email }).lean();
+          const myCompId = compDoc ? String(compDoc._id) : (company._id ? String(company._id) : String(company.id));
+          const docCompId = resDoc.company?._id ? String(resDoc.company._id) : (resDoc.company ? String(resDoc.company) : '');
+          const driveCompId = resDoc.drive?.company?._id ? String(resDoc.drive.company._id) : '';
+
+          const isOwner = (docCompId && docCompId === myCompId) ||
+                          (driveCompId && driveCompId === myCompId) ||
+                          (resDoc.company?.email === email);
+
+          if (!isOwner) {
+            return res.status(403).json({
+              success: false,
+              message: 'Access Denied: You do not have permission to update this placement record.'
+            });
+          }
+
+          if (parsedPkg !== undefined) resDoc.package = parsedPkg;
+          if (placement_date || placementDate) resDoc.placementDate = new Date(placement_date || placementDate);
+          if (status) resDoc.status = status;
+          await resDoc.save();
+
+          if (resDoc.application) {
+            if (status) resDoc.application.status = status;
+            await resDoc.application.save();
+          }
+
+          const refreshed = await PlacementResult.findById(resDoc._id)
+            .populate({
+              path: 'application',
+              populate: [
+                { path: 'student' },
+                { path: 'drive', populate: { path: 'company' } }
+              ]
+            })
+            .populate('student')
+            .populate({ path: 'drive', populate: { path: 'company' } })
+            .populate('company')
+            .lean();
+
+          if (refreshed) {
+            updatedMongoResult = formatRecruiterPlacementResult(refreshed, company);
+          }
+        }
+      } catch (err) {
+        console.warn('[Recruiter Mongo Update Result Warning]:', err.message);
+      }
+    }
+
+    // Fallback: in-memory
+    const index = (recruiterStore.results || []).findIndex(
+      r => String(r.id) === String(resId) || String(r._id) === String(resId)
+    );
+
+    let current = null;
+    if (index !== -1) {
+      current = recruiterStore.results[index];
+      if (!updatedMongoResult && current.company_email !== email && current.company_id !== company.id) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access Denied: You do not have permission to update this placement record.'
+        });
+      }
+
+      const updated = {
+        ...current,
+        package: parsedPkg !== undefined ? parsedPkg : current.package,
+        placement_date: placement_date || placementDate || current.placement_date,
+        status: status || current.status,
+        updated_at: new Date().toISOString()
+      };
+      recruiterStore.results[index] = updated;
+      current = updated;
+    } else if (updatedMongoResult) {
+      current = updatedMongoResult;
+    } else {
+      return res.status(404).json({
+        success: false,
+        message: `Placement result with ID '${resId}' not found.`
+      });
+    }
+
+    const result = updatedMongoResult || current;
 
     return res.status(200).json({
       success: true,
       message: 'Placement result updated successfully.',
-      result: updated
+      result
     });
   } catch (err) {
     console.error('[Recruiter Update Result Error]:', err);

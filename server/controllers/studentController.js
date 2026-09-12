@@ -503,7 +503,7 @@ exports.getDashboard = async (req, res) => {
     const completion = calculateCompletion(student);
     let app_count = studentStore.applications.length;
     let shortlisted = studentStore.applications.filter(a => ['Shortlisted', 'Interview Scheduled', 'Under Review'].includes(a.status)).length;
-    const selected = studentStore.selectedOffers;
+    let selected = studentStore.selectedOffers || [];
     let upcoming_interviews = (studentStore.interviews || []).filter(i => i.status === 'Scheduled').map(formatStudentInterview);
     const recent_notifications = studentStore.notifications.slice(0, 5);
 
@@ -543,6 +543,51 @@ exports.getDashboard = async (req, res) => {
 
           if (mongoUpcoming && mongoUpcoming.length > 0) {
             upcoming_interviews = mongoUpcoming.map(formatStudentInterview);
+          }
+
+          if (PlacementResult) {
+            const results = await PlacementResult.find({
+              $or: [
+                { student: studentDoc._id },
+                { application: { $in: appIds } }
+              ],
+              status: 'Selected'
+            })
+              .populate({
+                path: 'application',
+                populate: [
+                  { path: 'drive', populate: { path: 'company' } }
+                ]
+              })
+              .populate({ path: 'drive', populate: { path: 'company' } })
+              .populate('company')
+              .sort({ updatedAt: -1, createdAt: -1 })
+              .lean();
+
+            if (results && results.length > 0) {
+              selected = results.map(r => {
+                const drive = r.drive || r.application?.drive || {};
+                const comp = r.company || drive.company || {};
+                const dateStr = r.placementDate instanceof Date
+                  ? r.placementDate.toISOString().split('T')[0]
+                  : (r.placement_date ? String(r.placement_date).split('T')[0] : '');
+
+                return {
+                  id: r._id ? r._id.toString() : String(r.id),
+                  _id: r._id ? r._id.toString() : String(r.id),
+                  company_name: comp.name || 'TechNova Solutions',
+                  companyName: comp.name || 'TechNova Solutions',
+                  drive_title: drive.title || 'Software Engineer - New Grad',
+                  driveTitle: drive.title || 'Software Engineer - New Grad',
+                  package_lpa: r.package !== undefined ? Number(r.package) : 12.0,
+                  packageLpa: r.package !== undefined ? Number(r.package) : 12.0,
+                  package: r.package !== undefined ? Number(r.package) : 12.0,
+                  placement_date: dateStr,
+                  placementDate: dateStr,
+                  status: r.status || 'Selected'
+                };
+              });
+            }
           }
         }
       } catch (err) {
@@ -1399,11 +1444,66 @@ exports.markAllNotificationsRead = async (req, res) => {
 // 12. GET Placement Status
 exports.getPlacementStatus = async (req, res) => {
   try {
+    const userId = req.user?._id || req.user?.id;
+    const userEmail = req.user?.email || 'priya.sharma@student.edu';
+    const student = await getStudentProfileForUser(userId, userEmail);
+
+    let offers = studentStore.selectedOffers || [];
+
+    if (mongoose.connection?.readyState === 1 && PlacementResult) {
+      try {
+        const studentDoc = await getOrCreateMongoStudent(userId, userEmail);
+        if (studentDoc) {
+          const docs = await PlacementResult.find({
+            student: studentDoc._id,
+            status: 'Selected'
+          })
+            .populate({
+              path: 'application',
+              populate: [
+                { path: 'drive', populate: { path: 'company' } }
+              ]
+            })
+            .populate({ path: 'drive', populate: { path: 'company' } })
+            .populate('company')
+            .sort({ updatedAt: -1, createdAt: -1 })
+            .lean();
+
+          if (docs && docs.length > 0) {
+            offers = docs.map(r => {
+              const drive = r.drive || r.application?.drive || {};
+              const comp = r.company || drive.company || {};
+              const dateStr = r.placementDate instanceof Date
+                ? r.placementDate.toISOString().split('T')[0]
+                : (r.placement_date ? String(r.placement_date).split('T')[0] : '');
+
+              return {
+                id: r._id ? r._id.toString() : String(r.id),
+                _id: r._id ? r._id.toString() : String(r.id),
+                company_name: comp.name || 'TechNova Solutions',
+                companyName: comp.name || 'TechNova Solutions',
+                drive_title: drive.title || 'Software Engineer - New Grad',
+                driveTitle: drive.title || 'Software Engineer - New Grad',
+                package_lpa: r.package !== undefined ? Number(r.package) : 12.0,
+                packageLpa: r.package !== undefined ? Number(r.package) : 12.0,
+                package: r.package !== undefined ? Number(r.package) : 12.0,
+                placement_date: dateStr,
+                placementDate: dateStr,
+                status: r.status || 'Selected'
+              };
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('[Student Mongo Placement Status Warning]:', err.message);
+      }
+    }
+
     return res.status(200).json({
       success: true,
       data: {
-        student: studentStore.profile,
-        results: studentStore.selectedOffers
+        student: student || studentStore.profile,
+        results: offers
       }
     });
   } catch (err) {
