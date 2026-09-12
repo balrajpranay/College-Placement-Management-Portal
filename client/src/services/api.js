@@ -377,9 +377,35 @@ export async function updateRecruiterResultApi(id, data) {
   return handleResponse(res);
 }
 
+// Recruiter Notifications APIs (Step 12A)
+export async function getRecruiterNotificationsApi() {
+  const res = await fetch(`${API_BASE_URL}/recruiters/notifications`, {
+    headers: { ...getAuthHeader() }
+  });
+  return handleResponse(res);
+}
 
+export async function markRecruiterNotificationReadApi(id) {
+  const res = await fetch(`${API_BASE_URL}/recruiters/notifications/${id}/read`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeader()
+    }
+  });
+  return handleResponse(res);
+}
 
-
+export async function markAllRecruiterNotificationsReadApi() {
+  const res = await fetch(`${API_BASE_URL}/recruiters/notifications/read-all`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeader()
+    }
+  });
+  return handleResponse(res);
+}
 
 // Admin Portal APIs (Step 8A & 8B)
 export async function getAdminDashboardApi() {

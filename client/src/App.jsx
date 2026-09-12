@@ -37,6 +37,7 @@ import RecruiterCreateDrive from './pages/recruiter/CreateDrive';
 import RecruiterApplicants from './pages/recruiter/Applicants';
 import RecruiterInterviews from './pages/recruiter/Interviews';
 import RecruiterResults from './pages/recruiter/Results';
+import RecruiterNotifications from './pages/recruiter/Notifications';
 import RecruiterPlaceholder from './pages/recruiter/RecruiterPlaceholder';
 
 // Admin Portal Pages (Step 8A & 8B)
@@ -110,7 +111,7 @@ export default function App() {
             <Route path="applicants" element={<RecruiterApplicants />} />
             <Route path="interviews" element={<RecruiterInterviews />} />
             <Route path="results" element={<RecruiterResults />} />
-            <Route path="notifications" element={<RecruiterPlaceholder title="Recruiter Notifications" stepNote="Recruiter notification center will be migrated in subsequent Step 7 workflows." />} />
+            <Route path="notifications" element={<RecruiterNotifications />} />
           </Route>
 
           {/* Admin Portal (Protected for role === 'admin' - Step 8A & 8B) */}

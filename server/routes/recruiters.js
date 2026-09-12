@@ -40,6 +40,12 @@ router.post('/results', recruiterController.createOrUpdateResult);
 router.post('/results/:appId/package', recruiterController.createOrUpdateResult);
 router.put('/results/:id', recruiterController.updateResult);
 
+// Step 12A: Recruiter Notifications Routes
+router.get('/notifications', recruiterController.getNotifications);
+router.put('/notifications/:id/read', recruiterController.markNotificationRead);
+router.post('/notifications/:id/read', recruiterController.markNotificationRead);
+router.post('/notifications/read-all', recruiterController.markAllNotificationsRead);
+
 module.exports = router;
 
 

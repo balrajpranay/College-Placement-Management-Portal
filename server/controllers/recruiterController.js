@@ -289,6 +289,52 @@ const recruiterStore = {
       created_at: '2026-08-27 19:44:43',
       updated_at: '2026-08-27 19:44:43'
     }
+  ],
+  notifications: [
+    {
+      id: 1,
+      company_id: 1,
+      company_email: 'hr@technova.com',
+      user_id: '65e000000000000000000003',
+      message: "Priya Sharma applied to your drive 'Software Engineer - New Grad'.",
+      link: '/recruiter/applicants',
+      is_read: false,
+      isRead: false,
+      created_at: '2026-09-10 10:30:00'
+    },
+    {
+      id: 2,
+      company_id: 1,
+      company_email: 'hr@technova.com',
+      user_id: '65e000000000000000000003',
+      message: "Rahul Verma applied to your drive 'Software Engineer - New Grad'.",
+      link: '/recruiter/applicants',
+      is_read: true,
+      isRead: true,
+      created_at: '2026-08-16 19:44:43'
+    },
+    {
+      id: 3,
+      company_id: 1,
+      company_email: 'hr@technova.com',
+      user_id: '65e000000000000000000003',
+      message: "Your campus hiring drive 'Software Engineer - New Grad' was approved by the placement cell.",
+      link: '/recruiter/drives',
+      is_read: true,
+      isRead: true,
+      created_at: '2026-08-15 14:20:00'
+    },
+    {
+      id: 4,
+      company_id: 1,
+      company_email: 'hr@technova.com',
+      user_id: '65e000000000000000000003',
+      message: "Corporate partner profile verified by the Institutional Placement Officer.",
+      link: '/recruiter/profile',
+      is_read: true,
+      isRead: true,
+      created_at: '2026-08-10 09:15:00'
+    }
   ]
 };
 
@@ -1773,6 +1819,95 @@ exports.updateResult = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Failed to update placement result',
+      error: err.message
+    });
+  }
+};
+
+// GET /api/recruiters/notifications
+exports.getNotifications = async (req, res) => {
+  try {
+    const email = req.user?.email || 'hr@technova.com';
+    const company = getCompanyByEmail(email);
+    const companyId = company?.id;
+
+    let items = (recruiterStore.notifications || []).filter(
+      n => n.company_email === email || n.company_id === companyId || n.user_id === req.user?.id
+    );
+
+    // Fallback: If no company-specific items yet, return existing seeded items for demo
+    if (items.length === 0 && (email === 'hr@technova.com' || !req.user)) {
+      items = recruiterStore.notifications || [];
+    }
+
+    // Sort newest first
+    items.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    const unreadCount = items.filter(n => !n.is_read && !n.isRead).length;
+
+    return res.status(200).json({
+      success: true,
+      total: items.length,
+      unread_count: unreadCount,
+      data: items
+    });
+  } catch (err) {
+    console.error('[Recruiter Get Notifications Error]:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch recruiter notifications',
+      error: err.message
+    });
+  }
+};
+
+// PUT /api/recruiters/notifications/:id/read
+exports.markNotificationRead = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const notif = (recruiterStore.notifications || []).find(n => String(n.id) === String(id));
+    if (notif) {
+      notif.is_read = true;
+      notif.isRead = true;
+    }
+    return res.status(200).json({
+      success: true,
+      message: 'Notification marked as read.',
+      data: notif
+    });
+  } catch (err) {
+    console.error('[Recruiter Mark Notification Read Error]:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to mark notification as read',
+      error: err.message
+    });
+  }
+};
+
+// POST /api/recruiters/notifications/read-all
+exports.markAllNotificationsRead = async (req, res) => {
+  try {
+    const email = req.user?.email || 'hr@technova.com';
+    const company = getCompanyByEmail(email);
+    const companyId = company?.id;
+
+    (recruiterStore.notifications || []).forEach(n => {
+      if (n.company_email === email || n.company_id === companyId || n.user_id === req.user?.id || email === 'hr@technova.com') {
+        n.is_read = true;
+        n.isRead = true;
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'All recruiter notifications marked as read.'
+    });
+  } catch (err) {
+    console.error('[Recruiter Mark All Read Error]:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to mark all notifications as read',
       error: err.message
     });
   }
