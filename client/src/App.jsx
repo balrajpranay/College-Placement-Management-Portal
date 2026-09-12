@@ -113,15 +113,23 @@ export default function App() {
             <Route path="notifications" element={<RecruiterPlaceholder title="Recruiter Notifications" stepNote="Recruiter notification center will be migrated in subsequent Step 7 workflows." />} />
           </Route>
 
-          {/* Admin Portal Placeholder (Future Step 8) */}
+          {/* Admin Portal (Protected for role === 'admin' - Step 8A & 8B) */}
           <Route
-            path="/admin/*"
+            path="/admin"
             element={
               <ProtectedRoute allowedRoles={['admin']}>
-                <VerificationPage routeName="Placement Admin Portal (Under Migration)" />
+                <AdminLayout />
               </ProtectedRoute>
             }
-          />
+          >
+            <Route index element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="students" element={<AdminStudents />} />
+            <Route path="recruiters" element={<AdminRecruiters />} />
+            <Route path="drives" element={<AdminDrives />} />
+            <Route path="applications" element={<AdminApplications />} />
+            <Route path="notifications" element={<AdminNotifications />} />
+          </Route>
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
