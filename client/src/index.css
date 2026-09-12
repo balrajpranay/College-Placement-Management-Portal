@@ -1,0 +1,88 @@
+/* Supplementary styles for placeholder verification pages only */
+.verification-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.verification-card {
+  background: var(--card-bg, #FFFFFF);
+  border: 1px solid var(--border-subtle, #E2E8F0);
+  border-radius: 16px;
+  padding: 40px 32px;
+  max-width: 640px;
+  width: 100%;
+  box-shadow: 0 10px 25px -5px rgba(11, 37, 69, 0.08);
+  text-align: center;
+}
+
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success, #10B981);
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.title {
+  font-family: var(--font-display, inherit);
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--brand-navy-900, #0B2545);
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  color: var(--text-muted, #64748B);
+  font-size: 1.05rem;
+  margin-bottom: 24px;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  text-align: left;
+  margin-bottom: 28px;
+}
+
+.status-item {
+  background: var(--bg-app, #F8FAFC);
+  border: 1px solid var(--border-subtle, #E2E8F0);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.status-label {
+  font-size: 0.75rem;
+  color: var(--text-muted, #64748B);
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.status-val {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--brand-navy-800, #13315C);
+}
+
+.routes-preview {
+  text-align: left;
+  background: #0B2545;
+  color: #E2E8F0;
+  padding: 16px;
+  border-radius: 10px;
+  font-family: monospace;
+  font-size: 0.8rem;
+  max-height: 140px;
+  overflow-y: auto;
+  margin-bottom: 20px;
+}

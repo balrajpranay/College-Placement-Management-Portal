@@ -16,7 +16,7 @@
       </a>
       <div class="auth-visual-body">
         <h2>Your Career Path Starts Here</h2>
-        <p>A unified placement portal connecting students and placement officers with automated eligibility and AI coaching.</p>
+        <p>A unified placement portal connecting students, recruiters, and placement officers with automated eligibility and AI coaching.</p>
         
         <div class="auth-visual-features">
           <div class="auth-visual-feat">
@@ -25,7 +25,7 @@
           </div>
           <div class="auth-visual-feat">
             {{ icon('check', 18) }}
-            <span>1-click application to institutional and national drives</span>
+            <span>Recruiter portal for drive creation & candidate evaluation</span>
           </div>
           <div class="auth-visual-feat">
             {{ icon('check', 18) }}
@@ -50,16 +50,17 @@
       <p class="text-muted mb-6">Select your portal role and enter your credentials.</p>
 
       <div class="role-toggle mb-6">
-        <a href="{{ url_for('auth.login', role='student') }}" class="{{ 'active' if role!='admin' }}">Student</a>
+        <a href="{{ url_for('auth.login', role='student') }}" class="{{ 'active' if (role=='student' or not role or role not in ['admin','recruiter']) }}">Student</a>
+        <a href="{{ url_for('auth.login', role='recruiter') }}" class="{{ 'active' if role=='recruiter' }}">Recruiter</a>
         <a href="{{ url_for('auth.login', role='admin') }}" class="{{ 'active' if role=='admin' }}">Placement Admin</a>
       </div>
 
       <form method="POST">
-        <input type="hidden" name="role" value="{{ role }}">
+        <input type="hidden" name="role" value="{{ role or 'student' }}">
         
         <div class="form-group">
           <label for="login-email" class="form-label">Email Address <span class="required">*</span></label>
-          <input type="email" id="login-email" name="email" value="{{ email }}" placeholder="name@student.edu or admin@college.edu" required autofocus>
+          <input type="email" id="login-email" name="email" value="{{ email }}" placeholder="{% if role=='admin' %}admin@college.edu{% elif role=='recruiter' %}hr@company.com{% else %}name@student.edu{% endif %}" required autofocus>
         </div>
 
         <div class="form-group">
@@ -70,7 +71,7 @@
         </div>
 
         <button type="submit" class="btn btn-primary btn-block btn-lg mt-6">
-          Sign In as {{ 'Placement Admin' if role=='admin' else 'Student' }} &rarr;
+          Sign In as {% if role=='admin' %}Placement Admin{% elif role=='recruiter' %}Recruiter{% else %}Student{% endif %} &rarr;
         </button>
       </form>
 
@@ -81,6 +82,9 @@
           <button type="button" class="demo-pill-btn" onclick="fillCredentials('student', 'priya.sharma@student.edu', 'student123')">
             {{ icon('user', 12) }} Student (Priya)
           </button>
+          <button type="button" class="demo-pill-btn" onclick="fillCredentials('recruiter', 'hr@technova.com', 'recruit123')">
+            {{ icon('briefcase', 12) }} Recruiter (TechNova)
+          </button>
           <button type="button" class="demo-pill-btn" onclick="fillCredentials('admin', 'admin@college.edu', 'admin123')">
             {{ icon('shield', 12) }} Placement Admin
           </button>
@@ -88,9 +92,10 @@
       </div>
 
       <div class="mt-6 pt-4 text-center" style="border-top:1px solid var(--border-subtle);font-size:0.875rem;">
-        <span class="text-muted">New student?</span>
-        <div class="mt-2">
+        <span class="text-muted">Need an account?</span>
+        <div class="mt-2" style="display:flex;justify-content:center;gap:16px;">
           <a href="{{ url_for('auth.register_student') }}" class="text-brand font-semibold">Register as Student &rarr;</a>
+          <a href="{{ url_for('auth.register_company') }}" class="text-brand font-semibold">Register as Recruiter &rarr;</a>
         </div>
       </div>
     </div>
