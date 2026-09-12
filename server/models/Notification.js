@@ -3,12 +3,31 @@ const mongoose = require('mongoose');
 const NotificationSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+    ref: 'User'
+  },
+  recipientRole: {
+    type: String,
+    enum: ['student', 'recruiter', 'admin', 'all'],
+    default: 'student'
+  },
+  company: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Company'
+  },
+  student: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Student'
+  },
+  title: {
+    type: String
   },
   message: {
     type: String,
     required: true
+  },
+  type: {
+    type: String,
+    default: 'info'
   },
   link: {
     type: String
@@ -21,4 +40,4 @@ const NotificationSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('Notification', NotificationSchema);
+module.exports = mongoose.models.Notification || mongoose.model('Notification', NotificationSchema);

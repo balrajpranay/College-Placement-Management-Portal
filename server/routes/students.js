@@ -18,6 +18,9 @@ router.post('/applications/:id/withdraw', studentController.withdrawApplication)
 router.get('/interviews', studentController.getInterviews);
 router.get('/notifications', studentController.getNotifications);
 router.put('/notifications/:id/read', studentController.markNotificationRead);
+router.post('/notifications/:id/read', studentController.markNotificationRead);
+router.put('/notifications/read-all', studentController.markAllNotificationsRead);
+router.post('/notifications/read-all', studentController.markAllNotificationsRead);
 router.get('/status', studentController.getPlacementStatus);
 
 module.exports = router;

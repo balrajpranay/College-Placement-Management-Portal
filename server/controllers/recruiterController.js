@@ -4,6 +4,7 @@ const Company = require('../models/Company');
 const Drive = require('../models/Drive');
 const Application = require('../models/Application');
 const Interview = require('../models/Interview');
+const Notification = require('../models/Notification');
 const Student = require('../models/Student');
 const { studentStore } = require('./studentController');
 
@@ -705,6 +706,145 @@ function formatRecruiterDrive(d, company) {
     description: d.description || '',
     branches: Array.isArray(d.branches) ? d.branches : [],
     skills: Array.isArray(d.skills) ? d.skills : []
+  };
+}
+
+// Helper: Seed initial demo notifications if MongoDB is connected and collection is empty
+async function seedDemoNotificationsIfEmpty() {
+  if (mongoose.connection.readyState !== 1) return;
+  try {
+    const count = await Notification.countDocuments();
+    if (count === 0) {
+      const studentDoc = await Student.findOne({ studentNo: 'CS2023001' });
+      const driveDoc = await Drive.findOne({ title: 'Software Engineer - New Grad' }).populate('company');
+      const companyDoc = driveDoc?.company;
+
+      const initialNotifs = [
+        // Student notifications
+        {
+          student: studentDoc?._id,
+          recipientRole: 'student',
+          title: 'Interview Scheduled',
+          message: 'Interview Scheduled: Technical Coding & DSA Round with TechNova Solutions on Sep 18 at 11:00 AM.',
+          link: '/student/interviews',
+          isRead: false
+        },
+        {
+          student: studentDoc?._id,
+          recipientRole: 'student',
+          title: 'New Placement Drive',
+          message: 'New Placement Drive Announced: Microsoft Cloud Solutions & AI Trainee (₹18.5 LPA). Apply before Sep 22.',
+          link: '/student/drives',
+          isRead: false
+        },
+        {
+          student: studentDoc?._id,
+          recipientRole: 'student',
+          title: 'Application Submitted',
+          message: 'Application Submitted: Application successfully received for Software Engineer - New Grad at TechNova Solutions.',
+          link: '/student/applications',
+          isRead: true
+        },
+        // Recruiter notifications
+        {
+          company: companyDoc?._id,
+          recipientRole: 'recruiter',
+          title: 'New Applicant',
+          message: "Priya Sharma applied to your drive 'Software Engineer - New Grad'.",
+          link: '/recruiter/applicants',
+          isRead: false
+        },
+        {
+          company: companyDoc?._id,
+          recipientRole: 'recruiter',
+          title: 'New Applicant',
+          message: "Rahul Verma applied to your drive 'Software Engineer - New Grad'.",
+          link: '/recruiter/applicants',
+          isRead: true
+        },
+        {
+          company: companyDoc?._id,
+          recipientRole: 'recruiter',
+          title: 'Drive Approved',
+          message: "Your campus hiring drive 'Software Engineer - New Grad' was approved by the placement cell.",
+          link: '/recruiter/drives',
+          isRead: true
+        },
+        {
+          company: companyDoc?._id,
+          recipientRole: 'recruiter',
+          title: 'Profile Verified',
+          message: 'Corporate partner profile verified by the Institutional Placement Officer.',
+          link: '/recruiter/profile',
+          isRead: true
+        },
+        // Admin notifications
+        {
+          recipientRole: 'admin',
+          title: 'New Recruiter Verification Required',
+          message: 'InnovateAI Solutions has submitted employer registration for placement season review.',
+          type: 'company_approval',
+          link: '/admin/companies',
+          isRead: false
+        },
+        {
+          recipientRole: 'admin',
+          title: 'Drive Deadline Approaching',
+          message: 'TechNova Solutions placement drive registration closes in 3 days.',
+          type: 'drive_alert',
+          link: '/admin/drives',
+          isRead: false
+        },
+        {
+          recipientRole: 'admin',
+          title: 'Batch Result Published',
+          message: '5 candidates have accepted final offers across TechNova and DataEdge.',
+          type: 'placement_success',
+          link: '/admin/applications',
+          isRead: true
+        },
+        {
+          recipientRole: 'admin',
+          title: 'System Health & ATS Sync',
+          message: 'Institutional candidate resumes and ATS scoring pipelines synchronized successfully.',
+          type: 'system',
+          link: '/admin/reports',
+          isRead: true
+        }
+      ];
+
+      await Notification.insertMany(initialNotifs);
+    }
+  } catch (err) {
+    console.warn('[Seed Demo Notifications Notice]:', err.message);
+  }
+}
+
+// Helper: Format Notification for Recruiter responses matching React expectations
+function formatRecruiterNotification(doc, company) {
+  if (!doc) return null;
+  const idStr = doc._id ? String(doc._id) : String(doc.id || '');
+  const createdAtStr = doc.createdAt instanceof Date
+    ? doc.createdAt.toISOString().replace('T', ' ').substring(0, 19)
+    : (doc.created_at || doc.createdAt || '2026-09-10 10:30:00');
+  const isRead = Boolean(doc.isRead !== undefined ? doc.isRead : (doc.is_read !== undefined ? doc.is_read : false));
+  const compId = doc.company ? String(doc.company._id || doc.company) : String(company?._id || company?.id || 1);
+  const compEmail = company?.email || doc.company_email || doc.companyEmail || 'hr@technova.com';
+
+  return {
+    id: idStr,
+    _id: idStr,
+    company_id: compId,
+    companyId: compId,
+    company_email: compEmail,
+    companyEmail: compEmail,
+    user_id: doc.user ? String(doc.user) : '65e000000000000000000003',
+    message: doc.message || '',
+    link: doc.link || '/recruiter/notifications',
+    is_read: isRead,
+    isRead: isRead,
+    created_at: createdAtStr,
+    createdAt: createdAtStr
   };
 }
 
@@ -1705,6 +1845,23 @@ exports.updateApplicantStatus = async (req, res) => {
           is_read: false
         });
       }
+
+      // Persist notification to MongoDB if connected
+      if (mongoose.connection.readyState === 1) {
+        try {
+          const studentRef = updatedMongoApp?.student?._id || updatedMongoApp?.student || applicant.student_id;
+          await Notification.create({
+            student: mongoose.Types.ObjectId.isValid(studentRef) ? studentRef : null,
+            recipientRole: 'student',
+            title: 'Application Status Update',
+            message: `Your application for '${applicant.drive_title || applicant.driveTitle || 'Campus Drive'}' at ${company.name} is now: ${newStatus}.`,
+            link: '/student/applications',
+            isRead: false
+          });
+        } catch (notifErr) {
+          console.warn('[Recruiter Status Update Notif Warning]:', notifErr.message);
+        }
+      }
     }
 
     const formatted = formatRecruiterApplicant(updatedMongoApp || applicant, company);
@@ -2192,6 +2349,32 @@ exports.scheduleInterview = async (req, res) => {
           is_read: false
         });
       }
+
+      // Persist notifications to MongoDB if connected
+      if (mongoose.connection.readyState === 1) {
+        try {
+          const studentRef = application?.student_id || application?.studentId || createdMongoInt?.student_id;
+          await Notification.create({
+            student: mongoose.Types.ObjectId.isValid(studentRef) ? studentRef : null,
+            recipientRole: 'student',
+            title: 'Interview Scheduled',
+            message: `Interview Scheduled: ${newInterview.round_name || newInterview.roundName} for '${driveTitle}' with ${company.name} on ${newInterview.scheduled_date} at ${newInterview.scheduled_time}.`,
+            link: '/student/interviews',
+            isRead: false
+          });
+
+          await Notification.create({
+            company: company._id || (mongoose.Types.ObjectId.isValid(company.id) ? company.id : null),
+            recipientRole: 'recruiter',
+            title: 'Interview Scheduled',
+            message: `Interview scheduled for ${candName} on ${newInterview.scheduled_date} at ${newInterview.scheduled_time}.`,
+            link: '/recruiter/interviews',
+            isRead: false
+          });
+        } catch (notifErr) {
+          console.warn('[Recruiter Schedule Interview Notif Warning]:', notifErr.message);
+        }
+      }
     }
 
     return res.status(201).json({
@@ -2385,6 +2568,20 @@ exports.updateInterview = async (req, res) => {
           created_at: new Date().toISOString().replace('T', ' ').substring(0, 16),
           is_read: false
         });
+
+        if (mongoose.connection.readyState === 1) {
+          try {
+            const studentRef = updated.student_id || updated.studentId;
+            await Notification.create({
+              student: mongoose.Types.ObjectId.isValid(studentRef) ? studentRef : null,
+              recipientRole: 'student',
+              title: 'Interview Cancelled',
+              message: `Interview Update: Your interview for '${updated.drive_title || updated.driveTitle}' with ${company.name} has been cancelled.`,
+              link: '/student/interviews',
+              isRead: false
+            });
+          } catch (e) {}
+        }
       } else if (scheduled_date || scheduledDate || scheduled_time || scheduledTime) {
         studentStore.notifications.unshift({
           id: `notif-${Date.now()}`,
@@ -2392,6 +2589,20 @@ exports.updateInterview = async (req, res) => {
           created_at: new Date().toISOString().replace('T', ' ').substring(0, 16),
           is_read: false
         });
+
+        if (mongoose.connection.readyState === 1) {
+          try {
+            const studentRef = updated.student_id || updated.studentId;
+            await Notification.create({
+              student: mongoose.Types.ObjectId.isValid(studentRef) ? studentRef : null,
+              recipientRole: 'student',
+              title: 'Interview Rescheduled',
+              message: `Interview Rescheduled: ${updated.round_name || updated.roundName} for '${updated.drive_title || updated.driveTitle}' with ${company.name} is now on ${updated.scheduled_date} at ${updated.scheduled_time}.`,
+              link: '/student/interviews',
+              isRead: false
+            });
+          } catch (e) {}
+        }
       }
     }
 
@@ -2527,6 +2738,23 @@ exports.cancelInterview = async (req, res) => {
         created_at: new Date().toISOString().replace('T', ' ').substring(0, 16),
         is_read: false
       });
+    }
+
+    if (mongoose.connection?.readyState === 1 && Notification) {
+      try {
+        await Notification.create({
+          recipientRole: 'student',
+          student: cancelled.student_id || cancelled.studentId || (cancelled.student?._id ? cancelled.student._id : undefined),
+          company: company._id || company.id,
+          title: 'Interview Cancelled',
+          message: `Interview Cancelled: Your interview round '${cancelled.round_name || cancelled.roundName}' for '${cancelled.drive_title || cancelled.driveTitle}' with ${company.name} has been cancelled.`,
+          type: 'interview',
+          link: '/student/interviews',
+          isRead: false
+        });
+      } catch (e) {
+        console.warn('[Recruiter Cancel Interview Notif Warning]:', e.message);
+      }
     }
 
     return res.status(200).json({
@@ -2848,6 +3076,40 @@ exports.getNotifications = async (req, res) => {
     const company = getCompanyByEmail(email);
     const companyId = company?.id;
 
+    if (mongoose.connection?.readyState === 1 && Notification) {
+      try {
+        await seedDemoNotificationsIfEmpty();
+
+        const isMongoId = (val) => val && (val instanceof mongoose.Types.ObjectId || (typeof val === 'string' && /^[0-9a-fA-F]{24}$/.test(val)));
+        const validCompanyId = isMongoId(company?._id) ? company._id : (isMongoId(companyId) ? companyId : null);
+        const validUserId = isMongoId(req.user?._id) ? req.user._id : (isMongoId(req.user?.id) ? req.user.id : null);
+
+        const query = {
+          $or: [
+            { recipientRole: 'recruiter' },
+            { recipientRole: 'all' },
+            ...(validCompanyId ? [{ company: validCompanyId }] : []),
+            ...(validUserId ? [{ user: validUserId }] : [])
+          ]
+        };
+
+        const docs = await Notification.find(query).sort({ createdAt: -1 }).lean();
+        if (docs && docs.length > 0) {
+          const items = docs.map(d => formatRecruiterNotification(d, company));
+          const unreadCount = items.filter(n => !n.is_read && !n.isRead).length;
+
+          return res.status(200).json({
+            success: true,
+            total: items.length,
+            unread_count: unreadCount,
+            data: items
+          });
+        }
+      } catch (err) {
+        console.warn('[Recruiter Mongo Get Notifications Warning]:', err.message);
+      }
+    }
+
     let items = (recruiterStore.notifications || []).filter(
       n => n.company_email === email || n.company_id === companyId || n.user_id === req.user?.id
     );
@@ -2882,15 +3144,36 @@ exports.getNotifications = async (req, res) => {
 exports.markNotificationRead = async (req, res) => {
   try {
     const { id } = req.params;
-    const notif = (recruiterStore.notifications || []).find(n => String(n.id) === String(id));
+    let foundDoc = null;
+
+    if (mongoose.connection?.readyState === 1 && Notification) {
+      try {
+        if (mongoose.Types.ObjectId.isValid(id)) {
+          foundDoc = await Notification.findByIdAndUpdate(
+            id,
+            { isRead: true },
+            { new: true }
+          ).lean();
+        }
+      } catch (err) {
+        console.warn('[Recruiter Mongo Mark Read Warning]:', err.message);
+      }
+    }
+
+    const notif = (recruiterStore.notifications || []).find(n => String(n.id) === String(id) || String(n._id) === String(id));
     if (notif) {
       notif.is_read = true;
       notif.isRead = true;
     }
+
+    const email = req.user?.email || 'hr@technova.com';
+    const company = getCompanyByEmail(email);
+    const resultData = foundDoc ? formatRecruiterNotification(foundDoc, company) : notif;
+
     return res.status(200).json({
       success: true,
       message: 'Notification marked as read.',
-      data: notif
+      data: resultData
     });
   } catch (err) {
     console.error('[Recruiter Mark Notification Read Error]:', err);
@@ -2908,6 +3191,26 @@ exports.markAllNotificationsRead = async (req, res) => {
     const email = req.user?.email || 'hr@technova.com';
     const company = getCompanyByEmail(email);
     const companyId = company?.id;
+
+    if (mongoose.connection?.readyState === 1 && Notification) {
+      try {
+        const isMongoId = (val) => val && (val instanceof mongoose.Types.ObjectId || (typeof val === 'string' && /^[0-9a-fA-F]{24}$/.test(val)));
+        const validCompanyId = isMongoId(company?._id) ? company._id : (isMongoId(companyId) ? companyId : null);
+        const validUserId = isMongoId(req.user?._id) ? req.user._id : (isMongoId(req.user?.id) ? req.user.id : null);
+
+        const query = {
+          $or: [
+            { recipientRole: 'recruiter' },
+            { recipientRole: 'all' },
+            ...(validCompanyId ? [{ company: validCompanyId }] : []),
+            ...(validUserId ? [{ user: validUserId }] : [])
+          ]
+        };
+        await Notification.updateMany(query, { $set: { isRead: true } });
+      } catch (err) {
+        console.warn('[Recruiter Mongo Mark All Read Warning]:', err.message);
+      }
+    }
 
     (recruiterStore.notifications || []).forEach(n => {
       if (n.company_email === email || n.company_id === companyId || n.user_id === req.user?.id || email === 'hr@technova.com') {

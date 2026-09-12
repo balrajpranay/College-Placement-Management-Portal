@@ -962,28 +962,234 @@ exports.getApplications = async (req, res) => {
   }
 };
 
+// Helper: Seed initial demo notifications if MongoDB is connected and collection is empty
+async function seedDemoNotificationsIfEmpty() {
+  if (mongoose.connection.readyState !== 1) return;
+  try {
+    const count = await Notification.countDocuments();
+    if (count === 0) {
+      const studentDoc = await Student.findOne({ studentNo: 'CS2023001' });
+      const driveDoc = await Drive.findOne({ title: 'Software Engineer - New Grad' }).populate('company');
+      const companyDoc = driveDoc?.company;
+
+      const initialNotifs = [
+        // Student notifications
+        {
+          student: studentDoc?._id,
+          recipientRole: 'student',
+          title: 'Interview Scheduled',
+          message: 'Interview Scheduled: Technical Coding & DSA Round with TechNova Solutions on Sep 18 at 11:00 AM.',
+          link: '/student/interviews',
+          isRead: false
+        },
+        {
+          student: studentDoc?._id,
+          recipientRole: 'student',
+          title: 'New Placement Drive',
+          message: 'New Placement Drive Announced: Microsoft Cloud Solutions & AI Trainee (₹18.5 LPA). Apply before Sep 22.',
+          link: '/student/drives',
+          isRead: false
+        },
+        {
+          student: studentDoc?._id,
+          recipientRole: 'student',
+          title: 'Application Submitted',
+          message: 'Application Submitted: Application successfully received for Software Engineer - New Grad at TechNova Solutions.',
+          link: '/student/applications',
+          isRead: true
+        },
+        // Recruiter notifications
+        {
+          company: companyDoc?._id,
+          recipientRole: 'recruiter',
+          title: 'New Applicant',
+          message: "Priya Sharma applied to your drive 'Software Engineer - New Grad'.",
+          link: '/recruiter/applicants',
+          isRead: false
+        },
+        {
+          company: companyDoc?._id,
+          recipientRole: 'recruiter',
+          title: 'New Applicant',
+          message: "Rahul Verma applied to your drive 'Software Engineer - New Grad'.",
+          link: '/recruiter/applicants',
+          isRead: true
+        },
+        {
+          company: companyDoc?._id,
+          recipientRole: 'recruiter',
+          title: 'Drive Approved',
+          message: "Your campus hiring drive 'Software Engineer - New Grad' was approved by the placement cell.",
+          link: '/recruiter/drives',
+          isRead: true
+        },
+        {
+          company: companyDoc?._id,
+          recipientRole: 'recruiter',
+          title: 'Profile Verified',
+          message: 'Corporate partner profile verified by the Institutional Placement Officer.',
+          link: '/recruiter/profile',
+          isRead: true
+        },
+        // Admin notifications
+        {
+          recipientRole: 'admin',
+          title: 'New Recruiter Verification Required',
+          message: 'InnovateAI Solutions has submitted employer registration for placement season review.',
+          type: 'company_approval',
+          link: '/admin/companies',
+          isRead: false
+        },
+        {
+          recipientRole: 'admin',
+          title: 'Drive Deadline Approaching',
+          message: 'TechNova Solutions placement drive registration closes in 3 days.',
+          type: 'drive_alert',
+          link: '/admin/drives',
+          isRead: false
+        },
+        {
+          recipientRole: 'admin',
+          title: 'Batch Result Published',
+          message: '5 candidates have accepted final offers across TechNova and DataEdge.',
+          type: 'placement_success',
+          link: '/admin/applications',
+          isRead: true
+        },
+        {
+          recipientRole: 'admin',
+          title: 'System Health & ATS Sync',
+          message: 'Institutional candidate resumes and ATS scoring pipelines synchronized successfully.',
+          type: 'system',
+          link: '/admin/reports',
+          isRead: true
+        }
+      ];
+
+      await Notification.insertMany(initialNotifs);
+    }
+  } catch (err) {
+    console.warn('[Seed Demo Notifications Notice]:', err.message);
+  }
+}
+
+// Helper: Format Notification for Admin responses
+function formatAdminNotification(doc) {
+  if (!doc) return null;
+  const idStr = doc._id ? String(doc._id) : String(doc.id || '');
+  const createdAtStr = doc.createdAt instanceof Date
+    ? doc.createdAt.toISOString().slice(0, 16).replace('T', ' ')
+    : (doc.createdAt || doc.created_at || '2026-09-12 09:00');
+  const isRead = Boolean(doc.isRead !== undefined ? doc.isRead : (doc.is_read !== undefined ? doc.is_read : false));
+
+  return {
+    id: idStr,
+    _id: idStr,
+    title: doc.title || 'System Notice',
+    message: doc.message || '',
+    type: doc.type || 'info',
+    link: doc.link || '/admin/notifications',
+    isRead: isRead,
+    is_read: isRead,
+    createdAt: createdAtStr,
+    created_at: createdAtStr
+  };
+}
+
 // GET /api/admin/notifications
 exports.getNotifications = async (req, res) => {
   try {
+    let notifs = [];
+
+    // 1. Read from MongoDB if connected
+    if (mongoose.connection.readyState === 1) {
+      try {
+        await seedDemoNotificationsIfEmpty();
+        const mongoNotifs = await Notification.find({
+          $or: [
+            { recipientRole: { $in: ['admin', 'all'] } }
+          ]
+        }).sort({ createdAt: -1 }).lean();
+
+        if (mongoNotifs && mongoNotifs.length > 0) {
+          notifs = mongoNotifs.map(formatAdminNotification);
+        }
+      } catch (err) {
+        console.warn('[Admin Mongo Get Notifications Warning]:', err.message);
+      }
+    }
+
+    // 2. Fallback to in-memory store
+    if (notifs.length === 0) {
+      notifs = institutionalNotifications.map(formatAdminNotification);
+    }
+
     return res.status(200).json({
       success: true,
-      total: institutionalNotifications.length,
-      data: institutionalNotifications
+      total: notifs.length,
+      data: notifs,
+      notifications: notifs
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// PUT /api/admin/notifications/:id/read
+// PUT or POST /api/admin/notifications/:id/read
 exports.markNotificationRead = async (req, res) => {
   try {
-    const notif = institutionalNotifications.find(n => String(n.id) === String(req.params.id));
-    if (notif) notif.isRead = true;
+    const id = req.params.id;
+
+    // 1. Update in MongoDB if connected
+    if (mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(id)) {
+      try {
+        await Notification.findByIdAndUpdate(id, { $set: { isRead: true } });
+      } catch (err) {
+        console.warn('[Admin Mongo Mark Read Warning]:', err.message);
+      }
+    }
+
+    // 2. Also update in-memory fallback
+    const notif = institutionalNotifications.find(n => String(n.id) === String(id) || String(n._id) === String(id));
+    if (notif) {
+      notif.isRead = true;
+      notif.is_read = true;
+    }
+
     return res.status(200).json({
       success: true,
       message: 'Notification marked as read.',
-      data: notif
+      data: notif ? formatAdminNotification(notif) : { id, isRead: true }
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// POST or PUT /api/admin/notifications/read-all
+exports.markAllNotificationsRead = async (req, res) => {
+  try {
+    // 1. Update in MongoDB if connected
+    if (mongoose.connection.readyState === 1) {
+      try {
+        await Notification.updateMany(
+          { recipientRole: { $in: ['admin', 'all'] }, isRead: false },
+          { $set: { isRead: true } }
+        );
+      } catch (err) {
+        console.warn('[Admin Mongo Mark All Read Warning]:', err.message);
+      }
+    }
+
+    // 2. Also update in-memory fallback
+    institutionalNotifications.forEach(n => {
+      n.isRead = true;
+      n.is_read = true;
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'All admin notifications marked as read.'
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });

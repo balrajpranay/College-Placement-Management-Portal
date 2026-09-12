@@ -433,6 +433,66 @@ function formatStudentInterview(intDoc) {
   };
 }
 
+// Format Notification for student consumption
+function formatStudentNotification(doc) {
+  if (!doc) return null;
+  const id = (doc._id || doc.id || '').toString();
+  const createdAt = doc.createdAt
+    ? new Date(doc.createdAt).toISOString().slice(0, 16).replace('T', ' ')
+    : (doc.created_at || new Date().toISOString().slice(0, 16).replace('T', ' '));
+  const isRead = doc.isRead !== undefined ? Boolean(doc.isRead) : (doc.is_read !== undefined ? Boolean(doc.is_read) : false);
+
+  return {
+    id,
+    _id: id,
+    message: doc.message || doc.title || '',
+    title: doc.title || '',
+    type: doc.type || 'system',
+    link: doc.link || '/student/notifications',
+    is_read: isRead,
+    isRead: isRead,
+    created_at: createdAt,
+    createdAt: doc.createdAt || createdAt
+  };
+}
+
+async function seedDemoNotificationsIfEmpty() {
+  if (mongoose.connection?.readyState !== 1 || !Notification) return;
+  try {
+    const count = await Notification.countDocuments();
+    if (count === 0) {
+      await Notification.create([
+        {
+          recipientRole: 'student',
+          title: 'Interview Scheduled',
+          message: 'Interview Scheduled: Technical Coding & DSA Round with TechNova Solutions on Sep 18 at 11:00 AM.',
+          type: 'interview',
+          link: '/student/interviews',
+          isRead: false
+        },
+        {
+          recipientRole: 'student',
+          title: 'New Placement Drive',
+          message: 'New Placement Drive Announced: Microsoft Cloud Solutions & AI Trainee (₹18.5 LPA). Apply before Sep 22.',
+          type: 'drive',
+          link: '/student/drives',
+          isRead: false
+        },
+        {
+          recipientRole: 'student',
+          title: 'Profile Verified',
+          message: 'Profile Verification: Your academic metrics (CGPA 8.9) have been verified by the Placement Cell.',
+          type: 'system',
+          link: '/student/profile',
+          isRead: true
+        }
+      ]);
+    }
+  } catch (err) {
+    console.warn('[Student Seed Notifications Warning]:', err.message);
+  }
+}
+
 // 1. GET Dashboard
 exports.getDashboard = async (req, res) => {
   try {
@@ -993,6 +1053,35 @@ exports.applyToDrive = async (req, res) => {
       is_read: false
     });
 
+    if (mongoose.connection?.readyState === 1 && Notification) {
+      try {
+        await Notification.create({
+          user: userId,
+          recipientRole: 'student',
+          student: studentDoc?._id,
+          company: driveDoc?.company?._id || driveDoc?.company,
+          title: 'Application Submitted',
+          message: `Application submitted successfully for '${drive.title}' at ${drive.company_name}.`,
+          type: 'application',
+          link: '/student/applications',
+          isRead: false
+        });
+
+        await Notification.create({
+          recipientRole: 'recruiter',
+          student: studentDoc?._id,
+          company: driveDoc?.company?._id || driveDoc?.company,
+          title: 'New Applicant',
+          message: `New applicant ${student.name || 'Priya Sharma'} applied for '${drive.title}'.`,
+          type: 'application',
+          link: '/recruiter/applicants',
+          isRead: false
+        });
+      } catch (e) {
+        console.warn('[Student Apply Mongo Notification Warning]:', e.message);
+      }
+    }
+
     return res.status(200).json({
       success: true,
       message: `Application submitted successfully for ${drive.title} at ${drive.company_name}!`,
@@ -1109,6 +1198,22 @@ exports.withdrawApplication = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Application not found.' });
     }
 
+    if (mongoose.connection?.readyState === 1 && Notification) {
+      try {
+        await Notification.create({
+          user: userId,
+          recipientRole: 'student',
+          title: 'Application Withdrawn',
+          message: 'You have withdrawn your application.',
+          type: 'application',
+          link: '/student/applications',
+          isRead: false
+        });
+      } catch (e) {
+        console.warn('[Student Withdraw Mongo Notification Warning]:', e.message);
+      }
+    }
+
     return res.status(200).json({
       success: true,
       message: 'Application successfully withdrawn.'
@@ -1176,6 +1281,42 @@ exports.getInterviews = async (req, res) => {
 // 11. GET Notifications
 exports.getNotifications = async (req, res) => {
   try {
+    const userId = req.user?._id || req.user?.id;
+    const userEmail = req.user?.email || 'priya.sharma@student.edu';
+
+    // 1. If MongoDB is connected, query Notification collection
+    if (mongoose.connection?.readyState === 1 && Notification) {
+      try {
+        await seedDemoNotificationsIfEmpty();
+
+        let studentDoc = null;
+        if (userId) {
+          studentDoc = await Student.findOne({ user: userId }).lean();
+        }
+
+        const query = {
+          $or: [
+            { recipientRole: 'student' },
+            { recipientRole: 'all' },
+            ...(userId ? [{ user: userId }] : []),
+            ...(studentDoc ? [{ student: studentDoc._id }] : [])
+          ]
+        };
+
+        const docs = await Notification.find(query).sort({ createdAt: -1 }).lean();
+        if (docs && docs.length > 0) {
+          const items = docs.map(formatStudentNotification);
+          return res.status(200).json({
+            success: true,
+            data: items
+          });
+        }
+      } catch (dbErr) {
+        console.warn('[Student Mongo Get Notifications Warning]:', dbErr.message);
+      }
+    }
+
+    // 2. Fallback in-memory
     return res.status(200).json({
       success: true,
       data: studentStore.notifications
@@ -1189,13 +1330,66 @@ exports.getNotifications = async (req, res) => {
 exports.markNotificationRead = async (req, res) => {
   try {
     const { id } = req.params;
-    const notif = studentStore.notifications.find(n => n.id === id);
+
+    if (mongoose.connection?.readyState === 1 && Notification) {
+      try {
+        if (mongoose.Types.ObjectId.isValid(id)) {
+          await Notification.findByIdAndUpdate(id, { isRead: true });
+        }
+      } catch (err) {
+        console.warn('[Student Mongo Mark Read Warning]:', err.message);
+      }
+    }
+
+    const notif = studentStore.notifications.find(n => String(n.id) === String(id) || String(n._id) === String(id));
     if (notif) {
       notif.is_read = true;
+      notif.isRead = true;
     }
     return res.status(200).json({
       success: true,
       message: 'Notification marked as read.'
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Mark all notifications read
+exports.markAllNotificationsRead = async (req, res) => {
+  try {
+    const userId = req.user?._id || req.user?.id;
+
+    if (mongoose.connection?.readyState === 1 && Notification) {
+      try {
+        let studentDoc = null;
+        if (userId) {
+          studentDoc = await Student.findOne({ user: userId }).lean();
+        }
+
+        const query = {
+          $or: [
+            { recipientRole: 'student' },
+            { recipientRole: 'all' },
+            ...(userId ? [{ user: userId }] : []),
+            ...(studentDoc ? [{ student: studentDoc._id }] : [])
+          ]
+        };
+
+        await Notification.updateMany(query, { $set: { isRead: true } });
+      } catch (err) {
+        console.warn('[Student Mongo Mark All Read Warning]:', err.message);
+      }
+    }
+
+    (studentStore.notifications || []).forEach(n => {
+      n.is_read = true;
+      n.isRead = true;
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'All notifications marked as read.'
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });

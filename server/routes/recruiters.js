@@ -45,6 +45,7 @@ router.get('/notifications', recruiterController.getNotifications);
 router.put('/notifications/:id/read', recruiterController.markNotificationRead);
 router.post('/notifications/:id/read', recruiterController.markNotificationRead);
 router.post('/notifications/read-all', recruiterController.markAllNotificationsRead);
+router.put('/notifications/read-all', recruiterController.markAllNotificationsRead);
 
 module.exports = router;
 

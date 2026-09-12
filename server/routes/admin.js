@@ -34,5 +34,8 @@ router.get('/applications', adminController.getApplications);
 // Notifications Module
 router.get('/notifications', adminController.getNotifications);
 router.put('/notifications/:id/read', adminController.markNotificationRead);
+router.post('/notifications/:id/read', adminController.markNotificationRead);
+router.post('/notifications/read-all', adminController.markAllNotificationsRead);
+router.put('/notifications/read-all', adminController.markAllNotificationsRead);
 
 module.exports = router;
