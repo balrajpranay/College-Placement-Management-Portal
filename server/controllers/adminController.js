@@ -574,6 +574,47 @@ function formatAdminDrive(d) {
   };
 }
 
+// Helper: Format Application for admin master ledger
+function formatAdminApplication(a) {
+  if (!a) return null;
+  const student = a.student && typeof a.student === 'object' ? a.student : {};
+  const drive = a.drive && typeof a.drive === 'object' ? a.drive : {};
+  const company = drive.company && typeof drive.company === 'object' ? drive.company : {};
+
+  const candName = student.name || a.studentName || a.student_name || 'Candidate';
+  const candNo = student.studentNo || student.student_no || a.studentNo || a.student_no || 'STU1001';
+  const candEmail = student.email || a.studentEmail || a.student_email || 'student@college.edu';
+  const dept = student.department || a.department || 'Computer Science';
+  const cgpaVal = student.cgpa !== undefined ? Number(student.cgpa) : (a.cgpa !== undefined ? Number(a.cgpa) : 8.0);
+
+  const driveIdStr = drive._id ? String(drive._id) : (drive.id ? String(drive.id) : String(a.driveId || a.drive_id || ''));
+  const driveTitleStr = drive.title || a.driveTitle || a.drive_title || 'Campus Drive';
+  const compNameStr = company.name || a.companyName || a.company_name || 'Corporate Partner';
+  const ctcVal = drive.ctc !== undefined ? Number(drive.ctc) : (a.ctc !== undefined ? Number(a.ctc) : 12.0);
+
+  const appIdStr = a._id ? String(a._id) : String(a.id || '');
+  const appliedAtStr = a.createdAt instanceof Date
+    ? a.createdAt.toISOString().slice(0, 16).replace('T', ' ')
+    : (a.appliedAt || a.applied_at || '2026-09-01 10:30');
+
+  return {
+    id: appIdStr,
+    _id: appIdStr,
+    studentId: student._id ? String(student._id) : (student.id ? String(student.id) : String(a.studentId || 1)),
+    studentName: candName,
+    studentNo: candNo,
+    studentEmail: candEmail,
+    department: dept,
+    cgpa: cgpaVal,
+    driveId: driveIdStr,
+    driveTitle: driveTitleStr,
+    companyName: compNameStr,
+    ctc: ctcVal,
+    status: a.status || 'Applied',
+    appliedAt: appliedAtStr
+  };
+}
+
 // GET /api/admin/dashboard
 exports.getDashboard = async (req, res) => {
   try {
@@ -581,6 +622,7 @@ exports.getDashboard = async (req, res) => {
 
     let activeDrivesCount = institutionalDrives.length;
     let recentDrivesList = institutionalDrives.slice(0, 5);
+    let totalAppsCount = 20;
 
     if (mongoose.connection.readyState === 1) {
       try {
@@ -590,6 +632,9 @@ exports.getDashboard = async (req, res) => {
           activeDrivesCount = count;
           recentDrivesList = mongoDrives.map(d => formatAdminDrive(d));
         }
+
+        const appCount = await Application.countDocuments({ status: { $ne: 'Withdrawn' } });
+        if (appCount > 0) totalAppsCount = appCount;
       } catch (err) {
         console.warn('[Admin Mongo Dashboard Warning]:', err.message);
       }
@@ -599,7 +644,7 @@ exports.getDashboard = async (req, res) => {
       totalStudents: institutionalStudents.length + 5, // 13 enrolled
       totalCompanies: institutionalCompanies.length, // 8 companies
       activeDrives: activeDrivesCount,
-      totalApplications: 20,
+      totalApplications: totalAppsCount,
       placedStudents: 5,
       placementRate: '38.5%',
       avgPackage: '11.20',
@@ -834,7 +879,28 @@ exports.getDriveById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Placement drive not found.' });
     }
 
-    const apps = institutionalApplications.filter(a => String(a.driveId) === String(drive.id) || String(a.drive_id) === String(drive.id));
+    let apps = [];
+    if (mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(id)) {
+      try {
+        const mongoApps = await Application.find({
+          drive: id,
+          status: { $ne: 'Withdrawn' }
+        })
+          .populate('student')
+          .populate({ path: 'drive', populate: { path: 'company' } })
+          .sort({ createdAt: -1 })
+          .lean();
+
+        if (mongoApps && mongoApps.length > 0) {
+          apps = mongoApps.map(formatAdminApplication);
+        }
+      } catch (e) {}
+    }
+
+    if (apps.length === 0) {
+      apps = institutionalApplications.filter(a => String(a.driveId) === String(drive.id) || String(a.drive_id) === String(drive.id)).map(formatAdminApplication);
+    }
+
     return res.status(200).json({
       success: true,
       data: { ...drive, applications: apps }
@@ -848,14 +914,36 @@ exports.getDriveById = async (req, res) => {
 exports.getApplications = async (req, res) => {
   try {
     const { q, status } = req.query;
-    let apps = [...institutionalApplications];
+    let apps = [];
+
+    // 1. Read from MongoDB if connected
+    if (mongoose.connection.readyState === 1) {
+      try {
+        const mongoApps = await Application.find({ status: { $ne: 'Withdrawn' } })
+          .populate('student')
+          .populate({ path: 'drive', populate: { path: 'company' } })
+          .sort({ createdAt: -1 })
+          .lean();
+
+        if (mongoApps && mongoApps.length > 0) {
+          apps = mongoApps.map(formatAdminApplication);
+        }
+      } catch (err) {
+        console.warn('[Admin Mongo Get Applications Warning]:', err.message);
+      }
+    }
+
+    // 2. Fallback to in-memory institutionalApplications
+    if (apps.length === 0) {
+      apps = institutionalApplications.map(formatAdminApplication);
+    }
 
     if (q) {
       const queryStr = q.toLowerCase();
       apps = apps.filter(a =>
-        a.studentName.toLowerCase().includes(queryStr) ||
-        a.companyName.toLowerCase().includes(queryStr) ||
-        a.driveTitle.toLowerCase().includes(queryStr)
+        (a.studentName && a.studentName.toLowerCase().includes(queryStr)) ||
+        (a.companyName && a.companyName.toLowerCase().includes(queryStr)) ||
+        (a.driveTitle && a.driveTitle.toLowerCase().includes(queryStr))
       );
     }
 

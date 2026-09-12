@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Company = require('../models/Company');
 const Drive = require('../models/Drive');
 const Application = require('../models/Application');
+const Student = require('../models/Student');
 const { studentStore } = require('./studentController');
 
 // In-Memory Fallback Store for Recruiter Companies & Drives (Matching SQLite Source of Truth)
@@ -437,13 +438,95 @@ async function seedDemoDrivesIfEmpty() {
           branches: Array.isArray(d.branches) ? d.branches : ['Computer Science', 'Information Technology', 'Electronics & Comm.'],
           skills: Array.isArray(d.skills) ? d.skills : ['Python', 'Java', 'Data Structures', 'REST APIs'],
           status: d.status || 'active',
-          description: d.description || 'Hiring for Software Engineer.'
         });
       }
     }
   } catch (err) {
     console.warn('[Seed Demo Drives Notice]:', err.message);
   }
+}
+
+// Helper: Seed initial demo applications if MongoDB is connected and Application collection is empty
+async function seedDemoApplicationsIfEmpty() {
+  if (mongoose.connection.readyState !== 1) return;
+  try {
+    const appCount = await Application.countDocuments();
+    if (appCount === 0) {
+      const studentDoc = await Student.findOne({ studentNo: 'CS2023001' });
+      const driveDoc = await Drive.findOne({ title: 'Software Engineer - New Grad' });
+      if (studentDoc && driveDoc) {
+        await Application.create({
+          student: studentDoc._id,
+          drive: driveDoc._id,
+          status: 'Interview Scheduled'
+        });
+      }
+    }
+  } catch (err) {
+    console.warn('[Seed Demo Applications Notice]:', err.message);
+  }
+}
+
+// Helper: Format Application for recruiter applicant reviews matching React expectations
+function formatRecruiterApplicant(appDoc, company) {
+  if (!appDoc) return null;
+  const student = appDoc.student && typeof appDoc.student === 'object' ? appDoc.student : {};
+  const drive = appDoc.drive && typeof appDoc.drive === 'object' ? appDoc.drive : {};
+  const comp = drive.company && typeof drive.company === 'object' ? drive.company : (company || {});
+
+  const candName = student.name || appDoc.student_name || appDoc.studentName || appDoc.name || 'Candidate';
+  const candNo = student.studentNo || student.student_no || appDoc.student_no || appDoc.studentNo || 'STU1001';
+  const candEmail = student.email || appDoc.student_email || appDoc.studentEmail || 'student@college.edu';
+  const dept = student.department || appDoc.department || 'Computer Science';
+  const cgpaVal = student.cgpa !== undefined ? Number(student.cgpa) : (appDoc.cgpa !== undefined ? Number(appDoc.cgpa) : 8.0);
+  const resumeFile = student.resumeFilename || student.resume_filename || appDoc.resume_filename || null;
+
+  const driveIdStr = drive._id ? String(drive._id) : (drive.id ? String(drive.id) : String(appDoc.drive_id || appDoc.driveId || ''));
+  const driveTitleStr = drive.title || appDoc.drive_title || appDoc.driveTitle || 'Software Engineer';
+  const compIdStr = comp._id ? String(comp._id) : (comp.id ? String(comp.id) : String(appDoc.company_id || appDoc.companyId || 1));
+  const compEmailStr = comp.email || appDoc.company_email || appDoc.companyEmail || 'hr@technova.com';
+  const compNameStr = comp.name || appDoc.company_name || appDoc.companyName || 'TechNova Solutions';
+
+  const appIdStr = appDoc._id ? String(appDoc._id) : String(appDoc.id || '');
+  const appliedAtStr = appDoc.createdAt instanceof Date
+    ? appDoc.createdAt.toISOString().replace('T', ' ').substring(0, 19)
+    : (appDoc.applied_at || appDoc.appliedAt || '2026-09-01 10:00:00');
+  const updatedAtStr = appDoc.updatedAt instanceof Date
+    ? appDoc.updatedAt.toISOString().replace('T', ' ').substring(0, 19)
+    : (appDoc.updated_at || appDoc.updatedAt || appliedAtStr);
+
+  return {
+    id: appIdStr,
+    _id: appIdStr,
+    student_id: student._id ? String(student._id) : (student.id ? String(student.id) : String(appDoc.student_id || appDoc.studentId || 1)),
+    studentId: student._id ? String(student._id) : (student.id ? String(student.id) : String(appDoc.student_id || appDoc.studentId || 1)),
+    student_name: candName,
+    studentName: candName,
+    name: candName,
+    student_no: candNo,
+    studentNo: candNo,
+    student_email: candEmail,
+    studentEmail: candEmail,
+    department: dept,
+    cgpa: cgpaVal,
+    drive_id: driveIdStr,
+    driveId: driveIdStr,
+    drive_title: driveTitleStr,
+    driveTitle: driveTitleStr,
+    company_id: compIdStr,
+    companyId: compIdStr,
+    company_email: compEmailStr,
+    companyEmail: compEmailStr,
+    company_name: compNameStr,
+    companyName: compNameStr,
+    status: appDoc.status || 'Applied',
+    resume_filename: resumeFile,
+    resumeFilename: resumeFile,
+    applied_at: appliedAtStr,
+    appliedAt: appliedAtStr,
+    updated_at: updatedAtStr,
+    updatedAt: updatedAtStr
+  };
 }
 
 
@@ -1232,26 +1315,56 @@ exports.closeDrive = async (req, res) => {
 exports.getApplicants = async (req, res) => {
   try {
     const email = req.user?.email || 'hr@technova.com';
+    const userId = req.user?._id || req.user?.id;
     let company = getCompanyByEmail(email);
 
     if (mongoose.connection.readyState === 1) {
+      await seedDemoApplicationsIfEmpty();
+      const mongoComp = await getOrCreateMongoCompany(userId, email);
+      if (mongoComp) company = mongoComp;
+    }
+
+    let apps = [];
+    let userDrives = [];
+
+    // 1. If MongoDB is connected, query Application collection
+    if (mongoose.connection.readyState === 1 && company._id) {
       try {
-        const mongoComp = await Company.findOne({ email }).lean();
-        if (mongoComp) company = mongoComp;
+        const mongoDrives = await Drive.find({ company: company._id }).lean();
+        userDrives = mongoDrives.map(d => ({
+          id: String(d._id),
+          _id: String(d._id),
+          title: d.title
+        }));
+
+        const driveIds = mongoDrives.map(d => d._id);
+        const mongoApps = await Application.find({
+          drive: { $in: driveIds },
+          status: { $ne: 'Withdrawn' }
+        })
+          .populate('student')
+          .populate('drive')
+          .sort({ createdAt: -1 })
+          .lean();
+
+        if (mongoApps && mongoApps.length > 0) {
+          apps = mongoApps.map(a => formatRecruiterApplicant(a, company));
+        }
       } catch (err) {
-        console.warn('[Recruiter Mongo]: Fallback to memory store', err.message);
+        console.warn('[Recruiter Mongo Get Applicants Warning]:', err.message);
       }
     }
 
-    // Filter drives belonging to recruiter
-    const userDrives = recruiterStore.drives.filter(
-      d => d.company_email === email || d.company_id === company.id
-    );
+    // 2. Fallback to in-memory store if needed
+    if (apps.length === 0) {
+      userDrives = recruiterStore.drives.filter(
+        d => d.company_email === email || d.company_id === company.id
+      ).map(d => ({ id: d.id, _id: d.id, title: d.title }));
 
-    // Filter applicants belonging to recruiter's company
-    let apps = recruiterStore.applications.filter(
-      a => a.company_email === email || a.company_id === company.id
-    );
+      apps = recruiterStore.applications.filter(
+        a => (a.company_email === email || a.company_id === company.id) && a.status !== 'Withdrawn'
+      ).map(a => formatRecruiterApplicant(a, company));
+    }
 
     const { drive_id, driveId, status, q, search } = req.query;
     const selectedDrive = drive_id || driveId;
@@ -1259,20 +1372,23 @@ exports.getApplicants = async (req, res) => {
     const searchKeyword = (q || search || '').toLowerCase().trim();
 
     if (selectedDrive) {
-      apps = apps.filter(a => String(a.drive_id) === String(selectedDrive));
+      apps = apps.filter(a => String(a.drive_id) === String(selectedDrive) || String(a.driveId) === String(selectedDrive));
     }
 
-    if (statusFilter && statusFilter.trim()) {
+    if (statusFilter && statusFilter.trim() && statusFilter !== 'All') {
       apps = apps.filter(a => a.status.toLowerCase() === statusFilter.toLowerCase().trim());
     }
 
     if (searchKeyword) {
       apps = apps.filter(a =>
         (a.student_name && a.student_name.toLowerCase().includes(searchKeyword)) ||
+        (a.studentName && a.studentName.toLowerCase().includes(searchKeyword)) ||
         (a.name && a.name.toLowerCase().includes(searchKeyword)) ||
         (a.student_no && a.student_no.toLowerCase().includes(searchKeyword)) ||
+        (a.studentNo && a.studentNo.toLowerCase().includes(searchKeyword)) ||
         (a.department && a.department.toLowerCase().includes(searchKeyword)) ||
-        (a.drive_title && a.drive_title.toLowerCase().includes(searchKeyword))
+        (a.drive_title && a.drive_title.toLowerCase().includes(searchKeyword)) ||
+        (a.driveTitle && a.driveTitle.toLowerCase().includes(searchKeyword))
       );
     }
 
@@ -1296,9 +1412,43 @@ exports.getApplicants = async (req, res) => {
 exports.getApplicantById = async (req, res) => {
   try {
     const email = req.user?.email || 'hr@technova.com';
-    const company = getCompanyByEmail(email);
+    const userId = req.user?._id || req.user?.id;
+    let company = getCompanyByEmail(email);
+    if (mongoose.connection.readyState === 1) {
+      const mongoComp = await getOrCreateMongoCompany(userId, email);
+      if (mongoComp) company = mongoComp;
+    }
     const appId = req.params.id;
 
+    // 1. Check MongoDB if connected
+    if (mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(appId)) {
+      try {
+        const appDoc = await Application.findById(appId)
+          .populate('student')
+          .populate('drive')
+          .lean();
+
+        if (appDoc) {
+          const driveCompId = appDoc.drive?.company ? String(appDoc.drive.company) : '';
+          const myCompId = company._id ? String(company._id) : String(company.id);
+          if (driveCompId && myCompId && driveCompId !== myCompId) {
+            return res.status(403).json({
+              success: false,
+              message: 'Access Denied: You do not have permission to view this applicant.'
+            });
+          }
+
+          return res.status(200).json({
+            success: true,
+            applicant: formatRecruiterApplicant(appDoc, company)
+          });
+        }
+      } catch (err) {
+        console.warn('[Recruiter Mongo Get Applicant Detail Warning]:', err.message);
+      }
+    }
+
+    // 2. Fallback to in-memory store
     const applicant = recruiterStore.applications.find(
       a => String(a.id) === String(appId) || String(a._id) === String(appId)
     );
@@ -1320,7 +1470,7 @@ exports.getApplicantById = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      applicant
+      applicant: formatRecruiterApplicant(applicant, company)
     });
   } catch (err) {
     console.error('[Recruiter Get Applicant Detail Error]:', err);
@@ -1336,7 +1486,13 @@ exports.getApplicantById = async (req, res) => {
 exports.updateApplicantStatus = async (req, res) => {
   try {
     const email = req.user?.email || 'hr@technova.com';
-    const company = getCompanyByEmail(email);
+    const userId = req.user?._id || req.user?.id;
+    let company = getCompanyByEmail(email);
+    if (mongoose.connection.readyState === 1) {
+      const mongoComp = await getOrCreateMongoCompany(userId, email);
+      if (mongoComp) company = mongoComp;
+    }
+
     const appId = req.params.id;
     const newStatus = req.body.status;
 
@@ -1356,71 +1512,83 @@ exports.updateApplicantStatus = async (req, res) => {
       });
     }
 
+    let updatedMongoApp = null;
+
+    // 1. Update in MongoDB if connected
+    if (mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(appId)) {
+      try {
+        const appDoc = await Application.findById(appId).populate('drive').populate('student');
+        if (appDoc) {
+          const driveCompId = appDoc.drive?.company ? String(appDoc.drive.company) : '';
+          const myCompId = company._id ? String(company._id) : String(company.id);
+          if (driveCompId && myCompId && driveCompId !== myCompId) {
+            return res.status(403).json({
+              success: false,
+              message: 'Access Denied: You do not have permission to update this applicant.'
+            });
+          }
+
+          appDoc.status = newStatus;
+          await appDoc.save();
+          updatedMongoApp = appDoc.toObject();
+        }
+      } catch (err) {
+        console.warn('[Recruiter Mongo Update Status]:', err.message);
+      }
+    }
+
+    // 2. Also keep fallback store updated
     const index = recruiterStore.applications.findIndex(
       a => String(a.id) === String(appId) || String(a._id) === String(appId)
     );
 
-    if (index === -1) {
+    let applicant = null;
+    if (index !== -1) {
+      applicant = recruiterStore.applications[index];
+      if (!updatedMongoApp && applicant.company_email !== email && applicant.company_id !== company.id) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access Denied: You do not have permission to update this applicant.'
+        });
+      }
+      applicant.status = newStatus;
+      applicant.updated_at = new Date().toISOString().replace('T', ' ').substring(0, 19);
+      recruiterStore.applications[index] = applicant;
+    } else if (updatedMongoApp) {
+      applicant = formatRecruiterApplicant(updatedMongoApp, company);
+    } else {
       return res.status(404).json({
         success: false,
         message: `Applicant with ID '${appId}' not found.`
       });
     }
 
-    const applicant = recruiterStore.applications[index];
-
-    // Ownership check
-    if (applicant.company_email !== email && applicant.company_id !== company.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access Denied: You do not have permission to update this applicant.'
-      });
-    }
-
-    // Update in-memory applicant status
-    applicant.status = newStatus;
-    applicant.updated_at = new Date().toISOString().replace('T', ' ').substring(0, 19);
-    recruiterStore.applications[index] = applicant;
-
-    // Synchronize with Student Portal store for live reflection
+    // 3. Synchronize with Student Portal store & notifications for live reflection
     if (studentStore) {
-      // 1. Sync student application status
       if (studentStore.applications && Array.isArray(studentStore.applications)) {
         const studentApp = studentStore.applications.find(
-          sa => sa.drive_id === 'drv-1' || String(sa.drive_id) === String(applicant.drive_id) || sa.drive_title === applicant.drive_title
+          sa => String(sa.id) === String(appId) || String(sa.drive_id) === String(applicant.drive_id) || sa.drive_title === applicant.drive_title
         );
-        if (studentApp && (applicant.student_no === 'CS2023001' || applicant.student_name === 'Priya Sharma' || applicant.student_id === 1 || applicant.id === 101)) {
+        if (studentApp) {
           studentApp.status = newStatus;
         }
       }
 
-      // 2. Push Notification to student notification center
       if (studentStore.notifications && Array.isArray(studentStore.notifications)) {
         studentStore.notifications.unshift({
           id: `notif-${Date.now()}`,
-          message: `Your application for '${applicant.drive_title}' at ${company.name} is now: ${newStatus}.`,
+          message: `Your application for '${applicant.drive_title || applicant.driveTitle || 'Campus Drive'}' at ${company.name} is now: ${newStatus}.`,
           created_at: new Date().toISOString().replace('T', ' ').substring(0, 16),
           is_read: false
         });
       }
     }
 
-    // Update MongoDB if connected
-    if (mongoose.connection.readyState === 1) {
-      try {
-        await Application.findByIdAndUpdate(
-          applicant._id || applicant.id,
-          { $set: { status: newStatus, updatedAt: new Date() } }
-        );
-      } catch (err) {
-        console.warn('[Recruiter Mongo Update Status]:', err.message);
-      }
-    }
-
+    const formatted = formatRecruiterApplicant(updatedMongoApp || applicant, company);
     return res.status(200).json({
       success: true,
-      message: `${applicant.student_name || applicant.name}'s status updated to ${newStatus}.`,
-      applicant
+      message: `${formatted.student_name || formatted.name}'s status updated to ${newStatus}.`,
+      applicant: formatted
     });
   } catch (err) {
     console.error('[Recruiter Update Applicant Status Error]:', err);

@@ -305,6 +305,86 @@ function formatDriveForStudent(d) {
 }
 
 
+// Helper: Get or create Mongoose Student document for authenticated user
+async function getOrCreateMongoStudent(userId, fallbackEmail) {
+  if (mongoose.connection.readyState !== 1) return null;
+  try {
+    let studentDoc = null;
+    if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+      studentDoc = await Student.findOne({ user: userId });
+    }
+    if (!studentDoc && fallbackEmail) {
+      const User = require('../models/User');
+      const userDoc = await User.findOne({ email: fallbackEmail });
+      if (userDoc) {
+        studentDoc = await Student.findOne({ user: userDoc._id });
+      }
+    }
+    if (!studentDoc) {
+      const fallback = studentStore.profile;
+      const userObjId = userId && mongoose.Types.ObjectId.isValid(userId)
+        ? new mongoose.Types.ObjectId(userId)
+        : new mongoose.Types.ObjectId('65e000000000000000000002');
+      studentDoc = await Student.create({
+        user: userObjId,
+        studentNo: fallback.studentNo || fallback.student_no || 'CS2023001',
+        name: fallback.name || 'Priya Sharma',
+        phone: fallback.phone || '+91 98765 43210',
+        department: fallback.department || 'Computer Science',
+        gradYear: Number(fallback.gradYear || fallback.grad_year || 2026),
+        cgpa: Number(fallback.cgpa || 8.9),
+        tenthPct: Number(fallback.tenthPct || 92.5),
+        twelfthPct: Number(fallback.twelfthPct || 89.0),
+        backlogs: Number(fallback.backlogs || 0),
+        skills: Array.isArray(fallback.skills) ? fallback.skills : ['Python', 'SQL', 'React', 'Node.js'],
+        softSkills: fallback.softSkills || '',
+        certifications: fallback.certifications || '',
+        projects: fallback.projects || '',
+        internships: fallback.internships || '',
+        resumeFilename: fallback.resume_filename || null,
+        resumeOriginalName: fallback.resume_original_name || null
+      });
+    }
+    return studentDoc;
+  } catch (err) {
+    console.warn('[Student Mongo getOrCreateMongoStudent Warning]:', err.message);
+    return null;
+  }
+}
+
+// Helper: Format Application for student consumption matching React frontend expectations
+function formatApplicationForStudent(appDoc) {
+  if (!appDoc) return null;
+  const drive = appDoc.drive && typeof appDoc.drive === 'object' ? appDoc.drive : {};
+  const company = drive.company && typeof drive.company === 'object' ? drive.company : {};
+  const compName = company.name || drive.company_name || drive.companyName || appDoc.company_name || appDoc.companyName || 'Corporate Partner';
+  const ctcVal = drive.ctc !== undefined ? Number(drive.ctc) : (appDoc.package_lpa !== undefined ? Number(appDoc.package_lpa) : 12.0);
+  const appliedAtStr = appDoc.createdAt instanceof Date
+    ? appDoc.createdAt.toISOString()
+    : (appDoc.applied_at || appDoc.appliedAt || new Date().toISOString());
+
+  const driveIdStr = drive._id ? String(drive._id) : (drive.id ? String(drive.id) : String(appDoc.drive || ''));
+  const appIdStr = appDoc._id ? String(appDoc._id) : String(appDoc.id || '');
+
+  return {
+    id: appIdStr,
+    _id: appIdStr,
+    drive_id: driveIdStr,
+    driveId: driveIdStr,
+    drive_title: drive.title || appDoc.drive_title || appDoc.driveTitle || 'Campus Drive',
+    driveTitle: drive.title || appDoc.drive_title || appDoc.driveTitle || 'Campus Drive',
+    company_name: compName,
+    companyName: compName,
+    package_lpa: ctcVal,
+    packageLpa: ctcVal,
+    applied_at: appliedAtStr,
+    appliedAt: appliedAtStr,
+    status: appDoc.status || 'Applied',
+    interview_date: appDoc.interview_date || null
+  };
+}
+
+
 // 1. GET Dashboard
 exports.getDashboard = async (req, res) => {
   try {
@@ -313,11 +393,30 @@ exports.getDashboard = async (req, res) => {
     const student = await getStudentProfileForUser(userId, userEmail);
 
     const completion = calculateCompletion(student);
-    const app_count = studentStore.applications.length;
-    const shortlisted = studentStore.applications.filter(a => ['Shortlisted', 'Interview Scheduled', 'Under Review'].includes(a.status)).length;
+    let app_count = studentStore.applications.length;
+    let shortlisted = studentStore.applications.filter(a => ['Shortlisted', 'Interview Scheduled', 'Under Review'].includes(a.status)).length;
     const selected = studentStore.selectedOffers;
     const upcoming_interviews = studentStore.interviews.filter(i => i.status === 'Scheduled');
     const recent_notifications = studentStore.notifications.slice(0, 5);
+
+    // Read application metrics from MongoDB if connected
+    if (mongoose.connection.readyState === 1) {
+      try {
+        const studentDoc = await getOrCreateMongoStudent(userId, userEmail);
+        if (studentDoc) {
+          const mongoApps = await Application.find({
+            student: studentDoc._id,
+            status: { $ne: 'Withdrawn' }
+          }).lean();
+          if (mongoApps && mongoApps.length > 0) {
+            app_count = mongoApps.length;
+            shortlisted = mongoApps.filter(a => ['Shortlisted', 'Interview Scheduled', 'Under Review'].includes(a.status)).length;
+          }
+        }
+      } catch (err) {
+        console.warn('[Student Mongo Dashboard Applications Warning]:', err.message);
+      }
+    }
 
     return res.status(200).json({
       success: true,
@@ -612,7 +711,34 @@ exports.getDriveDetail = async (req, res) => {
     }
 
     const eligibility = checkEligibility(student, drive);
-    const app = studentStore.applications.find(a => String(a.drive_id) === String(drive.id));
+    let appliedApp = null;
+
+    if (mongoose.connection.readyState === 1) {
+      try {
+        const studentDoc = await getOrCreateMongoStudent(userId, userEmail);
+        let driveObjectId = null;
+        if (mongoose.Types.ObjectId.isValid(drive.id)) {
+          driveObjectId = drive.id;
+        } else {
+          const dDoc = await Drive.findOne({ title: drive.title });
+          if (dDoc) driveObjectId = dDoc._id;
+        }
+
+        if (studentDoc && driveObjectId) {
+          const mApp = await Application.findOne({
+            student: studentDoc._id,
+            drive: driveObjectId,
+            status: { $ne: 'Withdrawn' }
+          }).populate({ path: 'drive', populate: { path: 'company' } }).lean();
+          if (mApp) appliedApp = formatApplicationForStudent(mApp);
+        }
+      } catch (e) {}
+    }
+
+    if (!appliedApp) {
+      const appFallback = studentStore.applications.find(a => String(a.drive_id) === String(drive.id) && a.status !== 'Withdrawn');
+      if (appFallback) appliedApp = formatApplicationForStudent(appFallback);
+    }
 
     return res.status(200).json({
       success: true,
@@ -620,7 +746,7 @@ exports.getDriveDetail = async (req, res) => {
         drive,
         eligible: eligibility.eligible,
         reasons: eligibility.reasons,
-        applied: app || null
+        applied: appliedApp || null
       }
     });
   } catch (err) {
@@ -637,13 +763,22 @@ exports.applyToDrive = async (req, res) => {
     const student = await getStudentProfileForUser(userId, userEmail);
 
     let drive = null;
+    let driveDoc = null;
 
-    if (mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(id)) {
-      try {
-        const doc = await Drive.findById(id).populate('company').lean();
-        if (doc) drive = formatDriveForStudent(doc);
-      } catch (err) {
-        console.warn('[Student Mongo Apply Find Drive Warning]:', err.message);
+    if (mongoose.connection.readyState === 1) {
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        try {
+          driveDoc = await Drive.findById(id).populate('company');
+          if (driveDoc) drive = formatDriveForStudent(driveDoc);
+        } catch (err) {
+          console.warn('[Student Mongo Apply Find Drive Warning]:', err.message);
+        }
+      }
+      if (!drive) {
+        driveDoc = await Drive.findOne({ title: 'Software Engineer - New Grad' }).populate('company');
+        if (driveDoc && String(driveDoc.id) === String(id)) {
+          drive = formatDriveForStudent(driveDoc);
+        }
       }
     }
 
@@ -664,7 +799,36 @@ exports.applyToDrive = async (req, res) => {
       });
     }
 
-    const existingApp = studentStore.applications.find(a => String(a.drive_id) === String(drive.id));
+    let studentDoc = null;
+    if (mongoose.connection.readyState === 1) {
+      studentDoc = await getOrCreateMongoStudent(userId, userEmail);
+      if (!driveDoc && drive) {
+        if (mongoose.Types.ObjectId.isValid(drive.id)) {
+          driveDoc = await Drive.findById(drive.id).populate('company');
+        } else {
+          driveDoc = await Drive.findOne({ title: drive.title }).populate('company');
+        }
+      }
+
+      // Check existing application in MongoDB
+      if (studentDoc && driveDoc) {
+        const existingMongoApp = await Application.findOne({
+          student: studentDoc._id,
+          drive: driveDoc._id
+        });
+        if (existingMongoApp && existingMongoApp.status !== 'Withdrawn') {
+          return res.status(400).json({
+            success: false,
+            message: 'You have already submitted an application for this drive.'
+          });
+        }
+      }
+    }
+
+    // Check existing application in fallback store
+    const existingApp = studentStore.applications.find(
+      a => String(a.drive_id) === String(drive.id) && a.status !== 'Withdrawn'
+    );
     if (existingApp) {
       return res.status(400).json({
         success: false,
@@ -672,20 +836,84 @@ exports.applyToDrive = async (req, res) => {
       });
     }
 
-    const newApp = {
-      id: `app-${Date.now()}`,
-      drive_id: drive.id,
-      drive_title: drive.title,
-      company_name: drive.company_name,
-      package_lpa: drive.ctc,
-      applied_at: new Date().toISOString(),
-      status: 'Applied',
-      interview_date: null
-    };
+    let createdMongoApp = null;
+    if (mongoose.connection.readyState === 1 && studentDoc && driveDoc) {
+      try {
+        const doc = await Application.create({
+          student: studentDoc._id,
+          drive: driveDoc._id,
+          status: 'Applied'
+        });
+        createdMongoApp = await Application.findById(doc._id)
+          .populate('student')
+          .populate({ path: 'drive', populate: { path: 'company' } })
+          .lean();
+      } catch (dbErr) {
+        if (dbErr.code === 11000) {
+          return res.status(400).json({
+            success: false,
+            message: 'You have already submitted an application for this drive.'
+          });
+        }
+        console.warn('[Student Mongo Apply Create Warning]:', dbErr.message);
+      }
+    }
 
+    const newApp = createdMongoApp
+      ? formatApplicationForStudent(createdMongoApp)
+      : {
+          id: `app-${Date.now()}`,
+          _id: `app-${Date.now()}`,
+          drive_id: drive.id,
+          driveId: drive.id,
+          drive_title: drive.title,
+          driveTitle: drive.title,
+          company_name: drive.company_name,
+          companyName: drive.company_name,
+          package_lpa: drive.ctc,
+          packageLpa: drive.ctc,
+          applied_at: new Date().toISOString(),
+          appliedAt: new Date().toISOString(),
+          status: 'Applied',
+          interview_date: null
+        };
+
+    // Update in-memory fallback stores
     studentStore.applications.unshift(newApp);
 
-    // Also add notification
+    // Also sync to recruiterStore.applications for live reflection in fallback
+    try {
+      const { recruiterStore } = require('./recruiterController');
+      if (recruiterStore && recruiterStore.applications) {
+        recruiterStore.applications.unshift({
+          id: newApp.id,
+          _id: newApp.id,
+          student_id: 1,
+          studentId: 1,
+          student_name: student.name || 'Priya Sharma',
+          studentName: student.name || 'Priya Sharma',
+          name: student.name || 'Priya Sharma',
+          student_no: student.studentNo || student.student_no || 'CS2023001',
+          studentNo: student.studentNo || student.student_no || 'CS2023001',
+          student_email: userEmail,
+          studentEmail: userEmail,
+          department: student.department || 'Computer Science',
+          cgpa: student.cgpa !== undefined ? Number(student.cgpa) : 8.9,
+          drive_id: drive.id,
+          driveId: drive.id,
+          drive_title: drive.title,
+          driveTitle: drive.title,
+          company_id: 1,
+          company_email: 'hr@technova.com',
+          company_name: drive.company_name || 'TechNova Solutions',
+          status: 'Applied',
+          applied_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
+          updated_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
+        });
+      }
+    } catch (e) {}
+
+    // Add notification
     studentStore.notifications.unshift({
       id: `notif-${Date.now()}`,
       message: `Application submitted successfully for '${drive.title}' at ${drive.company_name}.`,
@@ -706,9 +934,40 @@ exports.applyToDrive = async (req, res) => {
 // 8. GET Applications
 exports.getApplications = async (req, res) => {
   try {
+    const userId = req.user?._id || req.user?.id;
+    const userEmail = req.user?.email || 'priya.sharma@student.edu';
+
+    // 1. If MongoDB is connected, query Application collection
+    if (mongoose.connection.readyState === 1) {
+      try {
+        const studentDoc = await getOrCreateMongoStudent(userId, userEmail);
+        if (studentDoc) {
+          const mongoApps = await Application.find({
+            student: studentDoc._id,
+            status: { $ne: 'Withdrawn' }
+          })
+            .populate({ path: 'drive', populate: { path: 'company' } })
+            .sort({ createdAt: -1 })
+            .lean();
+
+          if (mongoApps && mongoApps.length > 0) {
+            const formatted = mongoApps.map(formatApplicationForStudent);
+            return res.status(200).json({
+              success: true,
+              data: formatted
+            });
+          }
+        }
+      } catch (dbErr) {
+        console.warn('[Student Mongo Get Applications Warning]:', dbErr.message);
+      }
+    }
+
+    // 2. Fallback in-memory
+    const activeApps = studentStore.applications.filter(a => a.status !== 'Withdrawn');
     return res.status(200).json({
       success: true,
-      data: studentStore.applications
+      data: activeApps.map(formatApplicationForStudent)
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -719,21 +978,64 @@ exports.getApplications = async (req, res) => {
 exports.withdrawApplication = async (req, res) => {
   try {
     const { id } = req.params;
-    const index = studentStore.applications.findIndex(a => a.id === id);
+    const userId = req.user?._id || req.user?.id;
+    const userEmail = req.user?.email || 'priya.sharma@student.edu';
 
-    if (index === -1) {
+    let foundInMongo = false;
+
+    // 1. If MongoDB is connected, find and update in MongoDB
+    if (mongoose.connection.readyState === 1) {
+      try {
+        const studentDoc = await getOrCreateMongoStudent(userId, userEmail);
+        let mongoApp = null;
+        if (mongoose.Types.ObjectId.isValid(id)) {
+          mongoApp = await Application.findById(id);
+        }
+        if (!mongoApp && studentDoc) {
+          mongoApp = await Application.findOne({
+            student: studentDoc._id,
+            $or: [
+              { _id: mongoose.Types.ObjectId.isValid(id) ? id : null },
+              { drive: mongoose.Types.ObjectId.isValid(id) ? id : null }
+            ]
+          });
+        }
+
+        if (mongoApp) {
+          foundInMongo = true;
+          if (!['Applied', 'Under Review'].includes(mongoApp.status)) {
+            return res.status(400).json({
+              success: false,
+              message: 'Cannot withdraw an application that has progressed past review.'
+            });
+          }
+
+          mongoApp.status = 'Withdrawn';
+          await mongoApp.save();
+        }
+      } catch (dbErr) {
+        console.warn('[Student Mongo Withdraw Warning]:', dbErr.message);
+      }
+    }
+
+    // 2. Update fallback in-memory store
+    const index = studentStore.applications.findIndex(
+      a => String(a.id) === String(id) || String(a._id) === String(id) || String(a.drive_id) === String(id)
+    );
+
+    if (index !== -1) {
+      const app = studentStore.applications[index];
+      if (!foundInMongo && !['Applied', 'Under Review'].includes(app.status)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot withdraw an application that has progressed past review.'
+        });
+      }
+      app.status = 'Withdrawn';
+      studentStore.applications.splice(index, 1);
+    } else if (!foundInMongo) {
       return res.status(404).json({ success: false, message: 'Application not found.' });
     }
-
-    const app = studentStore.applications[index];
-    if (!['Applied', 'Under Review'].includes(app.status)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot withdraw an application that has progressed past review.'
-      });
-    }
-
-    studentStore.applications.splice(index, 1);
 
     return res.status(200).json({
       success: true,
@@ -743,6 +1045,7 @@ exports.withdrawApplication = async (req, res) => {
     return res.status(500).json({ success: false, message: err.message });
   }
 };
+
 
 // 10. GET Interviews
 exports.getInterviews = async (req, res) => {
