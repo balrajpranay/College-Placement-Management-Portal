@@ -522,21 +522,90 @@ let institutionalNotifications = [
   }
 ];
 
+// Helper: Format Drive for Admin responses
+function formatAdminDrive(d) {
+  if (!d) return null;
+  const idStr = (d._id || d.id || '').toString();
+  const companyObj = d.company && typeof d.company === 'object' ? d.company : null;
+  const compName = companyObj?.name || d.companyName || d.company_name || 'Corporate Partner';
+  const compEmail = companyObj?.email || d.companyEmail || d.company_email || '';
+
+  const deadlineStr = d.deadline instanceof Date
+    ? d.deadline.toISOString().split('T')[0]
+    : (d.deadline ? String(d.deadline).split('T')[0] : '');
+  const driveDateStr = d.driveDate instanceof Date
+    ? d.driveDate.toISOString().split('T')[0]
+    : (d.driveDate ? String(d.driveDate).split('T')[0] : (d.drive_date ? String(d.drive_date).split('T')[0] : ''));
+
+  const jobType = d.jobType || d.job_type || 'Full-Time';
+  const minCgpa = d.minCgpa !== undefined ? Number(d.minCgpa) : (d.min_cgpa !== undefined ? Number(d.min_cgpa) : 0);
+  const maxBacklogs = d.maxBacklogs !== undefined ? Number(d.maxBacklogs) : (d.max_backlogs !== undefined ? Number(d.max_backlogs) : 0);
+  const openings = d.openings !== undefined ? Number(d.openings) : 1;
+  const ctc = d.ctc !== undefined ? Number(d.ctc) : 0;
+  const applicantCount = d.applicantCount !== undefined ? Number(d.applicantCount) : (d.applicant_count !== undefined ? Number(d.applicant_count) : 0);
+
+  return {
+    id: idStr,
+    _id: idStr,
+    title: d.title || '',
+    companyName: compName,
+    company_name: compName,
+    companyEmail: compEmail,
+    company_email: compEmail,
+    jobType: jobType,
+    job_type: jobType,
+    ctc: ctc,
+    package: ctc,
+    location: d.location || 'Bengaluru',
+    minCgpa: minCgpa,
+    min_cgpa: minCgpa,
+    maxBacklogs: maxBacklogs,
+    max_backlogs: maxBacklogs,
+    openings: openings,
+    deadline: deadlineStr,
+    driveDate: driveDateStr,
+    drive_date: driveDateStr,
+    applicantCount: applicantCount,
+    applicant_count: applicantCount,
+    status: d.status || 'active',
+    branches: Array.isArray(d.branches) ? d.branches : [],
+    skills: Array.isArray(d.skills) ? d.skills : [],
+    description: d.description || ''
+  };
+}
+
 // GET /api/admin/dashboard
 exports.getDashboard = async (req, res) => {
   try {
     const pendingCount = institutionalCompanies.filter(c => !c.approved).length;
+
+    let activeDrivesCount = institutionalDrives.length;
+    let recentDrivesList = institutionalDrives.slice(0, 5);
+
+    if (mongoose.connection.readyState === 1) {
+      try {
+        const count = await Drive.countDocuments({ status: 'active' });
+        const mongoDrives = await Drive.find().populate('company').sort({ createdAt: -1 }).limit(5).lean();
+        if (mongoDrives && mongoDrives.length > 0) {
+          activeDrivesCount = count;
+          recentDrivesList = mongoDrives.map(d => formatAdminDrive(d));
+        }
+      } catch (err) {
+        console.warn('[Admin Mongo Dashboard Warning]:', err.message);
+      }
+    }
+
     const stats = {
       totalStudents: institutionalStudents.length + 5, // 13 enrolled
       totalCompanies: institutionalCompanies.length, // 8 companies
-      activeDrives: institutionalDrives.length, // 7 active
+      activeDrives: activeDrivesCount,
       totalApplications: 20,
       placedStudents: 5,
       placementRate: '38.5%',
       avgPackage: '11.20',
       highestPackage: '18.00',
       pendingCompanies: pendingCount,
-      recentDrives: institutionalDrives.slice(0, 5)
+      recentDrives: recentDrivesList
     };
 
     return res.status(200).json({
@@ -691,7 +760,24 @@ exports.rejectCompany = async (req, res) => {
 exports.getDrives = async (req, res) => {
   try {
     const { q, jobType, status } = req.query;
-    let drives = [...institutionalDrives];
+    let drives = [];
+
+    // 1. Read from MongoDB if connected
+    if (mongoose.connection.readyState === 1) {
+      try {
+        const mongoDrives = await Drive.find().populate('company').sort({ createdAt: -1 }).lean();
+        if (mongoDrives && mongoDrives.length > 0) {
+          drives = mongoDrives.map(d => formatAdminDrive(d));
+        }
+      } catch (err) {
+        console.warn('[Admin Mongo Get Drives Warning]:', err.message);
+      }
+    }
+
+    // 2. Fallback to in-memory institutionalDrives
+    if (drives.length === 0) {
+      drives = institutionalDrives.map(d => formatAdminDrive(d));
+    }
 
     if (q) {
       const queryStr = q.toLowerCase();
@@ -723,11 +809,32 @@ exports.getDrives = async (req, res) => {
 // GET /api/admin/drives/:id
 exports.getDriveById = async (req, res) => {
   try {
-    const drive = institutionalDrives.find(d => String(d.id) === String(req.params.id));
+    const { id } = req.params;
+    let drive = null;
+
+    if (mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(id)) {
+      try {
+        const doc = await Drive.findById(id).populate('company').lean();
+        if (doc) {
+          drive = formatAdminDrive(doc);
+        }
+      } catch (err) {
+        console.warn('[Admin Mongo Get Drive Detail Warning]:', err.message);
+      }
+    }
+
+    if (!drive) {
+      const fallback = institutionalDrives.find(d => String(d.id) === String(id) || String(d._id) === String(id));
+      if (fallback) {
+        drive = formatAdminDrive(fallback);
+      }
+    }
+
     if (!drive) {
       return res.status(404).json({ success: false, message: 'Placement drive not found.' });
     }
-    const apps = institutionalApplications.filter(a => a.driveId === drive.id);
+
+    const apps = institutionalApplications.filter(a => String(a.driveId) === String(drive.id) || String(a.drive_id) === String(drive.id));
     return res.status(200).json({
       success: true,
       data: { ...drive, applications: apps }

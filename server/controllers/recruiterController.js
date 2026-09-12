@@ -364,17 +364,156 @@ function getCompanyByEmail(email) {
   return defaultCompany;
 }
 
+// Helper: Get or create Mongoose Company document for authenticated recruiter
+async function getOrCreateMongoCompany(userId, email) {
+  if (mongoose.connection.readyState !== 1) return null;
+  try {
+    let comp = null;
+    if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+      comp = await Company.findOne({ user: userId });
+    }
+    if (!comp && email) {
+      comp = await Company.findOne({ email });
+    }
+    if (!comp) {
+      const fallback = getCompanyByEmail(email);
+      const userObjId = userId && mongoose.Types.ObjectId.isValid(userId)
+        ? new mongoose.Types.ObjectId(userId)
+        : new mongoose.Types.ObjectId('65e000000000000000000003');
+      comp = await Company.create({
+        user: userObjId,
+        name: fallback.name || 'TechNova Solutions',
+        industry: fallback.industry || 'Software / IT',
+        website: fallback.website || 'https://technova.example.com',
+        hrContact: fallback.hrContact || fallback.hr_contact || 'Anita Rao',
+        email: email,
+        phone: fallback.phone || '9363328006',
+        location: fallback.location || 'Bengaluru',
+        description: fallback.description || 'TechNova Solutions is a premier technology consulting firm.',
+        approved: true
+      });
+    }
+    return comp;
+  } catch (err) {
+    console.warn('[Recruiter Mongo getOrCreateMongoCompany Warning]:', err.message);
+    return null;
+  }
+}
+
+// Helper: Seed initial demo drives if MongoDB is connected and Drive collection is empty
+async function seedDemoDrivesIfEmpty() {
+  if (mongoose.connection.readyState !== 1) return;
+  try {
+    const count = await Drive.countDocuments();
+    if (count === 0) {
+      let technova = await Company.findOne({ email: 'hr@technova.com' });
+      if (!technova) {
+        technova = await Company.create({
+          user: new mongoose.Types.ObjectId('65e000000000000000000003'),
+          name: 'TechNova Solutions',
+          industry: 'Software / IT',
+          website: 'https://technova.example.com',
+          hrContact: 'Anita Rao',
+          email: 'hr@technova.com',
+          phone: '9363328006',
+          location: 'Bengaluru',
+          description: 'TechNova Solutions is a premier technology consulting firm.',
+          approved: true
+        });
+      }
+
+      for (const d of recruiterStore.drives) {
+        await Drive.create({
+          company: technova._id,
+          title: d.title,
+          jobType: d.job_type || d.jobType || 'Full-Time',
+          ctc: d.ctc,
+          location: d.location || 'Bengaluru',
+          minCgpa: d.min_cgpa || d.minCgpa || 7.0,
+          maxBacklogs: d.max_backlogs !== undefined ? d.max_backlogs : (d.maxBacklogs || 0),
+          openings: d.openings || 10,
+          deadline: d.deadline ? new Date(d.deadline) : new Date(Date.now() + 30 * 86400000),
+          driveDate: d.drive_date ? new Date(d.drive_date) : null,
+          branches: Array.isArray(d.branches) ? d.branches : ['Computer Science', 'Information Technology', 'Electronics & Comm.'],
+          skills: Array.isArray(d.skills) ? d.skills : ['Python', 'Java', 'Data Structures', 'REST APIs'],
+          status: d.status || 'active',
+          description: d.description || 'Hiring for Software Engineer.'
+        });
+      }
+    }
+  } catch (err) {
+    console.warn('[Seed Demo Drives Notice]:', err.message);
+  }
+}
+
+
+// Helper: Format Drive document with complete camelCase and snake_case compatibility
+function formatRecruiterDrive(d, company) {
+  if (!d) return null;
+  const idStr = (d._id || d.id || '').toString();
+  const companyObj = d.company && typeof d.company === 'object' ? d.company : company;
+  const compId = companyObj?._id ? companyObj._id.toString() : (companyObj?.id || 1);
+  const compName = companyObj?.name || d.company_name || d.companyName || 'TechNova Solutions';
+  const compEmail = companyObj?.email || d.company_email || d.companyEmail || 'hr@technova.com';
+
+  const deadlineStr = d.deadline instanceof Date
+    ? d.deadline.toISOString().split('T')[0]
+    : (d.deadline ? String(d.deadline).split('T')[0] : '');
+  const driveDateStr = d.driveDate instanceof Date
+    ? d.driveDate.toISOString().split('T')[0]
+    : (d.drive_date ? String(d.drive_date).split('T')[0] : (d.driveDate ? String(d.driveDate).split('T')[0] : ''));
+
+  const jobType = d.jobType || d.job_type || 'Full-Time';
+  const minCgpa = d.minCgpa !== undefined ? Number(d.minCgpa) : (d.min_cgpa !== undefined ? Number(d.min_cgpa) : 0);
+  const maxBacklogs = d.maxBacklogs !== undefined ? Number(d.maxBacklogs) : (d.max_backlogs !== undefined ? Number(d.max_backlogs) : 0);
+  const openings = d.openings !== undefined ? Number(d.openings) : 1;
+  const ctc = d.ctc !== undefined ? Number(d.ctc) : 0;
+  const applicantCount = d.applicantCount !== undefined ? Number(d.applicantCount) : (d.applicant_count !== undefined ? Number(d.applicant_count) : 0);
+
+  return {
+    _id: idStr,
+    id: idStr,
+    title: d.title,
+    company_id: compId,
+    companyId: compId,
+    company_email: compEmail,
+    companyEmail: compEmail,
+    company_name: compName,
+    companyName: compName,
+    job_type: jobType,
+    jobType: jobType,
+    ctc: ctc,
+    package: ctc,
+    location: d.location || 'Bengaluru',
+    min_cgpa: minCgpa,
+    minCgpa: minCgpa,
+    max_backlogs: maxBacklogs,
+    maxBacklogs: maxBacklogs,
+    openings: openings,
+    deadline: deadlineStr,
+    drive_date: driveDateStr,
+    driveDate: driveDateStr,
+    applicant_count: applicantCount,
+    applicantCount: applicantCount,
+    status: d.status || 'active',
+    description: d.description || '',
+    branches: Array.isArray(d.branches) ? d.branches : [],
+    skills: Array.isArray(d.skills) ? d.skills : []
+  };
+}
+
 // GET /api/recruiters/dashboard
 exports.getDashboard = async (req, res) => {
   try {
     const email = req.user?.email || 'hr@technova.com';
+    const userId = req.user?._id || req.user?.id;
     let company = null;
 
     if (mongoose.connection.readyState === 1) {
       try {
-        company = await Company.findOne({ email }).lean();
+        company = await getOrCreateMongoCompany(userId, email);
       } catch (err) {
-        console.warn('[Recruiter Mongo]: Fallback to memory store', err.message);
+        console.warn('[Recruiter Mongo Dashboard]: Fallback to memory store', err.message);
       }
     }
 
@@ -393,14 +532,28 @@ exports.getDashboard = async (req, res) => {
     }
 
     // Calculate metrics and drives
-    const userDrives = recruiterStore.drives.filter(
-      d => d.company_email === email || d.company_id === company.id
-    );
+    let userDrives = [];
+    if (mongoose.connection.readyState === 1 && company?._id) {
+      try {
+        const mongoDrives = await Drive.find({ company: company._id }).populate('company').sort({ createdAt: -1 }).lean();
+        if (mongoDrives && mongoDrives.length > 0) {
+          userDrives = mongoDrives.map(d => formatRecruiterDrive(d, company));
+        }
+      } catch (err) {
+        console.warn('[Recruiter Mongo Dashboard Drives Warning]:', err.message);
+      }
+    }
+
+    if (userDrives.length === 0) {
+      userDrives = recruiterStore.drives.filter(
+        d => d.company_email === email || d.company_id === company.id
+      );
+    }
 
     const active_drives = userDrives.filter(d => d.status === 'active').length;
     let total_applicants = 0;
     userDrives.forEach(d => {
-      total_applicants += (d.applicant_count || 0);
+      total_applicants += (d.applicant_count || d.applicantCount || 0);
     });
 
     const shortlisted = email === 'hr@technova.com' ? 2 : 0;
@@ -557,17 +710,30 @@ exports.updateProfile = async (req, res) => {
 exports.getDrives = async (req, res) => {
   try {
     const email = req.user?.email || 'hr@technova.com';
-    let company = getCompanyByEmail(email);
+    const userId = req.user?._id || req.user?.id;
 
     if (mongoose.connection.readyState === 1) {
       try {
-        const mongoComp = await Company.findOne({ email }).lean();
-        if (mongoComp) company = mongoComp;
+        const company = await getOrCreateMongoCompany(userId, email);
+        if (company) {
+          await seedDemoDrivesIfEmpty();
+          const mongoDrives = await Drive.find({ company: company._id }).populate('company').sort({ createdAt: -1 }).lean();
+          if (mongoDrives && mongoDrives.length > 0) {
+            const formatted = mongoDrives.map(d => formatRecruiterDrive(d, company));
+            return res.status(200).json({
+              success: true,
+              count: formatted.length,
+              drives: formatted
+            });
+          }
+        }
       } catch (err) {
-        console.warn('[Recruiter Mongo]: Fallback to memory store', err.message);
+        console.warn('[Recruiter Mongo Get Drives Warning]:', err.message);
       }
     }
 
+    // Fallback in-memory
+    const company = getCompanyByEmail(email);
     const userDrives = recruiterStore.drives.filter(
       d => d.company_email === email || d.company_id === company.id
     );
@@ -591,9 +757,38 @@ exports.getDrives = async (req, res) => {
 exports.getDriveById = async (req, res) => {
   try {
     const email = req.user?.email || 'hr@technova.com';
+    const userId = req.user?._id || req.user?.id;
     const driveId = req.params.id;
-    const company = getCompanyByEmail(email);
 
+    if (mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(driveId)) {
+      try {
+        const company = await getOrCreateMongoCompany(userId, email);
+        const driveDoc = await Drive.findById(driveId).populate('company').lean();
+        if (driveDoc) {
+          const docCompanyId = driveDoc.company?._id ? driveDoc.company._id.toString() : driveDoc.company?.toString();
+          const docCompanyEmail = driveDoc.company?.email;
+          const userCompId = company?._id?.toString();
+
+          // Ownership check: Recruiter must own this drive
+          if (docCompanyId !== userCompId && docCompanyEmail !== email) {
+            return res.status(403).json({
+              success: false,
+              message: 'Access Denied: You do not own or have permission to manage this placement drive.'
+            });
+          }
+
+          return res.status(200).json({
+            success: true,
+            drive: formatRecruiterDrive(driveDoc, company)
+          });
+        }
+      } catch (err) {
+        console.warn('[Recruiter Mongo Get Drive Detail Warning]:', err.message);
+      }
+    }
+
+    // Fallback in-memory
+    const company = getCompanyByEmail(email);
     const drive = recruiterStore.drives.find(
       d => String(d.id) === String(driveId) || String(d._id) === String(driveId)
     );
@@ -631,6 +826,7 @@ exports.getDriveById = async (req, res) => {
 exports.createDrive = async (req, res) => {
   try {
     const email = req.user?.email || 'hr@technova.com';
+    const userId = req.user?._id || req.user?.id;
     const company = getCompanyByEmail(email);
 
     if (!company.approved) {
@@ -660,7 +856,7 @@ exports.createDrive = async (req, res) => {
     } = req.body;
 
     const errors = [];
-    if (!title || !title.trim()) errors.append ? errors.push('Job title is required.') : errors.push('Job title is required.');
+    if (!title || !title.trim()) errors.push('Job title is required.');
     if (!deadline) errors.push('Application deadline is required.');
 
     const parsedCtc = parseFloat(ctc || 0);
@@ -697,54 +893,98 @@ exports.createDrive = async (req, res) => {
       skillList = skills.split(',').map(s => s.trim()).filter(Boolean);
     }
 
-    const newDrive = {
+    const resolvedJobType = job_type || jobType || 'Full-Time';
+    const resolvedDriveDate = drive_date || driveDate || null;
+    const resolvedLocation = location ? location.trim() : (company.location || 'Bengaluru');
+    const resolvedDesc = description ? description.trim() : `Exciting career opportunity with ${company.name}.`;
+
+    let createdDrive = null;
+
+    // 1. Persist to MongoDB if connected
+    if (mongoose.connection.readyState === 1) {
+      try {
+        const mongoComp = await getOrCreateMongoCompany(userId, email);
+        if (mongoComp) {
+          const doc = await Drive.create({
+            company: mongoComp._id,
+            title: title.trim(),
+            jobType: resolvedJobType,
+            ctc: parsedCtc,
+            location: resolvedLocation,
+            minCgpa: parsedMinCgpa,
+            maxBacklogs: parsedMaxBacklogs,
+            openings: parsedOpenings,
+            deadline: new Date(deadline),
+            driveDate: resolvedDriveDate ? new Date(resolvedDriveDate) : null,
+            branches: branchList,
+            skills: skillList,
+            status: 'active',
+            description: resolvedDesc
+          });
+          if (doc) {
+            const populated = await Drive.findById(doc._id).populate('company').lean();
+            createdDrive = formatRecruiterDrive(populated, mongoComp);
+          }
+        }
+      } catch (err) {
+        console.warn('[Recruiter Mongo Create Drive Warning]:', err.message);
+      }
+    }
+
+    // 2. Also synchronize in-memory fallback
+    const newDrive = createdDrive || {
       id: Date.now(),
+      _id: String(Date.now()),
       company_id: company.id || 1,
+      companyId: company.id || 1,
       company_email: email,
+      companyEmail: email,
       company_name: company.name,
+      companyName: company.name,
       title: title.trim(),
-      job_type: job_type || jobType || 'Full-Time',
+      job_type: resolvedJobType,
+      jobType: resolvedJobType,
       ctc: parsedCtc,
-      location: location ? location.trim() : (company.location || 'Bengaluru'),
+      location: resolvedLocation,
       min_cgpa: parsedMinCgpa,
+      minCgpa: parsedMinCgpa,
       max_backlogs: parsedMaxBacklogs,
+      maxBacklogs: parsedMaxBacklogs,
       openings: parsedOpenings,
       deadline: deadline,
-      drive_date: drive_date || driveDate || null,
+      drive_date: resolvedDriveDate,
+      driveDate: resolvedDriveDate,
       branches: branchList,
       skills: skillList,
       applicant_count: 0,
+      applicantCount: 0,
       status: 'active',
-      description: description ? description.trim() : `Exciting career opportunity with ${company.name}.`,
+      description: resolvedDesc,
       created_at: new Date().toISOString()
     };
 
-    // Store in-memory
     recruiterStore.drives.unshift(newDrive);
 
-    // Save in Mongo if connected
-    if (mongoose.connection.readyState === 1) {
-      try {
-        await Drive.create({
-          company: company._id || company.id,
-          title: newDrive.title,
-          jobType: newDrive.job_type,
-          ctc: newDrive.ctc,
-          location: newDrive.location,
-          minCgpa: newDrive.min_cgpa,
-          maxBacklogs: newDrive.max_backlogs,
-          openings: newDrive.openings,
-          deadline: new Date(newDrive.deadline),
-          driveDate: newDrive.drive_date ? new Date(newDrive.drive_date) : null,
-          branches: newDrive.branches,
-          skills: newDrive.skills,
-          status: 'active',
-          description: newDrive.description
-        });
-      } catch (err) {
-        console.warn('[Recruiter Mongo Create Drive]:', err.message);
-      }
-    }
+    // Keep student fallback store aligned
+    studentStore.drives.unshift({
+      id: String(newDrive.id || newDrive._id),
+      _id: String(newDrive._id || newDrive.id),
+      title: newDrive.title,
+      company_name: newDrive.company_name || newDrive.companyName,
+      logo: null,
+      location: newDrive.location,
+      ctc: newDrive.ctc,
+      job_type: newDrive.job_type,
+      min_cgpa: newDrive.min_cgpa,
+      max_backlogs: newDrive.max_backlogs,
+      branches: newDrive.branches,
+      skills: newDrive.skills,
+      openings: newDrive.openings,
+      deadline: newDrive.deadline,
+      drive_date: newDrive.drive_date,
+      description: newDrive.description,
+      company_desc: ''
+    });
 
     return res.status(201).json({
       success: true,
@@ -765,29 +1005,8 @@ exports.createDrive = async (req, res) => {
 exports.updateDrive = async (req, res) => {
   try {
     const email = req.user?.email || 'hr@technova.com';
+    const userId = req.user?._id || req.user?.id;
     const driveId = req.params.id;
-    const company = getCompanyByEmail(email);
-
-    const index = recruiterStore.drives.findIndex(
-      d => String(d.id) === String(driveId) || String(d._id) === String(driveId)
-    );
-
-    if (index === -1) {
-      return res.status(404).json({
-        success: false,
-        message: `Placement drive with ID '${driveId}' not found.`
-      });
-    }
-
-    const currentDrive = recruiterStore.drives[index];
-
-    // Security & Ownership check
-    if (currentDrive.company_email !== email && currentDrive.company_id !== company.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access Denied: You do not own or have permission to update this placement drive.'
-      });
-    }
 
     const {
       title,
@@ -809,29 +1028,109 @@ exports.updateDrive = async (req, res) => {
       status
     } = req.body;
 
-    const updatedDrive = {
-      ...currentDrive,
-      title: title ? title.trim() : currentDrive.title,
-      job_type: job_type || jobType || currentDrive.job_type,
-      ctc: ctc !== undefined ? parseFloat(ctc) : currentDrive.ctc,
-      location: location !== undefined ? location.trim() : currentDrive.location,
-      openings: openings !== undefined ? parseInt(openings, 10) : currentDrive.openings,
-      deadline: deadline || currentDrive.deadline,
-      drive_date: drive_date !== undefined ? drive_date : (driveDate !== undefined ? driveDate : currentDrive.drive_date),
-      description: description !== undefined ? description.trim() : currentDrive.description,
-      min_cgpa: min_cgpa !== undefined ? parseFloat(min_cgpa) : (minCgpa !== undefined ? parseFloat(minCgpa) : currentDrive.min_cgpa),
-      max_backlogs: max_backlogs !== undefined ? parseInt(max_backlogs, 10) : (maxBacklogs !== undefined ? parseInt(maxBacklogs, 10) : currentDrive.max_backlogs),
-      branches: Array.isArray(branches) ? branches : currentDrive.branches,
-      skills: Array.isArray(skills) ? skills : (typeof skills === 'string' ? skills.split(',').map(s => s.trim()).filter(Boolean) : currentDrive.skills),
-      status: status || currentDrive.status
-    };
+    let updatedDoc = null;
 
-    recruiterStore.drives[index] = updatedDrive;
+    // 1. If MongoDB is connected
+    if (mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(driveId)) {
+      try {
+        const mongoComp = await getOrCreateMongoCompany(userId, email);
+        const existing = await Drive.findById(driveId).populate('company');
+        if (!existing) {
+          return res.status(404).json({
+            success: false,
+            message: `Placement drive with ID '${driveId}' not found.`
+          });
+        }
+
+        // Ownership check
+        const docCompanyId = existing.company?._id ? existing.company._id.toString() : existing.company?.toString();
+        const docCompanyEmail = existing.company?.email;
+        const userCompId = mongoComp?._id?.toString();
+        if (docCompanyId !== userCompId && docCompanyEmail !== email) {
+          return res.status(403).json({
+            success: false,
+            message: 'Access Denied: You do not own or have permission to update this placement drive.'
+          });
+        }
+
+        const updateData = {};
+        if (title !== undefined) updateData.title = title.trim();
+        if (job_type !== undefined || jobType !== undefined) updateData.jobType = job_type || jobType;
+        if (ctc !== undefined) updateData.ctc = parseFloat(ctc);
+        if (location !== undefined) updateData.location = location.trim();
+        if (openings !== undefined) updateData.openings = parseInt(openings, 10);
+        if (deadline !== undefined) updateData.deadline = new Date(deadline);
+        if (drive_date !== undefined || driveDate !== undefined) {
+          const dd = drive_date || driveDate;
+          updateData.driveDate = dd ? new Date(dd) : null;
+        }
+        if (description !== undefined) updateData.description = description.trim();
+        if (min_cgpa !== undefined || minCgpa !== undefined) updateData.minCgpa = parseFloat(min_cgpa ?? minCgpa);
+        if (max_backlogs !== undefined || maxBacklogs !== undefined) updateData.maxBacklogs = parseInt(max_backlogs ?? maxBacklogs, 10);
+        if (branches !== undefined) updateData.branches = Array.isArray(branches) ? branches : branches.split(',').map(b => b.trim()).filter(Boolean);
+        if (skills !== undefined) updateData.skills = Array.isArray(skills) ? skills : skills.split(',').map(s => s.trim()).filter(Boolean);
+        if (status !== undefined) updateData.status = status;
+
+        const saved = await Drive.findByIdAndUpdate(driveId, { $set: updateData }, { new: true }).populate('company').lean();
+        if (saved) {
+          updatedDoc = formatRecruiterDrive(saved, mongoComp);
+        }
+      } catch (err) {
+        console.warn('[Recruiter Mongo Update Drive Warning]:', err.message);
+      }
+    }
+
+    // 2. Also update in-memory fallback
+    const index = recruiterStore.drives.findIndex(
+      d => String(d.id) === String(driveId) || String(d._id) === String(driveId)
+    );
+
+    if (index !== -1) {
+      const currentDrive = recruiterStore.drives[index];
+      const company = getCompanyByEmail(email);
+
+      // In-memory ownership check
+      if (currentDrive.company_email !== email && currentDrive.company_id !== company.id) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access Denied: You do not own or have permission to update this placement drive.'
+        });
+      }
+
+      const updatedDrive = {
+        ...currentDrive,
+        title: title ? title.trim() : currentDrive.title,
+        job_type: job_type || jobType || currentDrive.job_type,
+        jobType: job_type || jobType || currentDrive.job_type,
+        ctc: ctc !== undefined ? parseFloat(ctc) : currentDrive.ctc,
+        location: location !== undefined ? location.trim() : currentDrive.location,
+        openings: openings !== undefined ? parseInt(openings, 10) : currentDrive.openings,
+        deadline: deadline || currentDrive.deadline,
+        drive_date: drive_date !== undefined ? drive_date : (driveDate !== undefined ? driveDate : currentDrive.drive_date),
+        driveDate: drive_date !== undefined ? drive_date : (driveDate !== undefined ? driveDate : currentDrive.drive_date),
+        description: description !== undefined ? description.trim() : currentDrive.description,
+        min_cgpa: min_cgpa !== undefined ? parseFloat(min_cgpa) : (minCgpa !== undefined ? parseFloat(minCgpa) : currentDrive.min_cgpa),
+        minCgpa: min_cgpa !== undefined ? parseFloat(min_cgpa) : (minCgpa !== undefined ? parseFloat(minCgpa) : currentDrive.min_cgpa),
+        max_backlogs: max_backlogs !== undefined ? parseInt(max_backlogs, 10) : (maxBacklogs !== undefined ? parseInt(maxBacklogs, 10) : currentDrive.max_backlogs),
+        maxBacklogs: max_backlogs !== undefined ? parseInt(max_backlogs, 10) : (maxBacklogs !== undefined ? parseInt(maxBacklogs, 10) : currentDrive.max_backlogs),
+        branches: Array.isArray(branches) ? branches : currentDrive.branches,
+        skills: Array.isArray(skills) ? skills : (typeof skills === 'string' ? skills.split(',').map(s => s.trim()).filter(Boolean) : currentDrive.skills),
+        status: status || currentDrive.status
+      };
+
+      recruiterStore.drives[index] = updatedDrive;
+      if (!updatedDoc) updatedDoc = updatedDrive;
+    } else if (!updatedDoc) {
+      return res.status(404).json({
+        success: false,
+        message: `Placement drive with ID '${driveId}' not found.`
+      });
+    }
 
     return res.status(200).json({
       success: true,
       message: 'Placement drive updated successfully.',
-      drive: updatedDrive
+      drive: updatedDoc
     });
   } catch (err) {
     console.error('[Recruiter Update Drive Error]:', err);
@@ -847,37 +1146,73 @@ exports.updateDrive = async (req, res) => {
 exports.closeDrive = async (req, res) => {
   try {
     const email = req.user?.email || 'hr@technova.com';
+    const userId = req.user?._id || req.user?.id;
     const driveId = req.params.id;
-    const company = getCompanyByEmail(email);
 
+    let closedDoc = null;
+
+    // 1. If MongoDB is connected
+    if (mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(driveId)) {
+      try {
+        const mongoComp = await getOrCreateMongoCompany(userId, email);
+        const existing = await Drive.findById(driveId).populate('company');
+        if (!existing) {
+          return res.status(404).json({
+            success: false,
+            message: `Placement drive with ID '${driveId}' not found.`
+          });
+        }
+
+        // Ownership check
+        const docCompanyId = existing.company?._id ? existing.company._id.toString() : existing.company?.toString();
+        const docCompanyEmail = existing.company?.email;
+        const userCompId = mongoComp?._id?.toString();
+        if (docCompanyId !== userCompId && docCompanyEmail !== email) {
+          return res.status(403).json({
+            success: false,
+            message: 'Access Denied: You do not own or have permission to close this placement drive.'
+          });
+        }
+
+        const saved = await Drive.findByIdAndUpdate(driveId, { $set: { status: 'closed' } }, { new: true }).populate('company').lean();
+        if (saved) {
+          closedDoc = formatRecruiterDrive(saved, mongoComp);
+        }
+      } catch (err) {
+        console.warn('[Recruiter Mongo Close Drive Warning]:', err.message);
+      }
+    }
+
+    // 2. Also update in-memory fallback
     const index = recruiterStore.drives.findIndex(
       d => String(d.id) === String(driveId) || String(d._id) === String(driveId)
     );
 
-    if (index === -1) {
+    if (index !== -1) {
+      const currentDrive = recruiterStore.drives[index];
+      const company = getCompanyByEmail(email);
+
+      if (currentDrive.company_email !== email && currentDrive.company_id !== company.id) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access Denied: You do not own or have permission to close this placement drive.'
+        });
+      }
+
+      currentDrive.status = 'closed';
+      recruiterStore.drives[index] = currentDrive;
+      if (!closedDoc) closedDoc = currentDrive;
+    } else if (!closedDoc) {
       return res.status(404).json({
         success: false,
         message: `Placement drive with ID '${driveId}' not found.`
       });
     }
 
-    const currentDrive = recruiterStore.drives[index];
-
-    // Security & Ownership check
-    if (currentDrive.company_email !== email && currentDrive.company_id !== company.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access Denied: You do not own or have permission to close this placement drive.'
-      });
-    }
-
-    currentDrive.status = 'closed';
-    recruiterStore.drives[index] = currentDrive;
-
     return res.status(200).json({
       success: true,
       message: 'Placement drive closed.',
-      drive: currentDrive
+      drive: closedDoc
     });
   } catch (err) {
     console.error('[Recruiter Close Drive Error]:', err);

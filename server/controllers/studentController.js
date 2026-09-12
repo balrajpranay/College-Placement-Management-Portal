@@ -200,10 +200,118 @@ const checkEligibility = (student, drive) => {
   return { eligible, reasons };
 };
 
+// Format student profile for consistent frontend response matching React shape
+function formatStudentResponse(s, fallbackEmail) {
+  if (!s) return null;
+  const technicalSkills = Array.isArray(s.skills) && s.skills.length > 0
+    ? s.skills
+    : (Array.isArray(s.technical_skills) ? s.technical_skills : []);
+  const studentNum = s.studentNo || s.student_no || 'CS2023001';
+  const gradY = Number(s.gradYear || s.grad_year || 2026);
+  const resFilename = s.resumeFilename || s.resume_filename || null;
+  const resOrigName = s.resumeOriginalName || s.resume_original_name || null;
+
+  return {
+    id: (s._id || s.id || '').toString(),
+    _id: (s._id || s.id || '').toString(),
+    user: (s.user?._id || s.user || '').toString(),
+    name: s.name || '',
+    studentNo: studentNum,
+    student_no: studentNum,
+    email: s.email || fallbackEmail || 'priya.sharma@student.edu',
+    phone: s.phone || '',
+    department: s.department || 'Computer Science',
+    gradYear: gradY,
+    grad_year: gradY,
+    cgpa: s.cgpa !== undefined && s.cgpa !== null ? Number(s.cgpa) : 0,
+    tenthPct: s.tenthPct !== undefined && s.tenthPct !== null ? Number(s.tenthPct) : null,
+    twelfthPct: s.twelfthPct !== undefined && s.twelfthPct !== null ? Number(s.twelfthPct) : null,
+    backlogs: Number(s.backlogs || 0),
+    technical_skills: technicalSkills,
+    skills: technicalSkills,
+    softSkills: s.softSkills || '',
+    certifications: s.certifications || '',
+    internships: s.internships || '',
+    projects: s.projects || '',
+    resume_filename: resFilename,
+    resume_original_name: resOrigName,
+    resumeFilename: resFilename,
+    resumeOriginalName: resOrigName
+  };
+}
+
+// Helper: Query student profile from MongoDB with graceful in-memory fallback
+async function getStudentProfileForUser(userId, fallbackEmail) {
+  if (mongoose.connection.readyState === 1 && userId) {
+    try {
+      const doc = await Student.findOne({ user: userId }).lean();
+      if (doc) {
+        return formatStudentResponse(doc, fallbackEmail);
+      }
+    } catch (err) {
+      console.warn('[Student Mongo]: Fallback to memory store', err.message);
+    }
+  }
+  return studentStore.profile;
+}
+
+// Helper: Format Drive for student consumption matching React frontend expectations
+function formatDriveForStudent(d) {
+  if (!d) return null;
+  const idStr = (d._id || d.id || '').toString();
+  const companyObj = d.company && typeof d.company === 'object' ? d.company : null;
+  const compName = companyObj?.name || d.company_name || d.companyName || 'Corporate Partner';
+  const logo = companyObj?.logoFilename ? `/static/images/companies/${companyObj.logoFilename}` : (d.logo || null);
+
+  const deadlineStr = d.deadline instanceof Date
+    ? d.deadline.toISOString().split('T')[0]
+    : (d.deadline ? String(d.deadline).split('T')[0] : '');
+  const driveDateStr = d.driveDate instanceof Date
+    ? d.driveDate.toISOString().split('T')[0]
+    : (d.drive_date ? String(d.drive_date).split('T')[0] : (d.driveDate ? String(d.driveDate).split('T')[0] : ''));
+
+  const jobType = d.jobType || d.job_type || 'Full-Time';
+  const minCgpa = d.minCgpa !== undefined ? Number(d.minCgpa) : (d.min_cgpa !== undefined ? Number(d.min_cgpa) : 0);
+  const maxBacklogs = d.maxBacklogs !== undefined ? Number(d.maxBacklogs) : (d.max_backlogs !== undefined ? Number(d.max_backlogs) : 0);
+  const openings = d.openings !== undefined ? Number(d.openings) : 1;
+  const ctc = d.ctc !== undefined ? Number(d.ctc) : 0;
+
+  return {
+    id: idStr,
+    _id: idStr,
+    title: d.title || '',
+    company_name: compName,
+    companyName: compName,
+    logo: logo,
+    ctc: ctc,
+    package: ctc,
+    location: d.location || '',
+    job_type: jobType,
+    jobType: jobType,
+    min_cgpa: minCgpa,
+    minCgpa: minCgpa,
+    max_backlogs: maxBacklogs,
+    maxBacklogs: maxBacklogs,
+    openings: openings,
+    deadline: deadlineStr,
+    drive_date: driveDateStr,
+    driveDate: driveDateStr,
+    branches: Array.isArray(d.branches) ? d.branches : [],
+    skills: Array.isArray(d.skills) ? d.skills : [],
+    status: d.status || 'active',
+    description: d.description || '',
+    company_desc: companyObj?.description || d.company_desc || ''
+  };
+}
+
+
 // 1. GET Dashboard
 exports.getDashboard = async (req, res) => {
   try {
-    const student = studentStore.profile;
+    const userId = req.user?._id || req.user?.id;
+    const userEmail = req.user?.email || 'priya.sharma@student.edu';
+    const student = await getStudentProfileForUser(userId, userEmail);
+
     const completion = calculateCompletion(student);
     const app_count = studentStore.applications.length;
     const shortlisted = studentStore.applications.filter(a => ['Shortlisted', 'Interview Scheduled', 'Under Review'].includes(a.status)).length;
@@ -221,7 +329,7 @@ exports.getDashboard = async (req, res) => {
         selected,
         upcoming_interviews,
         recent_notifications,
-        skills: student.technical_skills
+        skills: student.technical_skills || student.skills || []
       }
     });
   } catch (err) {
@@ -232,7 +340,10 @@ exports.getDashboard = async (req, res) => {
 // 2. GET Profile
 exports.getProfile = async (req, res) => {
   try {
-    const student = studentStore.profile;
+    const userId = req.user?._id || req.user?.id;
+    const userEmail = req.user?.email || 'priya.sharma@student.edu';
+    const student = await getStudentProfileForUser(userId, userEmail);
+
     const completion = calculateCompletion(student);
     const departments = [
       'Computer Science',
@@ -249,7 +360,7 @@ exports.getProfile = async (req, res) => {
         student,
         completion,
         departments,
-        skills_string: student.technical_skills.join(', ')
+        skills_string: Array.isArray(student.technical_skills) ? student.technical_skills.join(', ') : (student.technical_skills || '')
       }
     });
   } catch (err) {
@@ -261,35 +372,104 @@ exports.getProfile = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     const body = req.body;
-    const student = studentStore.profile;
+    const userId = req.user?._id || req.user?.id;
+    const userEmail = req.user?.email || 'priya.sharma@student.edu';
 
-    if (body.name) student.name = body.name;
-    if (body.phone !== undefined) student.phone = body.phone;
-    if (body.department) student.department = body.department;
-    if (body.gradYear !== undefined) student.gradYear = Number(body.gradYear);
-    if (body.cgpa !== undefined) student.cgpa = Number(body.cgpa);
-    if (body.tenthPct !== undefined) student.tenthPct = Number(body.tenthPct);
-    if (body.twelfthPct !== undefined) student.twelfthPct = Number(body.twelfthPct);
-    if (body.backlogs !== undefined) student.backlogs = Number(body.backlogs);
-    if (body.softSkills !== undefined) student.softSkills = body.softSkills;
-    if (body.certifications !== undefined) student.certifications = body.certifications;
-    if (body.projects !== undefined) student.projects = body.projects;
-    if (body.internships !== undefined) student.internships = body.internships;
-
+    // Parse technical skills
+    let parsedSkills = [];
     if (body.technical_skills !== undefined) {
       if (Array.isArray(body.technical_skills)) {
-        student.technical_skills = body.technical_skills;
+        parsedSkills = body.technical_skills;
       } else if (typeof body.technical_skills === 'string') {
-        student.technical_skills = body.technical_skills.split(',').map(s => s.trim()).filter(Boolean);
+        parsedSkills = body.technical_skills.split(',').map(s => s.trim()).filter(Boolean);
       }
+    } else if (body.skills !== undefined) {
+      if (Array.isArray(body.skills)) {
+        parsedSkills = body.skills;
+      } else if (typeof body.skills === 'string') {
+        parsedSkills = body.skills.split(',').map(s => s.trim()).filter(Boolean);
+      }
+    }
+
+    // Build update object
+    const updateData = {};
+    if (body.name !== undefined) updateData.name = body.name.trim();
+    if (body.phone !== undefined) updateData.phone = body.phone.trim();
+    if (body.department !== undefined) updateData.department = body.department.trim();
+    if (body.gradYear !== undefined || body.grad_year !== undefined) {
+      updateData.gradYear = Number(body.gradYear || body.grad_year || 2026);
+    }
+    if (body.cgpa !== undefined) updateData.cgpa = Number(body.cgpa);
+    if (body.tenthPct !== undefined && body.tenthPct !== '') updateData.tenthPct = Number(body.tenthPct);
+    if (body.twelfthPct !== undefined && body.twelfthPct !== '') updateData.twelfthPct = Number(body.twelfthPct);
+    if (body.backlogs !== undefined) updateData.backlogs = Number(body.backlogs);
+    if (body.softSkills !== undefined) updateData.softSkills = body.softSkills;
+    if (body.certifications !== undefined) updateData.certifications = body.certifications;
+    if (body.projects !== undefined) updateData.projects = body.projects;
+    if (body.internships !== undefined) updateData.internships = body.internships;
+    if (parsedSkills.length > 0 || body.technical_skills !== undefined || body.skills !== undefined) {
+      updateData.skills = parsedSkills;
+    }
+
+    let updatedStudent = null;
+
+    // 1. Persist to MongoDB if connected
+    if (mongoose.connection.readyState === 1 && userId) {
+      try {
+        const studentNo = body.studentNo || body.student_no || studentStore.profile.studentNo || 'CS2023001';
+        const doc = await Student.findOneAndUpdate(
+          { user: userId },
+          {
+            $set: {
+              ...updateData,
+              user: userId
+            },
+            $setOnInsert: {
+              studentNo: studentNo,
+              name: updateData.name || studentStore.profile.name,
+              department: updateData.department || studentStore.profile.department,
+              gradYear: updateData.gradYear || 2026
+            }
+          },
+          { new: true, upsert: true, runValidators: false }
+        ).lean();
+
+        if (doc) {
+          updatedStudent = formatStudentResponse(doc, userEmail);
+        }
+      } catch (dbErr) {
+        console.warn('[Student Mongo UpdateProfile Warning]:', dbErr.message);
+      }
+    }
+
+    // 2. Also keep in-memory fallback updated
+    const student = studentStore.profile;
+    if (updateData.name !== undefined) student.name = updateData.name;
+    if (updateData.phone !== undefined) student.phone = updateData.phone;
+    if (updateData.department !== undefined) student.department = updateData.department;
+    if (updateData.gradYear !== undefined) student.gradYear = updateData.gradYear;
+    if (updateData.cgpa !== undefined) student.cgpa = updateData.cgpa;
+    if (updateData.tenthPct !== undefined) student.tenthPct = updateData.tenthPct;
+    if (updateData.twelfthPct !== undefined) student.twelfthPct = updateData.twelfthPct;
+    if (updateData.backlogs !== undefined) student.backlogs = updateData.backlogs;
+    if (updateData.softSkills !== undefined) student.softSkills = updateData.softSkills;
+    if (updateData.certifications !== undefined) student.certifications = updateData.certifications;
+    if (updateData.projects !== undefined) student.projects = updateData.projects;
+    if (updateData.internships !== undefined) student.internships = updateData.internships;
+    if (updateData.skills !== undefined) {
+      student.technical_skills = updateData.skills;
+    }
+
+    if (!updatedStudent) {
+      updatedStudent = student;
     }
 
     return res.status(200).json({
       success: true,
       message: 'Profile updated successfully.',
       data: {
-        student,
-        completion: calculateCompletion(student)
+        student: updatedStudent,
+        completion: calculateCompletion(updatedStudent)
       }
     });
   } catch (err) {
@@ -301,15 +481,35 @@ exports.updateProfile = async (req, res) => {
 exports.uploadResume = async (req, res) => {
   try {
     const { filename } = req.body;
-    studentStore.profile.resume_filename = filename || 'student_1_uploaded_resume.pdf';
-    studentStore.profile.resume_original_name = filename || 'Verified_Student_Resume.pdf';
+    const resumeFile = filename || 'student_1_uploaded_resume.pdf';
+    const resumeOriginal = filename || 'Verified_Student_Resume.pdf';
+
+    studentStore.profile.resume_filename = resumeFile;
+    studentStore.profile.resume_original_name = resumeOriginal;
+
+    const userId = req.user?._id || req.user?.id;
+    if (mongoose.connection.readyState === 1 && userId) {
+      try {
+        await Student.findOneAndUpdate(
+          { user: userId },
+          {
+            $set: {
+              resumeFilename: resumeFile,
+              resumeOriginalName: resumeOriginal
+            }
+          }
+        );
+      } catch (dbErr) {
+        console.warn('[Student Mongo UploadResume Warning]:', dbErr.message);
+      }
+    }
 
     return res.status(200).json({
       success: true,
       message: 'Resume updated successfully.',
       data: {
-        resume_filename: studentStore.profile.resume_filename,
-        resume_original_name: studentStore.profile.resume_original_name
+        resume_filename: resumeFile,
+        resume_original_name: resumeOriginal
       }
     });
   } catch (err) {
@@ -320,12 +520,33 @@ exports.uploadResume = async (req, res) => {
 // 5. GET Drives
 exports.getDrives = async (req, res) => {
   try {
-    const student = studentStore.profile;
+    const userId = req.user?._id || req.user?.id;
+    const userEmail = req.user?.email || 'priya.sharma@student.edu';
+    const student = await getStudentProfileForUser(userId, userEmail);
     const { q, eligible } = req.query;
 
-    let items = studentStore.drives.map(d => {
+    let driveList = [];
+
+    // 1. If MongoDB is connected, read from Drive collection
+    if (mongoose.connection.readyState === 1) {
+      try {
+        const mongoDrives = await Drive.find({ status: 'active' }).populate('company').sort({ deadline: 1 }).lean();
+        if (mongoDrives && mongoDrives.length > 0) {
+          driveList = mongoDrives.map(d => formatDriveForStudent(d));
+        }
+      } catch (err) {
+        console.warn('[Student Mongo Get Drives Warning]:', err.message);
+      }
+    }
+
+    // 2. Fallback to in-memory studentStore.drives
+    if (driveList.length === 0) {
+      driveList = studentStore.drives.map(d => formatDriveForStudent(d));
+    }
+
+    let items = driveList.map(d => {
       const eligibility = checkEligibility(student, d);
-      const app = studentStore.applications.find(a => a.drive_id === d.id);
+      const app = studentStore.applications.find(a => String(a.drive_id) === String(d.id));
       return {
         drive: d,
         eligible: eligibility.eligible,
@@ -360,15 +581,38 @@ exports.getDrives = async (req, res) => {
 exports.getDriveDetail = async (req, res) => {
   try {
     const { id } = req.params;
-    const drive = studentStore.drives.find(d => d.id === id);
+    const userId = req.user?._id || req.user?.id;
+    const userEmail = req.user?.email || 'priya.sharma@student.edu';
+    const student = await getStudentProfileForUser(userId, userEmail);
+
+    let drive = null;
+
+    // 1. Check MongoDB if connected
+    if (mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(id)) {
+      try {
+        const doc = await Drive.findById(id).populate('company').lean();
+        if (doc) {
+          drive = formatDriveForStudent(doc);
+        }
+      } catch (err) {
+        console.warn('[Student Mongo Get Drive Detail Warning]:', err.message);
+      }
+    }
+
+    // 2. Fallback in-memory
+    if (!drive) {
+      const fallback = studentStore.drives.find(d => String(d.id) === String(id) || String(d._id) === String(id));
+      if (fallback) {
+        drive = formatDriveForStudent(fallback);
+      }
+    }
 
     if (!drive) {
       return res.status(404).json({ success: false, message: 'Placement drive not found.' });
     }
 
-    const student = studentStore.profile;
     const eligibility = checkEligibility(student, drive);
-    const app = studentStore.applications.find(a => a.drive_id === drive.id);
+    const app = studentStore.applications.find(a => String(a.drive_id) === String(drive.id));
 
     return res.status(200).json({
       success: true,
@@ -388,15 +632,31 @@ exports.getDriveDetail = async (req, res) => {
 exports.applyToDrive = async (req, res) => {
   try {
     const { id } = req.params;
-    const drive = studentStore.drives.find(d => d.id === id);
+    const userId = req.user?._id || req.user?.id;
+    const userEmail = req.user?.email || 'priya.sharma@student.edu';
+    const student = await getStudentProfileForUser(userId, userEmail);
+
+    let drive = null;
+
+    if (mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(id)) {
+      try {
+        const doc = await Drive.findById(id).populate('company').lean();
+        if (doc) drive = formatDriveForStudent(doc);
+      } catch (err) {
+        console.warn('[Student Mongo Apply Find Drive Warning]:', err.message);
+      }
+    }
+
+    if (!drive) {
+      const fallback = studentStore.drives.find(d => String(d.id) === String(id) || String(d._id) === String(id));
+      if (fallback) drive = formatDriveForStudent(fallback);
+    }
 
     if (!drive) {
       return res.status(404).json({ success: false, message: 'Placement drive not found.' });
     }
 
-    const student = studentStore.profile;
     const eligibility = checkEligibility(student, drive);
-
     if (!eligibility.eligible) {
       return res.status(400).json({
         success: false,
@@ -404,7 +664,7 @@ exports.applyToDrive = async (req, res) => {
       });
     }
 
-    const existingApp = studentStore.applications.find(a => a.drive_id === drive.id);
+    const existingApp = studentStore.applications.find(a => String(a.drive_id) === String(drive.id));
     if (existingApp) {
       return res.status(400).json({
         success: false,
