@@ -293,10 +293,67 @@ exports.getFeaturedCompanies = async (req, res) => {
   });
 };
 
+// Helper to resolve any opportunity by ID across ALL_JOBS (520 scale dataset) and FEATURED_MNC_COMPANIES
+function findOpportunityById(jobId) {
+  if (!jobId) return null;
+
+  // 1. Check generated 520 full-time & internship jobs (plc-1..260, int-1..260)
+  const standardJob = ALL_JOBS.find(j => j.id === jobId);
+  if (standardJob) return standardJob;
+
+  // 2. Check Tier-1 Corporate Partners (mnc-*) with alias resolution
+  const mnc = FEATURED_MNC_COMPANIES.find(c =>
+    c.id === jobId ||
+    (c.id === 'mnc-microsoft' && jobId === 'mnc-msft') ||
+    (c.id === 'mnc-infosys' && jobId === 'mnc-infy') ||
+    (c.id === 'mnc-techmahindra' && jobId === 'mnc-tm')
+  );
+
+  if (mnc) {
+    return {
+      id: mnc.id,
+      title: (mnc.hiring_tracks && mnc.hiring_tracks[0]) || `${mnc.name} Early Career Track`,
+      company: mnc.name,
+      company_name: mnc.name,
+      logo: mnc.logo,
+      salary: mnc.category === 'Internship' ? 'Stipend + Allowance' : 'Competitive MNC CTC',
+      location: mnc.location,
+      work_mode: 'Hybrid',
+      job_type: mnc.category || 'Full-time',
+      source: mnc.tier,
+      url: mnc.url,
+      application_url: mnc.url,
+      description: mnc.description,
+      hiring_tracks: mnc.hiring_tracks,
+      tier: mnc.tier
+    };
+  }
+
+  return null;
+}
+
+// GET /api/jobs/:id (Public / Authenticated Opportunity Lookup)
+exports.getJobById = async (req, res) => {
+  const jobId = req.params.id;
+  const job = findOpportunityById(jobId);
+
+  if (!job) {
+    return res.status(404).json({
+      success: false,
+      message: `Opportunity with ID '${jobId}' not found.`
+    });
+  }
+
+  return res.status(200).json({
+    success: true,
+    data: job
+  });
+};
+
 // POST /api/jobs/:id/apply (Authenticated Students Only)
 exports.applyForJob = async (req, res) => {
   const jobId = req.params.id;
-  const job = ALL_JOBS.find(j => j.id === jobId);
+  const job = findOpportunityById(jobId);
 
   if (!job) {
     return res.status(404).json({

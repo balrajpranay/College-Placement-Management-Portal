@@ -126,9 +126,10 @@ export default function JobsHub({ isStudentPortal }) {
         message: res.message || `Application submitted successfully for ${job.title} at ${job.company}!`
       });
 
-      if (res.data && res.data.redirectUrl) {
+      const targetUrl = (res.data && res.data.redirectUrl) || job.url;
+      if (targetUrl) {
         setTimeout(() => {
-          window.open(res.data.redirectUrl, '_blank', 'noopener,noreferrer');
+          window.open(targetUrl, '_blank', 'noopener,noreferrer');
         }, 1200);
       }
     } catch (err) {
