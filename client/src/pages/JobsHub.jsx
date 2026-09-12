@@ -128,9 +128,7 @@ export default function JobsHub({ isStudentPortal }) {
 
       const targetUrl = (res.data && res.data.redirectUrl) || job.url;
       if (targetUrl) {
-        setTimeout(() => {
-          window.open(targetUrl, '_blank', 'noopener,noreferrer');
-        }, 1200);
+        window.open(targetUrl, '_blank', 'noopener,noreferrer');
       }
     } catch (err) {
       setApplyStatus({

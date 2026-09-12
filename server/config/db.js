@@ -10,9 +10,13 @@ const connectDB = async () => {
   const isProduction = process.env.NODE_ENV === 'production';
   const uri = process.env.MONGODB_URI || (!isProduction ? 'mongodb://localhost:27017/campus_connect' : null);
 
-  if (isProduction && !uri) {
-    console.error('[MongoDB Error] FATAL: MONGODB_URI environment variable is required in production.');
-    process.exit(1);
+  if (!uri) {
+    if (isProduction) {
+      console.warn('[MongoDB Notice] MONGODB_URI environment variable not configured. Running with in-memory fallback stores.');
+    } else {
+      console.log('[MongoDB Notice] Running in standalone development mode with in-memory stores.');
+    }
+    return null;
   }
 
   // Reuse cached connection if already established
@@ -22,7 +26,7 @@ const connectDB = async () => {
 
   if (!cached.promise) {
     const opts = {
-      serverSelectionTimeoutMS: isProduction ? 10000 : 1500,
+      serverSelectionTimeoutMS: isProduction ? 5000 : 1500,
       bufferCommands: false
     };
 
@@ -33,13 +37,8 @@ const connectDB = async () => {
       })
       .catch((error) => {
         cached.promise = null;
-        if (isProduction) {
-          console.error(`[MongoDB Error] FATAL: Failed to connect to MongoDB in production: ${error.message}`);
-          process.exit(1);
-        } else {
-          console.log(`[MongoDB] Connection ready. (Database offline or not yet started - server operational in standalone mode)`);
-          return null;
-        }
+        console.warn(`[MongoDB Notice] Database connection unavailable: ${error.message}. Running with in-memory fallback stores.`);
+        return null;
       });
   }
 
@@ -48,7 +47,7 @@ const connectDB = async () => {
     return cached.conn;
   } catch (err) {
     cached.promise = null;
-    throw err;
+    return null;
   }
 };
 
