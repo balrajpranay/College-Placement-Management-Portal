@@ -56,10 +56,12 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start Server on 0.0.0.0
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`[Express] Server running on http://127.0.0.1:${PORT}`);
-  console.log(`[Express] Health check available at: http://127.0.0.1:${PORT}/api/health`);
-});
+// Start Server on 0.0.0.0 (Only when run directly in standalone/local mode, bypassed in Vercel serverless)
+if (require.main === module && !process.env.VERCEL) {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[Express] Server running on http://127.0.0.1:${PORT}`);
+    console.log(`[Express] Health check available at: http://127.0.0.1:${PORT}/api/health`);
+  });
+}
 
 module.exports = app;
