@@ -13,3 +13,4 @@ __pycache__/
 scratch/
 test_*.py
 verify_*.py
+api/index.py
