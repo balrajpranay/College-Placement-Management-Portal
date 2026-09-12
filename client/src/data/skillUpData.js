@@ -11,7 +11,7 @@ export const SKILL_UP_OPPORTUNITIES = [
     "duration": "Varies",
     "certificate": "Digital credentials on eligible courses",
     "linkLabel": "Infosys Springboard",
-    "directLink": "https://infosysspringboard.onwings.com/?utm_source=chatgpt.com",
+    "directLink": "https://infyspringboard.onwingspan.com/",
     "category": "Programming & AI"
   },
   {
@@ -26,7 +26,7 @@ export const SKILL_UP_OPPORTUNITIES = [
     "duration": "12 weeks",
     "certificate": "Infosys credential",
     "linkLabel": "Infosys Pragati information",
-    "directLink": "https://infosysspringboard.onwings.com/?utm_source=chatgpt.com",
+    "directLink": "https://infyspringboard.onwingspan.com/",
     "category": "Career & Employability"
   },
   {
@@ -41,7 +41,7 @@ export const SKILL_UP_OPPORTUNITIES = [
     "duration": "1–20+ hrs depending on course",
     "certificate": "Digital credentials",
     "linkLabel": "IBM  SkillsBuild  AI",
-    "directLink": "https://skillsbuild.org/learning-catalog/university-catalog?topic=ai&utm_source=chatgpt.com",
+    "directLink": "https://skillsbuild.org/learning-catalog/university-catalog?topic=ai",
     "category": "AI & Machine Learning"
   },
   {
@@ -56,7 +56,7 @@ export const SKILL_UP_OPPORTUNITIES = [
     "duration": "3–20+ hrs",
     "certificate": "Learning resource / no exam certificate",
     "linkLabel": "IBM Data Science",
-    "directLink": "https://skillsbuild.org/college-students/data-science?utm_source=chatgpt.com",
+    "directLink": "https://skillsbuild.org/college-students",
     "category": "Data Science & AI"
   },
   {
@@ -71,7 +71,7 @@ export const SKILL_UP_OPPORTUNITIES = [
     "duration": "Varies",
     "certificate": "Learning resource / no exam certificate",
     "linkLabel": "IBM  SkillsBuild",
-    "directLink": "https://skillsbuild.org/?utm_source=chatgpt.com",
+    "directLink": "https://skillsbuild.org/college-students",
     "category": "Cybersecurity"
   },
   {
@@ -86,7 +86,7 @@ export const SKILL_UP_OPPORTUNITIES = [
     "duration": "~3 hr 12 min",
     "certificate": "Microsoft Learn achievements",
     "linkLabel": "Python Fundamentals",
-    "directLink": "https://learn.microsoft.com/en-us/training/paths/get-started-with-python-fundamentals/?utm_source=chatgpt.com",
+    "directLink": "https://learn.microsoft.com/en-us/training/paths/get-started-with-python-fundamentals/",
     "category": "Programming & Python"
   },
   {
@@ -101,7 +101,7 @@ export const SKILL_UP_OPPORTUNITIES = [
     "duration": "~5–10 hrs",
     "certificate": "Learning credential; exam separate",
     "linkLabel": "Azure Fundamentals",
-    "directLink": "https://learn.microsoft.com/en-us/training/azure/?utm_source=chatgpt.com",
+    "directLink": "https://learn.microsoft.com/en-us/training/azure/",
     "category": "Cloud Computing"
   },
   {
@@ -116,7 +116,7 @@ export const SKILL_UP_OPPORTUNITIES = [
     "duration": "~5–10+ hrs",
     "certificate": "Learning credential; certification exam separate",
     "linkLabel": "Azure AI Fundamentals",
-    "directLink": "https://learn.microsoft.com/en-us/training/paths/get-started-with-artificial-intelligence-on-azure/?utm_source=chatgpt.com",
+    "directLink": "https://learn.microsoft.com/en-us/training/paths/get-started-with-artificial-intelligence-on-azure/",
     "category": "AI & Machine Learning"
   },
   {
@@ -131,7 +131,7 @@ export const SKILL_UP_OPPORTUNITIES = [
     "duration": "Self-paced",
     "certificate": "Learn credentials",
     "linkLabel": "Microsoft Student Hub",
-    "directLink": "https://learn.microsoft.com/en-us/training/student-hub/?utm_source=chatgpt.com",
+    "directLink": "https://learn.microsoft.com/en-us/training/student-hub/",
     "category": "Cloud & Developer Tools"
   },
   {
@@ -146,7 +146,7 @@ export const SKILL_UP_OPPORTUNITIES = [
     "duration": "12 months",
     "certificate": "Azure student account",
     "linkLabel": "Azure for Students",
-    "directLink": "https://azure.microsoft.com/en-us/free/students/?utm_source=chatgpt.com",
+    "directLink": "https://azure.microsoft.com/en-us/free/students/",
     "category": "Cloud Computing"
   },
   {
@@ -161,7 +161,7 @@ export const SKILL_UP_OPPORTUNITIES = [
     "duration": "Self-paced",
     "certificate": "Badges/learning credentials depending on activity",
     "linkLabel": "AWS Educate",
-    "directLink": "https://aws.amazon.com/education/awseducate/?utm_source=chatgpt.com",
+    "directLink": "https://aws.amazon.com/education/awseducate/",
     "category": "Cloud Computing"
   },
   {
@@ -176,7 +176,7 @@ export const SKILL_UP_OPPORTUNITIES = [
     "duration": "Self-paced",
     "certificate": "Completion resources",
     "linkLabel": "Google ML Crash Course",
-    "directLink": "https://developers.google.com/machine-learning/crash-course/?utm_source=chatgpt.com",
+    "directLink": "https://developers.google.com/machine-learning/crash-course/",
     "category": "AI & Machine Learning"
   },
   {
@@ -191,7 +191,7 @@ export const SKILL_UP_OPPORTUNITIES = [
     "duration": "Self-paced",
     "certificate": "Learning resource; no formal certificate",
     "linkLabel": "Google Python Class",
-    "directLink": "https://developers.google.com/edu/python?utm_source=chatgpt.com",
+    "directLink": "https://developers.google.com/edu/python",
     "category": "Programming & Python"
   },
   {
@@ -206,7 +206,7 @@ export const SKILL_UP_OPPORTUNITIES = [
     "duration": "Self-paced",
     "certificate": "Badges/credentials vary",
     "linkLabel": "Google Developer Pathways",
-    "directLink": "https://developers.google.com/learn/pathways?utm_source=chatgpt.com",
+    "directLink": "https://developers.google.com/learn/pathways",
     "category": "Web & Mobile Dev"
   },
   {
@@ -221,7 +221,7 @@ export const SKILL_UP_OPPORTUNITIES = [
     "duration": "10+ hrs initially; full course longer",
     "certificate": "Earnable badges",
     "linkLabel": "Android Basics with Compose",
-    "directLink": "https://developer.android.com/courses/android-basics-compose/course?utm_source=chatgpt.com",
+    "directLink": "https://developer.android.com/courses/android-basics-compose/course",
     "category": "Web & Mobile Dev"
   },
   {
@@ -236,7 +236,7 @@ export const SKILL_UP_OPPORTUNITIES = [
     "duration": "Multi-unit",
     "certificate": "Badges",
     "linkLabel": "Android + Firebase Course",
-    "directLink": "https://developer.android.com/courses/android-basics-compose-firebase/course?utm_source=chatgpt.com",
+    "directLink": "https://developer.android.com/courses/android-basics-compose-firebase/course",
     "category": "Web & Mobile Dev"
   },
   {
@@ -251,7 +251,7 @@ export const SKILL_UP_OPPORTUNITIES = [
     "duration": "4–12 weeks typically",
     "certificate": "Certificate exam usually paid",
     "linkLabel": "NPTEL Courses",
-    "directLink": "https://onlinecourses.nptel.ac.in/?utm_source=chatgpt.com",
+    "directLink": "https://onlinecourses.nptel.ac.in/",
     "category": "Core Engineering"
   },
   {
@@ -266,7 +266,7 @@ export const SKILL_UP_OPPORTUNITIES = [
     "duration": "Self-paced",
     "certificate": "Depends on course",
     "linkLabel": "NPTEL",
-    "directLink": "https://nptel.ac.in/?utm_source=chatgpt.com",
+    "directLink": "https://nptel.ac.in/",
     "category": "Core Engineering"
   },
   {
@@ -281,7 +281,7 @@ export const SKILL_UP_OPPORTUNITIES = [
     "duration": "Depends on internship",
     "certificate": "Depends on internship",
     "linkLabel": "AICTE Internship Portal",
-    "directLink": "https://internship.aicte-india.org/?utm_source=chatgpt.com",
+    "directLink": "https://internship.aicte-india.org/",
     "category": "Internships"
   },
   {
@@ -296,7 +296,7 @@ export const SKILL_UP_OPPORTUNITIES = [
     "duration": "Self-paced",
     "certificate": "badges depending on course",
     "linkLabel": "Cisco Skills for All",
-    "directLink": "https://skillsforall.com/?utm_source=chatgpt.com",
+    "directLink": "https://skillsforall.com/",
     "category": "Cybersecurity"
   },
   {
@@ -311,7 +311,7 @@ export const SKILL_UP_OPPORTUNITIES = [
     "duration": "Self-paced",
     "certificate": "Course credential",
     "linkLabel": "Cisco Skills for All",
-    "directLink": "https://skillsforall.com/?utm_source=chatgpt.com",
+    "directLink": "https://skillsforall.com/",
     "category": "Programming & Python"
   },
   {
@@ -326,7 +326,7 @@ export const SKILL_UP_OPPORTUNITIES = [
     "duration": "Self-paced",
     "certificate": "Course credential",
     "linkLabel": "Cisco Skills for All",
-    "directLink": "https://skillsforall.com/?utm_source=chatgpt.com",
+    "directLink": "https://skillsforall.com/",
     "category": "Data Science & AI"
   },
   {
@@ -341,7 +341,7 @@ export const SKILL_UP_OPPORTUNITIES = [
     "duration": "Self-paced",
     "certificate": "Learning resource / no exam certificate",
     "linkLabel": "Fortinet Training",
-    "directLink": "https://training.fortinet.com/?utm_source=chatgpt.com",
+    "directLink": "https://training.fortinet.com/",
     "category": "Cybersecurity"
   },
   {
@@ -356,7 +356,7 @@ export const SKILL_UP_OPPORTUNITIES = [
     "duration": "Self-paced",
     "certificate": "Certification course",
     "linkLabel": "Fortinet Training",
-    "directLink": "https://training.fortinet.com/?utm_source=chatgpt.com",
+    "directLink": "https://training.fortinet.com/",
     "category": "Cybersecurity"
   },
   {
@@ -371,7 +371,7 @@ export const SKILL_UP_OPPORTUNITIES = [
     "duration": "Self-paced",
     "certificate": "Accreditation badges",
     "linkLabel": "Oracle Learning Explorer",
-    "directLink": "https://education.oracle.com/oracle-learning-explorer?utm_source=chatgpt.com",
+    "directLink": "https://education.oracle.com/oracle-learning-explorer",
     "category": "Cloud Computing"
   },
   {
@@ -386,7 +386,7 @@ export const SKILL_UP_OPPORTUNITIES = [
     "duration": "Self-paced",
     "certificate": "No formal certificate",
     "linkLabel": "MIT  OpenCourseWare",
-    "directLink": "https://ocw.mit.edu/?utm_source=chatgpt.com",
+    "directLink": "https://ocw.mit.edu/",
     "category": "Core Engineering"
   },
   {
@@ -401,7 +401,7 @@ export const SKILL_UP_OPPORTUNITIES = [
     "duration": "6+ weeks",
     "certificate": "Varies",
     "linkLabel": "Harvard  TinyML",
-    "directLink": "https://pll.harvard.edu/subject/computer-science-0?utm_source=chatgpt.com",
+    "directLink": "https://pll.harvard.edu/subject/computer-science-0",
     "category": "AI & Machine Learning"
   },
   {
@@ -416,7 +416,7 @@ export const SKILL_UP_OPPORTUNITIES = [
     "duration": "Self-paced",
     "certificate": "Usually no formal certificate",
     "linkLabel": "Virtual Labs India",
-    "directLink": "https://www.vlab.co.in/?utm_source=chatgpt.com",
+    "directLink": "https://www.vlab.co.in/",
     "category": "Core Engineering"
   }
 ];

@@ -99,8 +99,8 @@ FEATURED_MNC_COMPANIES = [
         "category": "both",
         "location": "Hyderabad, Bengaluru, Mumbai, Gurugram",
         "hiring_tracks": ["Analyst - Technology Consulting", "Risk & Financial Advisory", "Cloud Solutions"],
-        "url": "https://jobsindia.deloitte.com/search/?q=&locationsearch=India",
-        "application_url": "https://jobsindia.deloitte.com/search/?q=&locationsearch=India",
+        "url": "https://www.deloitte.com/in/en/careers.html",
+        "application_url": "https://www.deloitte.com/in/en/careers.html",
         "description": "Leading global provider of audit, consulting, and technology advisory."
     },
     {
@@ -111,8 +111,8 @@ FEATURED_MNC_COMPANIES = [
         "category": "both",
         "location": "Pune, Hyderabad, Bengaluru, Noida",
         "hiring_tracks": ["Associate Software Engineer", "Network Specialist", "AI & Automation Trainee"],
-        "url": "https://careers.techmahindra.com/JobSearch.aspx?exp=0-1",
-        "application_url": "https://careers.techmahindra.com/JobSearch.aspx?exp=0-1",
+        "url": "https://careers.techmahindra.com/",
+        "application_url": "https://careers.techmahindra.com/",
         "description": "Connected World. Connected Experiences. Driving next-gen enterprise technologies."
     },
     {
@@ -171,8 +171,8 @@ FEATURED_MNC_COMPANIES = [
         "category": "both",
         "location": "Bengaluru, Hyderabad, Mumbai, Pune, Noida",
         "hiring_tracks": ["Analyst & Software Engineer", "Cloud & Cybersecurity Specialist"],
-        "url": "https://www.capgemini.com/in-en/careers/job-search/?country_code=in-en&profession=Engineering",
-        "application_url": "https://www.capgemini.com/in-en/careers/job-search/?country_code=in-en&profession=Engineering",
+        "url": "https://www.capgemini.com/in-en/careers/",
+        "application_url": "https://www.capgemini.com/in-en/careers/",
         "description": "Unleashing human energy through technology for an inclusive future."
     },
     {
@@ -195,8 +195,8 @@ FEATURED_MNC_COMPANIES = [
         "category": "internship",
         "location": "Pan-India (Top 500 Enterprises)",
         "hiring_tracks": ["₹5,000/mo Stipend", "₹6,000 One-Time Grant", "12-Month Industry Track"],
-        "url": "https://pminternship.mca.gov.in/candidate-registration/",
-        "application_url": "https://pminternship.mca.gov.in/candidate-registration/",
+        "url": "https://pminternship.mca.gov.in/",
+        "application_url": "https://pminternship.mca.gov.in/",
         "description": "National corporate internship initiative by the Ministry of Corporate Affairs."
     }
 ]
@@ -225,12 +225,12 @@ def _generate_curated_placements():
         ("Zoho Corporation", "/static/images/companies/zoho.svg", "Campus Hiring Partner", "https://www.zoho.com/careers/"),
         ("Razorpay Software", "/static/images/companies/razorpay.svg", "AccioJob Placements", "https://razorpay.com/jobs/"),
         ("PhonePe Payments", "/static/images/companies/phonepe.svg", "AccioJob Placements", "https://www.phonepe.com/careers/job-openings/"),
-        ("Swiggy Engineering", "/static/images/companies/swiggy.svg", "Naukri.com", "https://careers.swiggy.com/jobs"),
+        ("Swiggy Engineering", "/static/images/companies/swiggy.svg", "Naukri.com", "https://careers.swiggy.com/"),
         ("Zomato Tech Labs", "/static/images/companies/zomato.svg", "Naukri.com", "https://www.zomato.com/careers"),
-        ("Cred Tech Labs", "/static/images/companies/cred.svg", "AccioJob Placements", "https://cred.club/careers"),
+        ("Cred Tech Labs", "/static/images/companies/cred.svg", "AccioJob Placements", "https://careers.cred.club/"),
         ("Juspay Technologies", "/static/images/companies/juspay.svg", "SJCE Placements", "https://juspay.in/careers"),
         ("Paytm Core Engineering", "/static/images/companies/paytm.svg", "AICTE Placement Portal", "https://paytm.com/careers/"),
-        ("Meesho Marketplace", "/static/images/companies/meesho.svg", "Naukri.com", "https://www.meesho.io/careers"),
+        ("Meesho Marketplace", "/static/images/companies/meesho.svg", "Naukri.com", "https://www.meesho.io/"),
         ("Groww Financial Tech", "/static/images/companies/groww.svg", "AccioJob Placements", "https://groww.in/careers"),
         ("Zerodha Technology", "/static/images/companies/zerodha.svg", "SJCE Placements", "https://zerodha.com/careers/"),
         ("Postman API Platform", "/static/images/companies/postman.svg", "AccioJob Placements", "https://www.postman.com/careers/"),
@@ -245,7 +245,7 @@ def _generate_curated_placements():
         ("L&T Technology Services", "/static/images/companies/ltts.svg", "AICTE Placement Portal", "https://www.ltts.com/careers"),
         ("HCLTech Software", "/static/images/companies/hcltech.svg", "Campus Hiring Partner", "https://www.hcltech.com/careers/Careers-in-india"),
         ("Cognizant Technology Solutions", "/static/images/companies/cognizant.svg", "Campus Hiring Partner", "https://careers.cognizant.com/global/en/c/campus-hiring-jobs"),
-        ("Tech Mahindra", "/static/images/companies/techmahindra.svg", "Campus Hiring Partner", "https://careers.techmahindra.com/JobSearch.aspx?exp=0-1"),
+        ("Tech Mahindra", "/static/images/companies/techmahindra.svg", "Campus Hiring Partner", "https://careers.techmahindra.com/"),
         ("LTIMindtree", "/static/images/companies/ltimindtree.svg", "SJCE Placements", "https://www.ltimindtree.com/careers/")
     ]
 
@@ -310,21 +310,21 @@ def _generate_curated_placements():
 def _generate_curated_internships():
     """Generates 260 distinct, verified Indian internship & PM Scheme tracks."""
     pm_pool = [
-        ("Tata Consultancy Services (PM Internship Scheme)", "/static/images/companies/tcs.svg", "https://pminternship.mca.gov.in/candidate-registration/"),
-        ("Larsen & Toubro (PM Internship Scheme)", "/static/images/companies/ltts.svg", "https://pminternship.mca.gov.in/candidate-registration/"),
-        ("Reliance Industries (PM Internship Scheme)", "/static/images/companies/reliance.svg", "https://pminternship.mca.gov.in/candidate-registration/"),
-        ("Tata Motors (PM Internship Scheme)", "/static/images/companies/tatamotors.svg", "https://pminternship.mca.gov.in/candidate-registration/"),
-        ("HDFC Bank Tech Labs (PM Internship Scheme)", "/static/images/companies/hdfc.svg", "https://pminternship.mca.gov.in/candidate-registration/"),
-        ("Mahindra & Mahindra (PM Internship Scheme)", "/static/images/companies/mahindra.svg", "https://pminternship.mca.gov.in/candidate-registration/"),
-        ("Adani Group Innovation Labs (PM Internship Scheme)", "/static/images/companies/adani.svg", "https://pminternship.mca.gov.in/candidate-registration/"),
-        ("Maruti Suzuki India (PM Internship Scheme)", "/static/images/companies/maruti.svg", "https://pminternship.mca.gov.in/candidate-registration/"),
-        ("NTPC Energy & Automation (PM Internship Scheme)", "/static/images/companies/ntpc.svg", "https://pminternship.mca.gov.in/candidate-registration/"),
-        ("ONGC Digital Technologies (PM Internship Scheme)", "/static/images/companies/ongc.svg", "https://pminternship.mca.gov.in/candidate-registration/"),
-        ("State Bank of India Tech Labs (PM Scheme)", "/static/images/companies/sbi.svg", "https://pminternship.mca.gov.in/candidate-registration/"),
-        ("Hindustan Unilever Innovation (PM Scheme)", "/static/images/companies/hul.svg", "https://pminternship.mca.gov.in/candidate-registration/"),
-        ("Coal India Digital Trainee (PM Scheme)", "/static/images/companies/coalindia.svg", "https://pminternship.mca.gov.in/candidate-registration/"),
-        ("BHEL Engineering (PM Scheme)", "/static/images/companies/bhel.svg", "https://pminternship.mca.gov.in/candidate-registration/"),
-        ("GAIL Energy Systems (PM Scheme)", "/static/images/companies/gail.svg", "https://pminternship.mca.gov.in/candidate-registration/")
+        ("Tata Consultancy Services (PM Internship Scheme)", "/static/images/companies/tcs.svg", "https://pminternship.mca.gov.in/"),
+        ("Larsen & Toubro (PM Internship Scheme)", "/static/images/companies/ltts.svg", "https://pminternship.mca.gov.in/"),
+        ("Reliance Industries (PM Internship Scheme)", "/static/images/companies/reliance.svg", "https://pminternship.mca.gov.in/"),
+        ("Tata Motors (PM Internship Scheme)", "/static/images/companies/tatamotors.svg", "https://pminternship.mca.gov.in/"),
+        ("HDFC Bank Tech Labs (PM Internship Scheme)", "/static/images/companies/hdfc.svg", "https://pminternship.mca.gov.in/"),
+        ("Mahindra & Mahindra (PM Internship Scheme)", "/static/images/companies/mahindra.svg", "https://pminternship.mca.gov.in/"),
+        ("Adani Group Innovation Labs (PM Internship Scheme)", "/static/images/companies/adani.svg", "https://pminternship.mca.gov.in/"),
+        ("Maruti Suzuki India (PM Internship Scheme)", "/static/images/companies/maruti.svg", "https://pminternship.mca.gov.in/"),
+        ("NTPC Energy & Automation (PM Internship Scheme)", "/static/images/companies/ntpc.svg", "https://pminternship.mca.gov.in/"),
+        ("ONGC Digital Technologies (PM Internship Scheme)", "/static/images/companies/ongc.svg", "https://pminternship.mca.gov.in/"),
+        ("State Bank of India Tech Labs (PM Scheme)", "/static/images/companies/sbi.svg", "https://pminternship.mca.gov.in/"),
+        ("Hindustan Unilever Innovation (PM Scheme)", "/static/images/companies/hul.svg", "https://pminternship.mca.gov.in/"),
+        ("Coal India Digital Trainee (PM Scheme)", "/static/images/companies/coalindia.svg", "https://pminternship.mca.gov.in/"),
+        ("BHEL Engineering (PM Scheme)", "/static/images/companies/bhel.svg", "https://pminternship.mca.gov.in/"),
+        ("GAIL Energy Systems (PM Scheme)", "/static/images/companies/gail.svg", "https://pminternship.mca.gov.in/")
     ]
 
     regional_tech_interns = [
@@ -333,9 +333,9 @@ def _generate_curated_internships():
         ("Indeed Tech Opportunities", "/static/images/companies/indeed.svg", "Indeed", "https://in.indeed.com/q-internship-jobs.html"),
         ("LinkedIn Regional Network (Hyderabad)", "/static/images/companies/linkedin.svg", "LinkedIn", "https://www.linkedin.com/jobs/search-results/?keywords=Internship%20jobs%20greater%20hyderabad%20area"),
         ("Wipro AI Labs", "/static/images/companies/wipro.svg", "Campus Hiring Partner", "https://careers.wipro.com/global-india/jobs?keywords=intern&location=India"),
-        ("Infosys Springboard Labs", "/static/images/companies/infosys.svg", "Campus Hiring Partner", "https://career.infosys.com/joblist?countrycode=IN&companyhiringtype=IL"),
+        ("Infosys Springboard Labs", "/static/images/companies/infosys.svg", "Campus Hiring Partner", "https://infyspringboard.onwingspan.com/"),
         ("Zoho Creator Tech Internships", "/static/images/companies/zoho.svg", "Campus Hiring Partner", "https://www.zoho.com/careers/"),
-        ("Swiggy Product Analytics Intern", "/static/images/companies/swiggy.svg", "Internshala", "https://careers.swiggy.com/jobs"),
+        ("Swiggy Product Analytics Intern", "/static/images/companies/swiggy.svg", "Internshala", "https://careers.swiggy.com/"),
         ("Razorpay Frontend Developer Intern", "/static/images/companies/razorpay.svg", "LinkedIn", "https://razorpay.com/jobs/"),
         ("Google University Internships", "/static/images/companies/google.svg", "Campus Hiring Partner", "https://www.google.com/about/careers/applications/jobs/results/?location=India&employment_type=INTERN"),
         ("Microsoft University Internships", "/static/images/companies/microsoft.svg", "Campus Hiring Partner", "https://careers.microsoft.com/v2/global/en/home.html#find-jobs?p=India&e=Students%20and%20graduates"),

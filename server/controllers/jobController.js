@@ -3,15 +3,15 @@ const FEATURED_MNC_COMPANIES = [
   { id: 'mnc-infosys', name: 'Infosys Technologies', logo: '/static/images/companies/infosys.svg', tier: 'Global Tier-1 IT Partner', category: 'Full-time', location: 'Bengaluru, Hyderabad, Pune, Chennai', hiring_tracks: ['Specialist Programmer', 'Digital Specialist Engineer', 'Systems Engineer'], url: 'https://career.infosys.com/joblist?countrycode=IN&companyhiringtype=IL', description: 'Global leader in next-generation digital services and consulting.' },
   { id: 'mnc-google', name: 'Google', logo: '/static/images/companies/google.svg', tier: 'Global Tech Giant', category: 'Full-time', location: 'Bengaluru, Hyderabad, Gurgaon', hiring_tracks: ['Software Engineer - Early Career', 'Data Analytics', 'Cloud Engineer'], url: 'https://www.google.com/about/careers/applications/jobs/results/?location=India&employment_type=FULL_TIME&employment_type=INTERN', description: 'Building technology that empowers billions across search, cloud, and AI.' },
   { id: 'mnc-microsoft', name: 'Microsoft', logo: '/static/images/companies/microsoft.svg', tier: 'Global Tech Giant', category: 'Full-time', location: 'Hyderabad, Bengaluru, Noida', hiring_tracks: ['Software Engineering (University)', 'Cloud Solution Architect', 'Product'], url: 'https://careers.microsoft.com/v2/global/en/home.html#find-jobs?p=India&e=Students%20and%20graduates', description: 'Empowering every person and organization on the planet to achieve more.' },
-  { id: 'mnc-deloitte', name: 'Deloitte', logo: '/static/images/companies/deloitte.svg', tier: 'Big 4 Consulting & Tech', category: 'Full-time', location: 'Hyderabad, Bengaluru, Mumbai, Gurugram', hiring_tracks: ['Analyst - Technology Consulting', 'Risk & Financial Advisory', 'Cloud Solutions'], url: 'https://jobsindia.deloitte.com/search/?q=&locationsearch=India', description: 'Leading global provider of audit, consulting, and technology advisory.' },
-  { id: 'mnc-techmahindra', name: 'Tech Mahindra', logo: '/static/images/companies/techmahindra.svg', tier: 'Tier-1 Digital Transformation', category: 'Full-time', location: 'Pune, Hyderabad, Bengaluru, Noida', hiring_tracks: ['Associate Software Engineer', 'Network Specialist', 'AI & Automation Trainee'], url: 'https://careers.techmahindra.com/JobSearch.aspx?exp=0-1', description: 'Connected World. Connected Experiences. Driving next-gen enterprise technologies.' },
+  { id: 'mnc-deloitte', name: 'Deloitte', logo: '/static/images/companies/deloitte.svg', tier: 'Big 4 Consulting & Tech', category: 'Full-time', location: 'Hyderabad, Bengaluru, Mumbai, Gurugram', hiring_tracks: ['Analyst - Technology Consulting', 'Risk & Financial Advisory', 'Cloud Solutions'], url: 'https://www.deloitte.com/in/en/careers.html', description: 'Leading global provider of audit, consulting, and technology advisory.' },
+  { id: 'mnc-techmahindra', name: 'Tech Mahindra', logo: '/static/images/companies/techmahindra.svg', tier: 'Tier-1 Digital Transformation', category: 'Full-time', location: 'Pune, Hyderabad, Bengaluru, Noida', hiring_tracks: ['Associate Software Engineer', 'Network Specialist', 'AI & Automation Trainee'], url: 'https://careers.techmahindra.com/', description: 'Connected World. Connected Experiences. Driving next-gen enterprise technologies.' },
   { id: 'mnc-amazon', name: 'Amazon', logo: '/static/images/companies/amazon.svg', tier: 'Global Tech & Cloud Leader', category: 'Full-time', location: 'Hyderabad, Bengaluru, Chennai, Delhi NCR', hiring_tracks: ['Software Development Engineer (SDE-1)', 'Cloud Support Associate', 'Data Engineer'], url: 'https://www.amazon.jobs/en/job_categories/software-development?country=IND', description: 'Earth\'s most customer-centric company and world-leading cloud infrastructure provider.' },
   { id: 'mnc-tcs', name: 'Tata Consultancy Services (TCS)', logo: '/static/images/companies/tcs.svg', tier: 'Global IT & Consulting Leader', category: 'Full-time', location: 'Pan-India Tech Hubs', hiring_tracks: ['TCS Prime (₹9.0L)', 'TCS Digital (₹7.5L)', 'TCS Ninja (₹3.6L)'], url: 'https://www.tcs.com/careers/india', description: 'Building on belief to transform industries through high-impact digital solutions.' },
   { id: 'mnc-wipro', name: 'Wipro', logo: '/static/images/companies/wipro.svg', tier: 'Global Technology & Services', category: 'Full-time', location: 'Bengaluru, Hyderabad, Pune, Chennai', hiring_tracks: ['Turbo Developer (₹6.5L)', 'Elite National Talent Hunt', 'AI Labs'], url: 'https://careers.wipro.com/global-india/jobs?keywords=engineer&location=India', description: 'Empowering ambitious companies to achieve their greatest potential.' },
   { id: 'mnc-accenture', name: 'Accenture', logo: '/static/images/companies/accenture.svg', tier: 'Global Strategy & Cloud Partner', category: 'Full-time', location: 'Bengaluru, Hyderabad, Mumbai, Pune, Gurugram', hiring_tracks: ['Associate Software Engineer (ASE)', 'Advanced App Engineering Analyst'], url: 'https://www.accenture.com/in-en/careers/jobsearch?jk=&sb=1&vw=0&is_ugc=0&ct=India', description: 'Delivering 360-degree value by helping clients transform operations.' },
-  { id: 'mnc-capgemini', name: 'Capgemini', logo: '/static/images/companies/capgemini.svg', tier: 'Global IT & Engineering Services', category: 'Full-time', location: 'Bengaluru, Hyderabad, Mumbai, Pune, Noida', hiring_tracks: ['Analyst & Software Engineer', 'Cloud & Cybersecurity Specialist'], url: 'https://www.capgemini.com/in-en/careers/job-search/?country_code=in-en&profession=Engineering', description: 'Unleashing human energy through technology for an inclusive future.' },
+  { id: 'mnc-capgemini', name: 'Capgemini', logo: '/static/images/companies/capgemini.svg', tier: 'Global IT & Engineering Services', category: 'Full-time', location: 'Bengaluru, Hyderabad, Mumbai, Pune, Noida', hiring_tracks: ['Analyst & Software Engineer', 'Cloud & Cybersecurity Specialist'], url: 'https://www.capgemini.com/in-en/careers/', description: 'Unleashing human energy through technology for an inclusive future.' },
   { id: 'mnc-ibm', name: 'IBM', logo: '/static/images/companies/ibm.svg', tier: 'Global Cognitive & Hybrid Cloud', category: 'Full-time', location: 'Bengaluru, Kochi, Hyderabad, Gurugram', hiring_tracks: ['Associate System Engineer', 'Cloud Developer', 'AI/ML Specialist'], url: 'https://www.ibm.com/careers/in-en/search?field_keyword_08%5B0%5D=Entry%20Level', description: 'Leading innovation in hybrid cloud, AI, and quantum computing.' },
-  { id: 'mnc-pmi', name: 'PM Internship Scheme', logo: '/static/images/companies/pmi.svg', tier: 'National Initiative (Govt of India)', category: 'Internship', location: 'Pan-India', hiring_tracks: ['Top 500 Enterprise Tracks', 'Technology & Manufacturing', 'BFSI & Operations'], url: 'https://pminternship.mca.gov.in/candidate-registration/', description: 'National 1-year corporate internship program by the Ministry of Corporate Affairs.' }
+  { id: 'mnc-pmi', name: 'PM Internship Scheme', logo: '/static/images/companies/pmi.svg', tier: 'National Initiative (Govt of India)', category: 'Internship', location: 'Pan-India', hiring_tracks: ['Top 500 Enterprise Tracks', 'Technology & Manufacturing', 'BFSI & Operations'], url: 'https://pminternship.mca.gov.in/', description: 'National 1-year corporate internship program by the Ministry of Corporate Affairs.' }
 ];
 
 // Generate distinct full-time and internship datasets (520 total)
@@ -31,12 +31,12 @@ function generateComprehensiveJobs() {
     { name: 'Zoho Corporation', logo: '/static/images/companies/zoho.svg', source: 'Campus Hiring Partner', url: 'https://www.zoho.com/careers/' },
     { name: 'Razorpay Software', logo: '/static/images/companies/razorpay.svg', source: 'AccioJob Placements', url: 'https://razorpay.com/jobs/' },
     { name: 'PhonePe Payments', logo: '/static/images/companies/phonepe.svg', source: 'AccioJob Placements', url: 'https://www.phonepe.com/careers/job-openings/' },
-    { name: 'Swiggy Engineering', logo: '/static/images/companies/swiggy.svg', source: 'Naukri.com', url: 'https://careers.swiggy.com/jobs' },
+    { name: 'Swiggy Engineering', logo: '/static/images/companies/swiggy.svg', source: 'Naukri.com', url: 'https://careers.swiggy.com/' },
     { name: 'Zomato Tech Labs', logo: '/static/images/companies/zomato.svg', source: 'Naukri.com', url: 'https://www.zomato.com/careers' },
-    { name: 'Cred Tech Labs', logo: '/static/images/companies/cred.svg', source: 'AccioJob Placements', url: 'https://cred.club/careers' },
+    { name: 'Cred Tech Labs', logo: '/static/images/companies/cred.svg', source: 'AccioJob Placements', url: 'https://careers.cred.club/' },
     { name: 'Juspay Technologies', logo: '/static/images/companies/juspay.svg', source: 'SJCE Placements', url: 'https://juspay.in/careers' },
     { name: 'Paytm Core Engineering', logo: '/static/images/companies/paytm.svg', source: 'AICTE Placement Portal', url: 'https://paytm.com/careers/' },
-    { name: 'Meesho Marketplace', logo: '/static/images/companies/meesho.svg', source: 'Naukri.com', url: 'https://www.meesho.io/careers' },
+    { name: 'Meesho Marketplace', logo: '/static/images/companies/meesho.svg', source: 'Naukri.com', url: 'https://www.meesho.io/' },
     { name: 'Groww Financial Tech', logo: '/static/images/companies/groww.svg', source: 'AccioJob Placements', url: 'https://groww.in/careers' },
     { name: 'Zerodha Technology', logo: '/static/images/companies/zerodha.svg', source: 'SJCE Placements', url: 'https://zerodha.com/careers/' },
     { name: 'Postman API Platform', logo: '/static/images/companies/postman.svg', source: 'AccioJob Placements', url: 'https://www.postman.com/careers/' },
@@ -114,21 +114,21 @@ function generateComprehensiveJobs() {
 
   // 2. Internships & PM Scheme Pool (27 distinct organizations)
   const pmSchemePool = [
-    { name: 'Tata Consultancy Services (PM Internship Scheme)', logo: '/static/images/companies/tcs.svg', url: 'https://pminternship.mca.gov.in/candidate-registration/' },
-    { name: 'Larsen & Toubro (PM Internship Scheme)', logo: '/static/images/companies/ltts.svg', url: 'https://pminternship.mca.gov.in/candidate-registration/' },
-    { name: 'Reliance Industries (PM Internship Scheme)', logo: '/static/images/companies/reliance.svg', url: 'https://pminternship.mca.gov.in/candidate-registration/' },
-    { name: 'Tata Motors (PM Internship Scheme)', logo: '/static/images/companies/tatamotors.svg', url: 'https://pminternship.mca.gov.in/candidate-registration/' },
-    { name: 'HDFC Bank Tech Labs (PM Internship Scheme)', logo: '/static/images/companies/hdfc.svg', url: 'https://pminternship.mca.gov.in/candidate-registration/' },
-    { name: 'Mahindra & Mahindra (PM Internship Scheme)', logo: '/static/images/companies/mahindra.svg', url: 'https://pminternship.mca.gov.in/candidate-registration/' },
-    { name: 'Adani Group Innovation Labs (PM Internship Scheme)', logo: '/static/images/companies/adani.svg', url: 'https://pminternship.mca.gov.in/candidate-registration/' },
-    { name: 'Maruti Suzuki India (PM Internship Scheme)', logo: '/static/images/companies/maruti.svg', url: 'https://pminternship.mca.gov.in/candidate-registration/' },
-    { name: 'NTPC Energy & Automation (PM Internship Scheme)', logo: '/static/images/companies/ntpc.svg', url: 'https://pminternship.mca.gov.in/candidate-registration/' },
-    { name: 'ONGC Digital Technologies (PM Internship Scheme)', logo: '/static/images/companies/ongc.svg', url: 'https://pminternship.mca.gov.in/candidate-registration/' },
-    { name: 'State Bank of India Tech Labs (PM Scheme)', logo: '/static/images/companies/sbi.svg', url: 'https://pminternship.mca.gov.in/candidate-registration/' },
-    { name: 'Hindustan Unilever Innovation (PM Scheme)', logo: '/static/images/companies/hul.svg', url: 'https://pminternship.mca.gov.in/candidate-registration/' },
-    { name: 'Coal India Digital Trainee (PM Scheme)', logo: '/static/images/companies/coalindia.svg', url: 'https://pminternship.mca.gov.in/candidate-registration/' },
-    { name: 'BHEL Engineering (PM Scheme)', logo: '/static/images/companies/bhel.svg', url: 'https://pminternship.mca.gov.in/candidate-registration/' },
-    { name: 'GAIL Energy Systems (PM Scheme)', logo: '/static/images/companies/gail.svg', url: 'https://pminternship.mca.gov.in/candidate-registration/' }
+    { name: 'Tata Consultancy Services (PM Internship Scheme)', logo: '/static/images/companies/tcs.svg', url: 'https://pminternship.mca.gov.in/' },
+    { name: 'Larsen & Toubro (PM Internship Scheme)', logo: '/static/images/companies/ltts.svg', url: 'https://pminternship.mca.gov.in/' },
+    { name: 'Reliance Industries (PM Internship Scheme)', logo: '/static/images/companies/reliance.svg', url: 'https://pminternship.mca.gov.in/' },
+    { name: 'Tata Motors (PM Internship Scheme)', logo: '/static/images/companies/tatamotors.svg', url: 'https://pminternship.mca.gov.in/' },
+    { name: 'HDFC Bank Tech Labs (PM Internship Scheme)', logo: '/static/images/companies/hdfc.svg', url: 'https://pminternship.mca.gov.in/' },
+    { name: 'Mahindra & Mahindra (PM Internship Scheme)', logo: '/static/images/companies/mahindra.svg', url: 'https://pminternship.mca.gov.in/' },
+    { name: 'Adani Group Innovation Labs (PM Internship Scheme)', logo: '/static/images/companies/adani.svg', url: 'https://pminternship.mca.gov.in/' },
+    { name: 'Maruti Suzuki India (PM Internship Scheme)', logo: '/static/images/companies/maruti.svg', url: 'https://pminternship.mca.gov.in/' },
+    { name: 'NTPC Energy & Automation (PM Internship Scheme)', logo: '/static/images/companies/ntpc.svg', url: 'https://pminternship.mca.gov.in/' },
+    { name: 'ONGC Digital Technologies (PM Internship Scheme)', logo: '/static/images/companies/ongc.svg', url: 'https://pminternship.mca.gov.in/' },
+    { name: 'State Bank of India Tech Labs (PM Scheme)', logo: '/static/images/companies/sbi.svg', url: 'https://pminternship.mca.gov.in/' },
+    { name: 'Hindustan Unilever Innovation (PM Scheme)', logo: '/static/images/companies/hul.svg', url: 'https://pminternship.mca.gov.in/' },
+    { name: 'Coal India Digital Trainee (PM Scheme)', logo: '/static/images/companies/coalindia.svg', url: 'https://pminternship.mca.gov.in/' },
+    { name: 'BHEL Engineering (PM Scheme)', logo: '/static/images/companies/bhel.svg', url: 'https://pminternship.mca.gov.in/' },
+    { name: 'GAIL Energy Systems (PM Scheme)', logo: '/static/images/companies/gail.svg', url: 'https://pminternship.mca.gov.in/' }
   ];
 
   const regionalInternshipPool = [
@@ -137,7 +137,7 @@ function generateComprehensiveJobs() {
     { name: 'Indeed Tech Opportunities', logo: '/static/images/companies/indeed.svg', source: 'Indeed', url: 'https://in.indeed.com/' },
     { name: 'LinkedIn Regional Network (Hyderabad)', logo: '/static/images/companies/linkedin.svg', source: 'LinkedIn', url: 'https://www.linkedin.com/' },
     { name: 'Wipro AI Labs', logo: '/static/images/companies/wipro.svg', source: 'Campus Hiring Partner', url: 'https://careers.wipro.com/' },
-    { name: 'Infosys Springboard Labs', logo: '/static/images/companies/infosys.svg', source: 'Campus Hiring Partner', url: 'https://career.infosys.com/' },
+    { name: 'Infosys Springboard Labs', logo: '/static/images/companies/infosys.svg', source: 'Campus Hiring Partner', url: 'https://infyspringboard.onwingspan.com/' },
     { name: 'Zoho Creator Tech Internships', logo: '/static/images/companies/zoho.svg', source: 'Campus Hiring Partner', url: 'https://www.zoho.com/' },
     { name: 'Swiggy Product Analytics Intern', logo: '/static/images/companies/swiggy.svg', source: 'Internshala', url: 'https://careers.swiggy.com/' },
     { name: 'Razorpay Frontend Developer Intern', logo: '/static/images/companies/razorpay.svg', source: 'LinkedIn', url: 'https://razorpay.com/' },
