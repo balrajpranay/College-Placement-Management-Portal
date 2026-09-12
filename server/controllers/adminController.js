@@ -4,6 +4,7 @@ const Student = require('../models/Student');
 const Company = require('../models/Company');
 const Drive = require('../models/Drive');
 const Application = require('../models/Application');
+const Interview = require('../models/Interview');
 const PlacementResult = require('../models/PlacementResult');
 const Notification = require('../models/Notification');
 

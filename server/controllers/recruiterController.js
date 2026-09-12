@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Company = require('../models/Company');
 const Drive = require('../models/Drive');
 const Application = require('../models/Application');
+const Interview = require('../models/Interview');
 const Student = require('../models/Student');
 const { studentStore } = require('./studentController');
 
@@ -529,6 +530,128 @@ function formatRecruiterApplicant(appDoc, company) {
   };
 }
 
+// Helper: Seed initial demo interviews if MongoDB is connected and Interview collection is empty
+async function seedDemoInterviewsIfEmpty() {
+  if (mongoose.connection.readyState !== 1) return;
+  try {
+    const intCount = await Interview.countDocuments();
+    if (intCount === 0) {
+      await seedDemoApplicationsIfEmpty();
+      const studentDoc = await Student.findOne({ studentNo: 'CS2023001' });
+      const driveDoc = await Drive.findOne({ title: 'Software Engineer - New Grad' });
+      if (studentDoc && driveDoc) {
+        let appDoc = await Application.findOne({ student: studentDoc._id, drive: driveDoc._id });
+        if (!appDoc) {
+          appDoc = await Application.create({
+            student: studentDoc._id,
+            drive: driveDoc._id,
+            status: 'Interview Scheduled'
+          });
+        }
+        if (appDoc) {
+          await Interview.create({
+            application: appDoc._id,
+            student: studentDoc._id,
+            drive: driveDoc._id,
+            company: driveDoc.company,
+            roundName: 'Technical Coding & DSA Round',
+            scheduledDate: new Date('2026-09-18T11:00:00Z'),
+            scheduledTime: '11:00 AM - 12:00 PM',
+            interviewType: 'Online',
+            venue: 'https://meet.google.com/abc-tnov-xyz',
+            status: 'Scheduled'
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[Seed Demo Interviews Notice]:', err.message);
+  }
+}
+
+// Helper: Format Interview document for recruiter responses matching React expectations
+function formatRecruiterInterview(intDoc, company) {
+  if (!intDoc) return null;
+  const app = intDoc.application && typeof intDoc.application === 'object' ? intDoc.application : {};
+  const student = intDoc.student && typeof intDoc.student === 'object' ? intDoc.student : (app.student && typeof app.student === 'object' ? app.student : {});
+  const drive = intDoc.drive && typeof intDoc.drive === 'object' ? intDoc.drive : (app.drive && typeof app.drive === 'object' ? app.drive : {});
+  const comp = intDoc.company && typeof intDoc.company === 'object' ? intDoc.company : (drive.company && typeof drive.company === 'object' ? drive.company : (company || {}));
+
+  const candName = student.name || intDoc.student_name || intDoc.studentName || 'Candidate';
+  const candNo = student.studentNo || student.student_no || intDoc.student_no || intDoc.studentNo || 'STU1001';
+  const candEmail = student.email || intDoc.student_email || intDoc.studentEmail || 'student@college.edu';
+  const dept = student.department || intDoc.department || 'Computer Science';
+
+  const driveIdStr = drive._id ? String(drive._id) : (drive.id ? String(drive.id) : String(intDoc.drive_id || intDoc.driveId || ''));
+  const driveTitleStr = drive.title || intDoc.drive_title || intDoc.driveTitle || 'Software Engineer';
+  const compIdStr = comp._id ? String(comp._id) : (comp.id ? String(comp.id) : String(intDoc.company_id || intDoc.companyId || 1));
+  const compEmailStr = comp.email || intDoc.company_email || intDoc.companyEmail || 'hr@technova.com';
+  const compNameStr = comp.name || intDoc.company_name || intDoc.companyName || 'TechNova Solutions';
+
+  const appIdStr = app._id ? String(app._id) : (app.id ? String(app.id) : String(intDoc.application_id || intDoc.applicationId || ''));
+  const intIdStr = intDoc._id ? String(intDoc._id) : String(intDoc.id || '');
+
+  let dateStr = intDoc.scheduled_date || intDoc.scheduledDate;
+  if (intDoc.scheduledDate instanceof Date) {
+    dateStr = intDoc.scheduledDate.toISOString().split('T')[0];
+  } else if (typeof dateStr === 'string' && dateStr.includes('T')) {
+    dateStr = dateStr.split('T')[0];
+  }
+
+  const timeStr = intDoc.scheduled_time || intDoc.scheduledTime || '10:00 AM';
+  const typeStr = intDoc.interview_type || intDoc.interviewType || 'Online';
+  const roundStr = intDoc.round_name || intDoc.roundName || 'Technical Round 1';
+  const venueStr = intDoc.venue || (typeStr === 'Online' ? 'Google Meet link will be shared via email' : 'Campus Placement Cell');
+  const statusStr = intDoc.status || 'Scheduled';
+
+  const createdAtStr = intDoc.createdAt instanceof Date
+    ? intDoc.createdAt.toISOString().replace('T', ' ').substring(0, 19)
+    : (intDoc.created_at || intDoc.createdAt || new Date().toISOString());
+
+  const updatedAtStr = intDoc.updatedAt instanceof Date
+    ? intDoc.updatedAt.toISOString().replace('T', ' ').substring(0, 19)
+    : (intDoc.updated_at || intDoc.updatedAt || createdAtStr);
+
+  return {
+    id: intIdStr,
+    _id: intIdStr,
+    application_id: appIdStr,
+    applicationId: appIdStr,
+    drive_id: driveIdStr,
+    driveId: driveIdStr,
+    drive_title: driveTitleStr,
+    driveTitle: driveTitleStr,
+    company_id: compIdStr,
+    companyId: compIdStr,
+    company_email: compEmailStr,
+    companyEmail: compEmailStr,
+    company_name: compNameStr,
+    companyName: compNameStr,
+    student_id: student._id ? String(student._id) : (student.id ? String(student.id) : String(intDoc.student_id || intDoc.studentId || 1)),
+    studentId: student._id ? String(student._id) : (student.id ? String(student.id) : String(intDoc.student_id || intDoc.studentId || 1)),
+    student_name: candName,
+    studentName: candName,
+    student_no: candNo,
+    studentNo: candNo,
+    student_email: candEmail,
+    studentEmail: candEmail,
+    department: dept,
+    round_name: roundStr,
+    roundName: roundStr,
+    scheduled_date: dateStr,
+    scheduledDate: dateStr,
+    scheduled_time: timeStr,
+    scheduledTime: timeStr,
+    interview_type: typeStr,
+    interviewType: typeStr,
+    venue: venueStr,
+    status: statusStr,
+    created_at: createdAtStr,
+    createdAt: createdAtStr,
+    updated_at: updatedAtStr,
+    updatedAt: updatedAtStr
+  };
+}
 
 // Helper: Format Drive document with complete camelCase and snake_case compatibility
 function formatRecruiterDrive(d, company) {
@@ -1608,17 +1731,68 @@ exports.updateApplicantStatus = async (req, res) => {
 exports.getInterviews = async (req, res) => {
   try {
     const email = req.user?.email || 'hr@technova.com';
-    const company = getCompanyByEmail(email);
+    const userId = req.user?._id || req.user?.id;
+    let company = getCompanyByEmail(email);
 
-    // Filter drives belonging to recruiter
-    const userDrives = recruiterStore.drives.filter(
-      d => d.company_email === email || d.company_id === company.id
-    );
+    let items = [];
+    let userDrives = [];
 
-    // Filter interviews belonging to recruiter's company
-    let items = (recruiterStore.interviews || []).filter(
-      i => i.company_email === email || i.company_id === company.id
-    );
+    // 1. If MongoDB is connected, query Interview collection
+    if (mongoose.connection.readyState === 1) {
+      try {
+        await seedDemoInterviewsIfEmpty();
+        const mongoComp = await getOrCreateMongoCompany(userId, email);
+        if (mongoComp) company = mongoComp;
+
+        const mongoDrives = await Drive.find({ company: company._id }).lean();
+        userDrives = mongoDrives.map(d => ({
+          id: String(d._id),
+          _id: String(d._id),
+          title: d.title
+        }));
+
+        const driveIds = mongoDrives.map(d => d._id);
+        const appDocs = await Application.find({ drive: { $in: driveIds } }).select('_id').lean();
+        const appIds = appDocs.map(a => a._id);
+
+        const mongoInterviews = await Interview.find({
+          $or: [
+            { company: company._id },
+            { drive: { $in: driveIds } },
+            { application: { $in: appIds } }
+          ]
+        })
+          .populate({
+            path: 'application',
+            populate: [
+              { path: 'student' },
+              { path: 'drive', populate: { path: 'company' } }
+            ]
+          })
+          .populate('student')
+          .populate('drive')
+          .populate('company')
+          .sort({ scheduledDate: -1, createdAt: -1 })
+          .lean();
+
+        if (mongoInterviews && mongoInterviews.length > 0) {
+          items = mongoInterviews.map(i => formatRecruiterInterview(i, company));
+        }
+      } catch (err) {
+        console.warn('[Recruiter Mongo Get Interviews Warning]:', err.message);
+      }
+    }
+
+    // 2. Fallback to in-memory store if needed
+    if (items.length === 0) {
+      userDrives = recruiterStore.drives.filter(
+        d => d.company_email === email || d.company_id === company.id
+      ).map(d => ({ id: d.id, _id: d.id, title: d.title }));
+
+      items = (recruiterStore.interviews || []).filter(
+        i => i.company_email === email || i.company_id === company.id
+      ).map(i => formatRecruiterInterview(i, company));
+    }
 
     const { drive_id, driveId, status, q, search } = req.query;
     const selectedDrive = drive_id || driveId;
@@ -1626,25 +1800,29 @@ exports.getInterviews = async (req, res) => {
     const searchKeyword = (q || search || '').toLowerCase().trim();
 
     if (selectedDrive) {
-      items = items.filter(i => String(i.drive_id) === String(selectedDrive));
+      items = items.filter(i => String(i.drive_id) === String(selectedDrive) || String(i.driveId) === String(selectedDrive));
     }
 
-    if (statusFilter && statusFilter.trim()) {
+    if (statusFilter && statusFilter.trim() && statusFilter !== 'All') {
       items = items.filter(i => i.status.toLowerCase() === statusFilter.toLowerCase().trim());
     }
 
     if (searchKeyword) {
       items = items.filter(i =>
         (i.student_name && i.student_name.toLowerCase().includes(searchKeyword)) ||
+        (i.studentName && i.studentName.toLowerCase().includes(searchKeyword)) ||
         (i.student_no && i.student_no.toLowerCase().includes(searchKeyword)) ||
+        (i.studentNo && i.studentNo.toLowerCase().includes(searchKeyword)) ||
         (i.drive_title && i.drive_title.toLowerCase().includes(searchKeyword)) ||
+        (i.driveTitle && i.driveTitle.toLowerCase().includes(searchKeyword)) ||
         (i.round_name && i.round_name.toLowerCase().includes(searchKeyword)) ||
+        (i.roundName && i.roundName.toLowerCase().includes(searchKeyword)) ||
         (i.venue && i.venue.toLowerCase().includes(searchKeyword))
       );
     }
 
     // Sort by scheduled_date descending
-    items.sort((a, b) => new Date(b.scheduled_date || 0) - new Date(a.scheduled_date || 0));
+    items.sort((a, b) => new Date(b.scheduled_date || b.scheduledDate || 0) - new Date(a.scheduled_date || a.scheduledDate || 0));
 
     return res.status(200).json({
       success: true,
@@ -1666,9 +1844,59 @@ exports.getInterviews = async (req, res) => {
 exports.getInterviewById = async (req, res) => {
   try {
     const email = req.user?.email || 'hr@technova.com';
-    const company = getCompanyByEmail(email);
+    const userId = req.user?._id || req.user?.id;
+    let company = getCompanyByEmail(email);
+    if (mongoose.connection.readyState === 1) {
+      const mongoComp = await getOrCreateMongoCompany(userId, email);
+      if (mongoComp) company = mongoComp;
+    }
     const intId = req.params.id;
 
+    // 1. Check MongoDB if connected
+    if (mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(intId)) {
+      try {
+        const intDoc = await Interview.findById(intId)
+          .populate({
+            path: 'application',
+            populate: [
+              { path: 'student' },
+              { path: 'drive', populate: { path: 'company' } }
+            ]
+          })
+          .populate('student')
+          .populate('drive')
+          .populate('company')
+          .lean();
+
+        if (intDoc) {
+          const docCompId = intDoc.company?._id ? String(intDoc.company._id) : (intDoc.company ? String(intDoc.company) : '');
+          const driveCompId = intDoc.drive?.company?._id ? String(intDoc.drive.company._id) : (intDoc.drive?.company ? String(intDoc.drive.company) : '');
+          const appCompId = intDoc.application?.drive?.company?._id ? String(intDoc.application.drive.company._id) : '';
+          const myCompId = company._id ? String(company._id) : String(company.id);
+
+          const isOwner = (docCompId && docCompId === myCompId) ||
+                          (driveCompId && driveCompId === myCompId) ||
+                          (appCompId && appCompId === myCompId) ||
+                          (intDoc.company_email === email);
+
+          if (!isOwner) {
+            return res.status(403).json({
+              success: false,
+              message: 'Access Denied: You do not have permission to view this interview.'
+            });
+          }
+
+          return res.status(200).json({
+            success: true,
+            interview: formatRecruiterInterview(intDoc, company)
+          });
+        }
+      } catch (err) {
+        console.warn('[Recruiter Mongo Get Interview Detail Warning]:', err.message);
+      }
+    }
+
+    // 2. Fallback to in-memory store
     const interview = (recruiterStore.interviews || []).find(
       i => String(i.id) === String(intId) || String(i._id) === String(intId)
     );
@@ -1680,7 +1908,7 @@ exports.getInterviewById = async (req, res) => {
       });
     }
 
-    // Ownership check: Recruiter must own the company/drive
+    // Ownership check
     if (interview.company_email !== email && interview.company_id !== company.id) {
       return res.status(403).json({
         success: false,
@@ -1690,7 +1918,7 @@ exports.getInterviewById = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      interview
+      interview: formatRecruiterInterview(interview, company)
     });
   } catch (err) {
     console.error('[Recruiter Get Interview Detail Error]:', err);
@@ -1706,7 +1934,12 @@ exports.getInterviewById = async (req, res) => {
 exports.scheduleInterview = async (req, res) => {
   try {
     const email = req.user?.email || 'hr@technova.com';
-    const company = getCompanyByEmail(email);
+    const userId = req.user?._id || req.user?.id;
+    let company = getCompanyByEmail(email);
+    if (mongoose.connection.readyState === 1) {
+      const mongoComp = await getOrCreateMongoCompany(userId, email);
+      if (mongoComp) company = mongoComp;
+    }
 
     const {
       application_id,
@@ -1742,44 +1975,153 @@ exports.scheduleInterview = async (req, res) => {
       });
     }
 
-    // Find application in recruiterStore
-    const application = (recruiterStore.applications || []).find(
-      a => String(a.id) === String(appId) || String(a._id) === String(appId)
-    );
+    let createdMongoInt = null;
+    let application = null;
 
+    // 1. If MongoDB is connected, find application and persist interview
+    if (mongoose.connection.readyState === 1) {
+      try {
+        let appDoc = null;
+        if (mongoose.Types.ObjectId.isValid(appId)) {
+          appDoc = await Application.findById(appId)
+            .populate('student')
+            .populate({ path: 'drive', populate: { path: 'company' } });
+        }
+
+        if (!appDoc) {
+          // If appId is numeric / demo string (e.g. "1" or "101"), find matching demo application
+          const inMemApp = (recruiterStore.applications || []).find(
+            a => String(a.id) === String(appId) || String(a._id) === String(appId)
+          );
+          if (inMemApp) {
+            const studentDoc = await Student.findOne({ studentNo: inMemApp.student_no || inMemApp.studentNo || 'CS2023001' });
+            const driveDoc = await Drive.findOne({ title: inMemApp.drive_title || inMemApp.driveTitle || 'Software Engineer - New Grad' });
+            if (studentDoc && driveDoc) {
+              appDoc = await Application.findOne({ student: studentDoc._id, drive: driveDoc._id })
+                .populate('student')
+                .populate({ path: 'drive', populate: { path: 'company' } });
+              if (!appDoc) {
+                appDoc = await Application.create({
+                  student: studentDoc._id,
+                  drive: driveDoc._id,
+                  status: 'Interview Scheduled'
+                });
+                appDoc = await Application.findById(appDoc._id)
+                  .populate('student')
+                  .populate({ path: 'drive', populate: { path: 'company' } });
+              }
+            }
+          }
+        }
+
+        if (appDoc) {
+          // Ownership check
+          const driveCompId = appDoc.drive?.company?._id ? String(appDoc.drive.company._id) : (appDoc.drive?.company ? String(appDoc.drive.company) : '');
+          const myCompId = company._id ? String(company._id) : String(company.id);
+          if (driveCompId && myCompId && driveCompId !== myCompId) {
+            return res.status(403).json({
+              success: false,
+              message: 'Access Denied: You do not have permission to schedule interviews for this application.'
+            });
+          }
+
+          // Update application status
+          appDoc.status = 'Interview Scheduled';
+          await appDoc.save();
+
+          // Create Interview in MongoDB
+          const scheduledDateObj = new Date(date);
+          const newDoc = await Interview.create({
+            application: appDoc._id,
+            student: appDoc.student?._id || appDoc.student,
+            drive: appDoc.drive?._id || appDoc.drive,
+            company: appDoc.drive?.company?._id || appDoc.drive?.company || company._id,
+            roundName: round.trim(),
+            scheduledDate: isNaN(scheduledDateObj.getTime()) ? new Date() : scheduledDateObj,
+            scheduledTime: time.trim(),
+            interviewType: format,
+            venue: loc,
+            status: 'Scheduled'
+          });
+
+          const populatedDoc = await Interview.findById(newDoc._id)
+            .populate({
+              path: 'application',
+              populate: [
+                { path: 'student' },
+                { path: 'drive', populate: { path: 'company' } }
+              ]
+            })
+            .populate('student')
+            .populate('drive')
+            .populate('company')
+            .lean();
+
+          if (populatedDoc) {
+            createdMongoInt = formatRecruiterInterview(populatedDoc, company);
+          }
+          application = formatRecruiterApplicant(appDoc, company);
+        }
+      } catch (err) {
+        console.warn('[Recruiter Mongo Schedule Interview Warning]:', err.message);
+      }
+    }
+
+    // 2. Also keep in-memory fallback store updated
     if (!application) {
+      application = (recruiterStore.applications || []).find(
+        a => String(a.id) === String(appId) || String(a._id) === String(appId)
+      );
+    }
+
+    if (!application && !createdMongoInt) {
       return res.status(404).json({
         success: false,
         message: `Application with ID '${appId}' not found.`
       });
     }
 
-    // Security & Ownership check
-    if (application.company_email !== email && application.company_id !== company.id) {
+    if (application && application.company_email !== email && application.company_id !== company.id && !createdMongoInt) {
       return res.status(403).json({
         success: false,
         message: 'Access Denied: You do not have permission to schedule interviews for this application.'
       });
     }
 
-    const candName = application.student_name || application.name || 'Candidate';
-    const candNo = application.student_no || 'STU';
+    const candName = application?.student_name || application?.studentName || application?.name || createdMongoInt?.student_name || 'Candidate';
+    const candNo = application?.student_no || application?.studentNo || createdMongoInt?.student_no || 'STU';
+    const driveTitle = application?.drive_title || application?.driveTitle || createdMongoInt?.drive_title || 'Placement Drive';
+    const driveId = application?.drive_id || application?.driveId || createdMongoInt?.drive_id || 1;
 
-    const newInterview = {
+    const newInterview = createdMongoInt || {
       id: Date.now(),
-      application_id: application.id,
-      drive_id: application.drive_id,
-      drive_title: application.drive_title || 'Software Engineer',
+      _id: Date.now(),
+      application_id: appId,
+      applicationId: appId,
+      drive_id: driveId,
+      driveId: driveId,
+      drive_title: driveTitle,
+      driveTitle: driveTitle,
       company_id: company.id,
+      companyId: company.id,
       company_email: email,
+      companyEmail: email,
       company_name: company.name,
-      student_id: application.student_id,
+      companyName: company.name,
+      student_id: application?.student_id || application?.studentId || 1,
+      studentId: application?.student_id || application?.studentId || 1,
       student_name: candName,
+      studentName: candName,
       student_no: candNo,
+      studentNo: candNo,
       round_name: round.trim(),
+      roundName: round.trim(),
       scheduled_date: date,
+      scheduledDate: date,
       scheduled_time: time.trim(),
+      scheduledTime: time.trim(),
       interview_type: format,
+      interviewType: format,
       venue: loc,
       status: 'Scheduled',
       created_at: new Date().toISOString()
@@ -1790,18 +2132,19 @@ exports.scheduleInterview = async (req, res) => {
     }
     recruiterStore.interviews.unshift(newInterview);
 
-    // Update application status to 'Interview Scheduled'
-    application.status = 'Interview Scheduled';
-    application.updated_at = new Date().toISOString().replace('T', ' ').substring(0, 19);
+    if (application) {
+      application.status = 'Interview Scheduled';
+      application.updated_at = new Date().toISOString().replace('T', ' ').substring(0, 19);
+    }
 
     // Synchronize with Student Portal store
     if (studentStore) {
       // 1. Sync student application status
       if (studentStore.applications && Array.isArray(studentStore.applications)) {
         const studentApp = studentStore.applications.find(
-          sa => sa.drive_id === 'drv-1' || String(sa.drive_id) === String(application.drive_id) || sa.drive_title === application.drive_title
+          sa => sa.drive_id === 'drv-1' || String(sa.drive_id) === String(driveId) || sa.drive_title === driveTitle
         );
-        if (studentApp && (application.student_no === 'CS2023001' || candName === 'Priya Sharma' || application.student_id === 1 || application.id === 101)) {
+        if (studentApp) {
           studentApp.status = 'Interview Scheduled';
           studentApp.interview_date = date;
         }
@@ -1810,20 +2153,28 @@ exports.scheduleInterview = async (req, res) => {
       // 2. Add to student interviews calendar
       if (studentStore.interviews && Array.isArray(studentStore.interviews)) {
         const studentInt = {
-          id: `int-${Date.now()}`,
+          id: newInterview.id ? `int-${newInterview.id}` : `int-${Date.now()}`,
+          _id: newInterview._id || newInterview.id,
           application_id: newInterview.application_id,
+          applicationId: newInterview.applicationId,
           company_name: company.name,
-          drive_title: newInterview.drive_title,
+          companyName: company.name,
+          drive_title: driveTitle,
+          driveTitle: driveTitle,
           round_name: newInterview.round_name,
+          roundName: newInterview.roundName,
           scheduled_date: newInterview.scheduled_date,
+          scheduledDate: newInterview.scheduledDate,
           scheduled_time: newInterview.scheduled_time,
+          scheduledTime: newInterview.scheduledTime,
           interview_type: newInterview.interview_type,
+          interviewType: newInterview.interviewType,
           venue: newInterview.venue,
           status: 'Scheduled'
         };
-        // Avoid duplicates if same round exists
         const existingIdx = studentStore.interviews.findIndex(
-          si => si.drive_title === newInterview.drive_title && si.round_name === newInterview.round_name
+          si => (si.drive_title === driveTitle || si.driveTitle === driveTitle) &&
+                (si.round_name === newInterview.round_name || si.roundName === newInterview.roundName)
         );
         if (existingIdx >= 0) {
           studentStore.interviews[existingIdx] = studentInt;
@@ -1836,7 +2187,7 @@ exports.scheduleInterview = async (req, res) => {
       if (studentStore.notifications && Array.isArray(studentStore.notifications)) {
         studentStore.notifications.unshift({
           id: `notif-${Date.now()}`,
-          message: `Interview Scheduled: ${newInterview.round_name} for '${newInterview.drive_title}' with ${company.name} on ${newInterview.scheduled_date} at ${newInterview.scheduled_time}.`,
+          message: `Interview Scheduled: ${newInterview.round_name || newInterview.roundName} for '${driveTitle}' with ${company.name} on ${newInterview.scheduled_date} at ${newInterview.scheduled_time}.`,
           created_at: new Date().toISOString().replace('T', ' ').substring(0, 16),
           is_read: false
         });
@@ -1862,29 +2213,13 @@ exports.scheduleInterview = async (req, res) => {
 exports.updateInterview = async (req, res) => {
   try {
     const email = req.user?.email || 'hr@technova.com';
-    const company = getCompanyByEmail(email);
+    const userId = req.user?._id || req.user?.id;
+    let company = getCompanyByEmail(email);
+    if (mongoose.connection.readyState === 1) {
+      const mongoComp = await getOrCreateMongoCompany(userId, email);
+      if (mongoComp) company = mongoComp;
+    }
     const intId = req.params.id;
-
-    const index = (recruiterStore.interviews || []).findIndex(
-      i => String(i.id) === String(intId) || String(i._id) === String(intId)
-    );
-
-    if (index === -1) {
-      return res.status(404).json({
-        success: false,
-        message: `Interview with ID '${intId}' not found.`
-      });
-    }
-
-    const current = recruiterStore.interviews[index];
-
-    // Security & Ownership check
-    if (current.company_email !== email && current.company_id !== company.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access Denied: You do not have permission to update this interview.'
-      });
-    }
 
     const {
       round_name,
@@ -1907,29 +2242,138 @@ exports.updateInterview = async (req, res) => {
       });
     }
 
-    const updated = {
-      ...current,
-      round_name: round_name !== undefined ? round_name.trim() : (roundName !== undefined ? roundName.trim() : current.round_name),
-      scheduled_date: scheduled_date || scheduledDate || current.scheduled_date,
-      scheduled_time: scheduled_time !== undefined ? scheduled_time.trim() : (scheduledTime !== undefined ? scheduledTime.trim() : current.scheduled_time),
-      interview_type: interview_type || interviewType || current.interview_type,
-      venue: venue !== undefined ? venue.trim() : current.venue,
-      status: status || current.status,
-      updated_at: new Date().toISOString()
-    };
+    let updatedMongoInt = null;
 
-    recruiterStore.interviews[index] = updated;
+    // 1. Update in MongoDB if connected
+    if (mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(intId)) {
+      try {
+        const intDoc = await Interview.findById(intId)
+          .populate({
+            path: 'application',
+            populate: [
+              { path: 'student' },
+              { path: 'drive', populate: { path: 'company' } }
+            ]
+          })
+          .populate('student')
+          .populate('drive')
+          .populate('company');
+
+        if (intDoc) {
+          // Ownership check
+          const docCompId = intDoc.company?._id ? String(intDoc.company._id) : (intDoc.company ? String(intDoc.company) : '');
+          const driveCompId = intDoc.drive?.company?._id ? String(intDoc.drive.company._id) : (intDoc.drive?.company ? String(intDoc.drive.company) : '');
+          const appCompId = intDoc.application?.drive?.company?._id ? String(intDoc.application.drive.company._id) : '';
+          const myCompId = company._id ? String(company._id) : String(company.id);
+
+          const isOwner = (docCompId && docCompId === myCompId) ||
+                          (driveCompId && driveCompId === myCompId) ||
+                          (appCompId && appCompId === myCompId) ||
+                          (intDoc.company_email === email);
+
+          if (!isOwner) {
+            return res.status(403).json({
+              success: false,
+              message: 'Access Denied: You do not have permission to update this interview.'
+            });
+          }
+
+          if (round_name !== undefined || roundName !== undefined) {
+            intDoc.roundName = (round_name !== undefined ? round_name : roundName).trim();
+          }
+          if (scheduled_date || scheduledDate) {
+            const parsed = new Date(scheduled_date || scheduledDate);
+            if (!isNaN(parsed.getTime())) intDoc.scheduledDate = parsed;
+          }
+          if (scheduled_time !== undefined || scheduledTime !== undefined) {
+            intDoc.scheduledTime = (scheduled_time !== undefined ? scheduled_time : scheduledTime).trim();
+          }
+          if (interview_type || interviewType) {
+            intDoc.interviewType = interview_type || interviewType;
+          }
+          if (venue !== undefined) {
+            intDoc.venue = venue.trim();
+          }
+          if (status) {
+            intDoc.status = status;
+          }
+
+          await intDoc.save();
+
+          const refreshed = await Interview.findById(intDoc._id)
+            .populate({
+              path: 'application',
+              populate: [
+                { path: 'student' },
+                { path: 'drive', populate: { path: 'company' } }
+              ]
+            })
+            .populate('student')
+            .populate('drive')
+            .populate('company')
+            .lean();
+
+          if (refreshed) {
+            updatedMongoInt = formatRecruiterInterview(refreshed, company);
+          }
+        }
+      } catch (err) {
+        console.warn('[Recruiter Mongo Update Interview Warning]:', err.message);
+      }
+    }
+
+    // 2. Also update in-memory fallback
+    const index = (recruiterStore.interviews || []).findIndex(
+      i => String(i.id) === String(intId) || String(i._id) === String(intId)
+    );
+
+    let current = null;
+    if (index !== -1) {
+      current = recruiterStore.interviews[index];
+      if (!updatedMongoInt && current.company_email !== email && current.company_id !== company.id) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access Denied: You do not have permission to update this interview.'
+        });
+      }
+
+      current = {
+        ...current,
+        round_name: round_name !== undefined ? round_name.trim() : (roundName !== undefined ? roundName.trim() : current.round_name),
+        scheduled_date: scheduled_date || scheduledDate || current.scheduled_date,
+        scheduled_time: scheduled_time !== undefined ? scheduled_time.trim() : (scheduledTime !== undefined ? scheduledTime.trim() : current.scheduled_time),
+        interview_type: interview_type || interviewType || current.interview_type,
+        venue: venue !== undefined ? venue.trim() : current.venue,
+        status: status || current.status,
+        updated_at: new Date().toISOString()
+      };
+      recruiterStore.interviews[index] = current;
+    } else if (updatedMongoInt) {
+      current = updatedMongoInt;
+    } else {
+      return res.status(404).json({
+        success: false,
+        message: `Interview with ID '${intId}' not found.`
+      });
+    }
+
+    const updated = updatedMongoInt || formatRecruiterInterview(current, company);
 
     // Sync with Student Portal store
     if (studentStore && studentStore.interviews) {
       const stuInt = studentStore.interviews.find(
-        si => si.drive_title === updated.drive_title && (si.round_name === current.round_name || si.round_name === updated.round_name)
+        si => (String(si.id) === String(intId) || String(si._id) === String(intId)) ||
+              (si.drive_title === updated.drive_title && (si.round_name === updated.round_name || si.roundName === updated.round_name))
       );
       if (stuInt) {
         stuInt.round_name = updated.round_name;
+        stuInt.roundName = updated.roundName;
         stuInt.scheduled_date = updated.scheduled_date;
+        stuInt.scheduledDate = updated.scheduledDate;
         stuInt.scheduled_time = updated.scheduled_time;
+        stuInt.scheduledTime = updated.scheduledTime;
         stuInt.interview_type = updated.interview_type;
+        stuInt.interviewType = updated.interviewType;
         stuInt.venue = updated.venue;
         stuInt.status = updated.status;
       }
@@ -1937,14 +2381,14 @@ exports.updateInterview = async (req, res) => {
       if (status === 'Cancelled') {
         studentStore.notifications.unshift({
           id: `notif-${Date.now()}`,
-          message: `Interview Update: Your interview for '${updated.drive_title}' with ${company.name} has been cancelled.`,
+          message: `Interview Update: Your interview for '${updated.drive_title || updated.driveTitle}' with ${company.name} has been cancelled.`,
           created_at: new Date().toISOString().replace('T', ' ').substring(0, 16),
           is_read: false
         });
-      } else if (scheduled_date || scheduled_time) {
+      } else if (scheduled_date || scheduledDate || scheduled_time || scheduledTime) {
         studentStore.notifications.unshift({
           id: `notif-${Date.now()}`,
-          message: `Interview Rescheduled: ${updated.round_name} for '${updated.drive_title}' with ${company.name} is now on ${updated.scheduled_date} at ${updated.scheduled_time}.`,
+          message: `Interview Rescheduled: ${updated.round_name || updated.roundName} for '${updated.drive_title || updated.driveTitle}' with ${company.name} is now on ${updated.scheduled_date} at ${updated.scheduled_time}.`,
           created_at: new Date().toISOString().replace('T', ' ').substring(0, 16),
           is_read: false
         });
@@ -1970,38 +2414,108 @@ exports.updateInterview = async (req, res) => {
 exports.cancelInterview = async (req, res) => {
   try {
     const email = req.user?.email || 'hr@technova.com';
-    const company = getCompanyByEmail(email);
+    const userId = req.user?._id || req.user?.id;
+    let company = getCompanyByEmail(email);
+    if (mongoose.connection.readyState === 1) {
+      const mongoComp = await getOrCreateMongoCompany(userId, email);
+      if (mongoComp) company = mongoComp;
+    }
     const intId = req.params.id;
 
+    let cancelledMongoInt = null;
+
+    // 1. Update in MongoDB if connected
+    if (mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(intId)) {
+      try {
+        const intDoc = await Interview.findById(intId)
+          .populate({
+            path: 'application',
+            populate: [
+              { path: 'student' },
+              { path: 'drive', populate: { path: 'company' } }
+            ]
+          })
+          .populate('student')
+          .populate('drive')
+          .populate('company');
+
+        if (intDoc) {
+          // Ownership check
+          const docCompId = intDoc.company?._id ? String(intDoc.company._id) : (intDoc.company ? String(intDoc.company) : '');
+          const driveCompId = intDoc.drive?.company?._id ? String(intDoc.drive.company._id) : (intDoc.drive?.company ? String(intDoc.drive.company) : '');
+          const appCompId = intDoc.application?.drive?.company?._id ? String(intDoc.application.drive.company._id) : '';
+          const myCompId = company._id ? String(company._id) : String(company.id);
+
+          const isOwner = (docCompId && docCompId === myCompId) ||
+                          (driveCompId && driveCompId === myCompId) ||
+                          (appCompId && appCompId === myCompId) ||
+                          (intDoc.company_email === email);
+
+          if (!isOwner) {
+            return res.status(403).json({
+              success: false,
+              message: 'Access Denied: You do not have permission to cancel this interview.'
+            });
+          }
+
+          intDoc.status = 'Cancelled';
+          await intDoc.save();
+
+          const refreshed = await Interview.findById(intDoc._id)
+            .populate({
+              path: 'application',
+              populate: [
+                { path: 'student' },
+                { path: 'drive', populate: { path: 'company' } }
+              ]
+            })
+            .populate('student')
+            .populate('drive')
+            .populate('company')
+            .lean();
+
+          if (refreshed) {
+            cancelledMongoInt = formatRecruiterInterview(refreshed, company);
+          }
+        }
+      } catch (err) {
+        console.warn('[Recruiter Mongo Cancel Interview Warning]:', err.message);
+      }
+    }
+
+    // 2. Fallback in-memory
     const index = (recruiterStore.interviews || []).findIndex(
       i => String(i.id) === String(intId) || String(i._id) === String(intId)
     );
 
-    if (index === -1) {
+    let current = null;
+    if (index !== -1) {
+      current = recruiterStore.interviews[index];
+      if (!cancelledMongoInt && current.company_email !== email && current.company_id !== company.id) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access Denied: You do not have permission to cancel this interview.'
+        });
+      }
+      current.status = 'Cancelled';
+      current.updated_at = new Date().toISOString();
+      recruiterStore.interviews[index] = current;
+    } else if (cancelledMongoInt) {
+      current = cancelledMongoInt;
+    } else {
       return res.status(404).json({
         success: false,
         message: `Interview with ID '${intId}' not found.`
       });
     }
 
-    const current = recruiterStore.interviews[index];
-
-    // Security & Ownership check
-    if (current.company_email !== email && current.company_id !== company.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access Denied: You do not have permission to cancel this interview.'
-      });
-    }
-
-    current.status = 'Cancelled';
-    current.updated_at = new Date().toISOString();
-    recruiterStore.interviews[index] = current;
+    const cancelled = cancelledMongoInt || formatRecruiterInterview(current, company);
 
     // Sync with Student Portal store
     if (studentStore && studentStore.interviews) {
       const stuInt = studentStore.interviews.find(
-        si => si.drive_title === current.drive_title && si.round_name === current.round_name
+        si => (String(si.id) === String(intId) || String(si._id) === String(intId)) ||
+              (si.drive_title === cancelled.drive_title && (si.round_name === cancelled.round_name || si.roundName === cancelled.roundName))
       );
       if (stuInt) {
         stuInt.status = 'Cancelled';
@@ -2009,7 +2523,7 @@ exports.cancelInterview = async (req, res) => {
 
       studentStore.notifications.unshift({
         id: `notif-${Date.now()}`,
-        message: `Interview Cancelled: Your interview round '${current.round_name}' for '${current.drive_title}' with ${company.name} has been cancelled.`,
+        message: `Interview Cancelled: Your interview round '${cancelled.round_name || cancelled.roundName}' for '${cancelled.drive_title || cancelled.driveTitle}' with ${company.name} has been cancelled.`,
         created_at: new Date().toISOString().replace('T', ' ').substring(0, 16),
         is_read: false
       });
@@ -2018,7 +2532,7 @@ exports.cancelInterview = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: 'Interview cancelled.',
-      interview: current
+      interview: cancelled
     });
   } catch (err) {
     console.error('[Recruiter Cancel Interview Error]:', err);

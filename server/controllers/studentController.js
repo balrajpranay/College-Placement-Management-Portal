@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const User = require('../models/User');
 const Student = require('../models/Student');
+const Company = require('../models/Company');
 const Drive = require('../models/Drive');
 const Application = require('../models/Application');
 const Interview = require('../models/Interview');
@@ -384,6 +385,53 @@ function formatApplicationForStudent(appDoc) {
   };
 }
 
+// Helper: Format Interview for student views matching React expectations
+function formatStudentInterview(intDoc) {
+  if (!intDoc) return null;
+  const app = intDoc.application && typeof intDoc.application === 'object' ? intDoc.application : {};
+  const student = intDoc.student && typeof intDoc.student === 'object' ? intDoc.student : (app.student && typeof app.student === 'object' ? app.student : {});
+  const drive = intDoc.drive && typeof intDoc.drive === 'object' ? intDoc.drive : (app.drive && typeof app.drive === 'object' ? app.drive : {});
+  const comp = intDoc.company && typeof intDoc.company === 'object' ? intDoc.company : (drive.company && typeof drive.company === 'object' ? drive.company : {});
+
+  const compName = comp.name || intDoc.company_name || intDoc.companyName || 'TechNova Solutions';
+  const driveTitle = drive.title || intDoc.drive_title || intDoc.driveTitle || 'Software Engineer';
+  const roundStr = intDoc.round_name || intDoc.roundName || 'Technical Round 1';
+
+  let dateStr = intDoc.scheduled_date || intDoc.scheduledDate;
+  if (intDoc.scheduledDate instanceof Date) {
+    dateStr = intDoc.scheduledDate.toISOString().split('T')[0];
+  } else if (typeof dateStr === 'string' && dateStr.includes('T')) {
+    dateStr = dateStr.split('T')[0];
+  }
+
+  const timeStr = intDoc.scheduled_time || intDoc.scheduledTime || '10:00 AM';
+  const typeStr = intDoc.interview_type || intDoc.interviewType || 'Online';
+  const venueStr = intDoc.venue || (typeStr === 'Online' ? 'Google Meet link will be shared via email' : 'Campus Placement Cell');
+  const statusStr = intDoc.status || 'Scheduled';
+  const intIdStr = intDoc._id ? String(intDoc._id) : String(intDoc.id || '');
+  const appIdStr = app._id ? String(app._id) : (app.id ? String(app.id) : String(intDoc.application_id || intDoc.applicationId || ''));
+
+  return {
+    id: intIdStr,
+    _id: intIdStr,
+    application_id: appIdStr,
+    applicationId: appIdStr,
+    company_name: compName,
+    companyName: compName,
+    drive_title: driveTitle,
+    driveTitle: driveTitle,
+    round_name: roundStr,
+    roundName: roundStr,
+    scheduled_date: dateStr,
+    scheduledDate: dateStr,
+    scheduled_time: timeStr,
+    scheduledTime: timeStr,
+    interview_type: typeStr,
+    interviewType: typeStr,
+    venue: venueStr,
+    status: statusStr
+  };
+}
 
 // 1. GET Dashboard
 exports.getDashboard = async (req, res) => {
@@ -396,10 +444,10 @@ exports.getDashboard = async (req, res) => {
     let app_count = studentStore.applications.length;
     let shortlisted = studentStore.applications.filter(a => ['Shortlisted', 'Interview Scheduled', 'Under Review'].includes(a.status)).length;
     const selected = studentStore.selectedOffers;
-    const upcoming_interviews = studentStore.interviews.filter(i => i.status === 'Scheduled');
+    let upcoming_interviews = (studentStore.interviews || []).filter(i => i.status === 'Scheduled').map(formatStudentInterview);
     const recent_notifications = studentStore.notifications.slice(0, 5);
 
-    // Read application metrics from MongoDB if connected
+    // Read application and interview metrics from MongoDB if connected
     if (mongoose.connection.readyState === 1) {
       try {
         const studentDoc = await getOrCreateMongoStudent(userId, userEmail);
@@ -412,9 +460,33 @@ exports.getDashboard = async (req, res) => {
             app_count = mongoApps.length;
             shortlisted = mongoApps.filter(a => ['Shortlisted', 'Interview Scheduled', 'Under Review'].includes(a.status)).length;
           }
+
+          const appIds = (mongoApps || []).map(a => a._id);
+          const mongoUpcoming = await Interview.find({
+            $or: [
+              { student: studentDoc._id },
+              { application: { $in: appIds } }
+            ],
+            status: 'Scheduled'
+          })
+            .populate({
+              path: 'application',
+              populate: [
+                { path: 'student' },
+                { path: 'drive', populate: { path: 'company' } }
+              ]
+            })
+            .populate('drive')
+            .populate('company')
+            .sort({ scheduledDate: 1, createdAt: -1 })
+            .lean();
+
+          if (mongoUpcoming && mongoUpcoming.length > 0) {
+            upcoming_interviews = mongoUpcoming.map(formatStudentInterview);
+          }
         }
       } catch (err) {
-        console.warn('[Student Mongo Dashboard Applications Warning]:', err.message);
+        console.warn('[Student Mongo Dashboard Warning]:', err.message);
       }
     }
 
@@ -1050,9 +1122,51 @@ exports.withdrawApplication = async (req, res) => {
 // 10. GET Interviews
 exports.getInterviews = async (req, res) => {
   try {
+    const userId = req.user?._id || req.user?.id;
+    const userEmail = req.user?.email || 'priya.sharma@student.edu';
+
+    // 1. If MongoDB is connected, query Interview collection
+    if (mongoose.connection.readyState === 1) {
+      try {
+        const studentDoc = await getOrCreateMongoStudent(userId, userEmail);
+        if (studentDoc) {
+          const apps = await Application.find({ student: studentDoc._id }).lean();
+          const appIds = (apps || []).map(a => a._id);
+
+          const mongoInterviews = await Interview.find({
+            $or: [
+              { student: studentDoc._id },
+              { application: { $in: appIds } }
+            ]
+          })
+            .populate({
+              path: 'application',
+              populate: [
+                { path: 'student' },
+                { path: 'drive', populate: { path: 'company' } }
+              ]
+            })
+            .populate('drive')
+            .populate('company')
+            .sort({ scheduledDate: 1, createdAt: -1 })
+            .lean();
+
+          if (mongoInterviews && mongoInterviews.length > 0) {
+            return res.status(200).json({
+              success: true,
+              data: mongoInterviews.map(formatStudentInterview)
+            });
+          }
+        }
+      } catch (dbErr) {
+        console.warn('[Student Mongo Get Interviews Warning]:', dbErr.message);
+      }
+    }
+
+    // 2. Fallback in-memory
     return res.status(200).json({
       success: true,
-      data: studentStore.interviews
+      data: (studentStore.interviews || []).map(formatStudentInterview)
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });

@@ -6,6 +6,18 @@ const InterviewSchema = new mongoose.Schema({
     ref: 'Application',
     required: true
   },
+  company: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Company'
+  },
+  drive: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Drive'
+  },
+  student: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Student'
+  },
   scheduledDate: {
     type: Date,
     required: true
@@ -34,4 +46,4 @@ const InterviewSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('Interview', InterviewSchema);
+module.exports = mongoose.models.Interview || mongoose.model('Interview', InterviewSchema);
