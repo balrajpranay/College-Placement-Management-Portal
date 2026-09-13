@@ -18,7 +18,10 @@ const POPULAR_TECH_SKILLS = [
   'PostgreSQL',
   'C++',
   'Data Structures',
-  'Machine Learning'
+  'Machine Learning',
+  'Next.js',
+  'Tailwind CSS',
+  'Linux'
 ];
 
 const POPULAR_SOFT_SKILLS = [
@@ -28,7 +31,8 @@ const POPULAR_SOFT_SKILLS = [
   'Technical Documentation',
   'Clear Communication',
   'Critical Thinking',
-  'Adaptability'
+  'Adaptability',
+  'Time Management'
 ];
 
 export default function StudentProfile() {
@@ -137,7 +141,7 @@ export default function StudentProfile() {
     const raw = (skillToAdd !== undefined ? skillToAdd : techInput).trim();
     if (!raw) return;
 
-    // Handle comma-separated additions in text input
+    // Handle comma-separated additions
     const toAdd = raw.split(',').map(s => s.trim()).filter(Boolean);
     setForm(prev => {
       const existing = prev.technical_skills || [];
@@ -196,7 +200,6 @@ export default function StudentProfile() {
     setSaving(true);
 
     try {
-      // Prepare payload: convert skill arrays appropriately
       const payload = {
         ...form,
         technical_skills: form.technical_skills,
@@ -329,12 +332,12 @@ export default function StudentProfile() {
                 </div>
                 <div className="score-number">{completion}%</div>
               </div>
-              <div style={{ flex: 1, minWidth: 80 }}>
+              <div style={{ flex: 1, minWidth: 100 }}>
                 <div style={{ height: 6, background: 'var(--border-subtle)', borderRadius: 4, overflow: 'hidden' }}>
                   <div style={{ width: `${completion}%`, height: '100%', background: 'linear-gradient(90deg, #0096FF, #10B981)', transition: 'width 0.4s ease' }} />
                 </div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 3 }}>
-                  {completion >= 85 ? 'Placement Optimized' : 'Needs Complete Skills'}
+                  {completion >= 85 ? 'Placement Optimized' : 'Add Skills & Resume'}
                 </div>
               </div>
             </div>
@@ -344,10 +347,10 @@ export default function StudentProfile() {
               onClick={saveProfile}
               className="btn btn-primary"
               disabled={saving}
-              style={{ padding: '10px 20px', borderRadius: 10, display: 'inline-flex', alignItems: 'center', gap: 8 }}
+              style={{ padding: '10px 22px', borderRadius: 10, display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 700 }}
             >
               <Icon name="check" size={16} />
-              {saving ? 'Saving...' : 'Save Profile'}
+              {saving ? 'Saving...' : 'Save Profile Changes'}
             </button>
           </div>
         </div>
@@ -369,627 +372,556 @@ export default function StudentProfile() {
         </div>
       )}
 
-      {/* Main Form */}
-      <form onSubmit={handleSubmit}>
-        <div className="profile-grid-layout">
-          {/* Main Column */}
-          <div className="profile-main-col">
-            {/* Card 1: Personal & Institutional Identity */}
-            <div className="profile-section-card">
-              <div className="section-header">
-                <div className="section-icon-wrap">
-                  <Icon name="user" size={20} />
-                </div>
-                <div>
-                  <h3 className="section-title">Institutional &amp; Personal Identity</h3>
-                  <p className="section-desc">Manage your full candidate name, contact, and official university registration roll number.</p>
-                </div>
-              </div>
-
-              <div className="profile-field-grid-2">
-                <div className="profile-input-group">
-                  <label className="profile-label">
-                    Full Name <span style={{ color: '#EF4444' }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={form.name}
-                    onChange={handleChange}
-                    required
-                    placeholder="Enter your full legal name"
-                    className="profile-input"
-                  />
-                </div>
-
-                {/* UNLOCKED: Student ID / Roll No */}
-                <div className="profile-input-group">
-                  <label className="profile-label">
-                    <span>University Roll No / Student ID <span style={{ color: '#EF4444' }}>*</span></span>
-                    <span style={{ fontSize: '0.725rem', color: '#10B981', display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <Icon name="unlock" size={12} /> Editable
-                    </span>
-                  </label>
-                  <input
-                    type="text"
-                    name="studentNo"
-                    value={form.studentNo}
-                    onChange={handleChange}
-                    required
-                    placeholder="e.g. CS2023001 or 21BCE1042"
-                    className="profile-input unlocked-highlight"
-                  />
-                  <div className="profile-hint">
-                    Tied to your institutional dossier. You can update this to match your university examination hall ticket.
-                  </div>
-                </div>
-              </div>
-
-              <div className="profile-field-grid-2">
-                <div className="profile-input-group">
-                  <label className="profile-label">Phone Number</label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={form.phone}
-                    onChange={handleChange}
-                    placeholder="+91 98765 43210"
-                    className="profile-input"
-                  />
-                </div>
-
-                <div className="profile-input-group">
-                  <label className="profile-label">
-                    <span>Registered Institutional Email</span>
-                    <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>OAuth Verified</span>
-                  </label>
-                  <input
-                    type="email"
-                    value={form.email || data?.student?.email || 'student@university.edu'}
-                    disabled
-                    className="profile-input"
-                    style={{ opacity: 0.8, cursor: 'not-allowed', background: 'var(--bg-surface-alt)' }}
-                  />
-                </div>
-              </div>
-
-              <div className="profile-field-grid-2">
-                <div className="profile-input-group">
-                  <label className="profile-label">Department / Branch</label>
-                  <select
-                    name="department"
-                    value={form.department}
-                    onChange={handleChange}
-                    className="profile-select"
-                  >
-                    {departments.map(d => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="profile-input-group">
-                  <label className="profile-label">Graduation Year</label>
-                  <input
-                    type="number"
-                    name="gradYear"
-                    min="2024"
-                    max="2030"
-                    value={form.gradYear}
-                    onChange={handleChange}
-                    required
-                    className="profile-input"
-                  />
-                </div>
-              </div>
+      {/* Main Form Flow - Natural Full Width Layout (No Locked Right Columns) */}
+      <form onSubmit={handleSubmit} className="profile-form-flow">
+        {/* Card 1: Personal & Institutional Identity */}
+        <div className="profile-section-card">
+          <div className="section-header">
+            <div className="section-icon-wrap">
+              <Icon name="user" size={20} />
             </div>
-
-            {/* Card 2: Academic Qualifications & Eligibility Engine */}
-            <div className="profile-section-card">
-              <div className="section-header">
-                <div className="section-icon-wrap" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10B981' }}>
-                  <Icon name="graduation" size={20} />
-                </div>
-                <div>
-                  <h3 className="section-title">Academic Qualifications &amp; Drive Eligibility</h3>
-                  <p className="section-desc">Academic cutoff criteria evaluated by recruiter algorithms during drive shortlisting.</p>
-                </div>
-              </div>
-
-              <div className="profile-field-grid-2">
-                <div className="profile-input-group">
-                  <label className="profile-label">
-                    College CGPA (out of 10) <span style={{ color: '#EF4444' }}>*</span>
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="10"
-                    name="cgpa"
-                    value={form.cgpa}
-                    onChange={handleChange}
-                    required
-                    className="profile-input"
-                  />
-                </div>
-
-                <div className="profile-input-group">
-                  <label className="profile-label">
-                    Active Backlogs <span style={{ color: '#EF4444' }}>*</span>
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="10"
-                    name="backlogs"
-                    value={form.backlogs}
-                    onChange={handleChange}
-                    required
-                    className="profile-input"
-                  />
-                </div>
-              </div>
-
-              <div className="profile-field-grid-2">
-                <div className="profile-input-group">
-                  <label className="profile-label">10th Grade Percentage (%)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    name="tenthPct"
-                    value={form.tenthPct}
-                    onChange={handleChange}
-                    placeholder="e.g. 88.5"
-                    className="profile-input"
-                  />
-                </div>
-
-                <div className="profile-input-group">
-                  <label className="profile-label">12th / Diploma Percentage (%)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    name="twelfthPct"
-                    value={form.twelfthPct}
-                    onChange={handleChange}
-                    placeholder="e.g. 84.0"
-                    className="profile-input"
-                  />
-                </div>
-              </div>
-
-              {/* Real-time Eligibility Engine Output */}
-              <div style={{
-                padding: '14px 16px',
-                borderRadius: 12,
-                background: isSuperEligible
-                  ? 'rgba(16, 185, 129, 0.08)'
-                  : isStandardEligible
-                  ? 'rgba(0, 150, 255, 0.08)'
-                  : 'rgba(245, 158, 11, 0.08)',
-                border: `1px solid ${
-                  isSuperEligible
-                    ? 'rgba(16, 185, 129, 0.25)'
-                    : isStandardEligible
-                    ? 'rgba(0, 150, 255, 0.25)'
-                    : 'rgba(245, 158, 11, 0.25)'
-                }`,
-                marginTop: 8
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <Icon
-                    name={isSuperEligible || isStandardEligible ? 'check-circle' : 'alert'}
-                    size={18}
-                    style={{
-                      color: isSuperEligible ? '#10B981' : isStandardEligible ? '#0096FF' : '#F59E0B'
-                    }}
-                  />
-                  <div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                      {isSuperEligible
-                        ? 'Super Dream & Tier-1 Qualified (CGPA ≥ 7.5, 0 Backlogs)'
-                        : isStandardEligible
-                        ? 'Standard Placement Drives Qualified (CGPA ≥ 6.0, ≤ 1 Backlog)'
-                        : 'Action Required: Backlogs / CGPA Needs Attention'}
-                    </div>
-                    <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                      {isSuperEligible
-                        ? 'Your academic profile qualifies for Microsoft, TechNova, and tier-1 high-package drives.'
-                        : isStandardEligible
-                        ? 'Eligible for core enterprise drives. Keep backlogs at 0 to unlock all tier-1 campus drives.'
-                        : 'Most enterprise drives require CGPA ≥ 6.0 and zero active backlogs.'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 3: Interactive Skills & Competencies Studio (PILLS UNLOCKED) */}
-            <div className="profile-section-card">
-              <div className="section-header">
-                <div className="section-icon-wrap" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B' }}>
-                  <Icon name="zap" size={20} />
-                </div>
-                <div>
-                  <h3 className="section-title">Interactive Skills Studio (Tags &amp; Badges)</h3>
-                  <p className="section-desc">Manage verified technical skills and behavioral competencies with dynamic interactive pills.</p>
-                </div>
-              </div>
-
-              {/* TECHNICAL SKILLS SECTION */}
-              <div style={{ marginBottom: 24 }}>
-                <div className="profile-label">
-                  <span>
-                    Technical Skills &amp; Stacks ({form.technical_skills.length})
-                  </span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    Type &amp; press Enter or comma, or click recommendations
-                  </span>
-                </div>
-
-                {/* Active Technical Pills Cloud */}
-                <div className="pills-cloud-box">
-                  {form.technical_skills.length === 0 ? (
-                    <span style={{ fontSize: '0.825rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                      No technical skills added yet. Type below or click from popular skills.
-                    </span>
-                  ) : (
-                    form.technical_skills.map(skill => (
-                      <span key={skill} className="active-skill-pill">
-                        <span className="pill-dot"></span>
-                        <span>{skill}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveTechSkill(skill)}
-                          className="pill-remove-btn"
-                          title={`Remove ${skill}`}
-                        >
-                          &times;
-                        </button>
-                      </span>
-                    ))
-                  )}
-                </div>
-
-                {/* Input to type new tech skills */}
-                <div className="pill-input-row">
-                  <input
-                    type="text"
-                    value={techInput}
-                    onChange={(e) => setTechInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ',') {
-                        e.preventDefault();
-                        handleAddTechSkill();
-                      }
-                    }}
-                    placeholder="Type skill (e.g. React, Docker, Kubernetes) and press Enter..."
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleAddTechSkill()}
-                    className="btn-add-pill"
-                  >
-                    <Icon name="plus" size={14} /> Add Skill
-                  </button>
-                </div>
-
-                {/* Popular Tech Skills Recommendation Cloud */}
-                <div className="recommendation-section">
-                  <div className="recommendation-label">
-                    <Icon name="sparkles" size={13} /> Quick Add Popular Skills
-                  </div>
-                  <div className="recommendation-pills-list">
-                    {POPULAR_TECH_SKILLS.map(skill => {
-                      const isAdded = form.technical_skills.some(
-                        s => s.toLowerCase() === skill.toLowerCase()
-                      );
-                      return (
-                        <button
-                          key={skill}
-                          type="button"
-                          disabled={isAdded}
-                          onClick={() => handleAddTechSkill(skill)}
-                          className={`suggest-pill ${isAdded ? 'selected' : ''}`}
-                        >
-                          {isAdded ? (
-                            <>
-                              <Icon name="check" size={12} /> {skill}
-                            </>
-                          ) : (
-                            <>
-                              <Icon name="plus" size={12} /> {skill}
-                            </>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              {/* SOFT SKILLS SECTION */}
-              <div style={{ paddingTop: 16, borderTop: '1px solid var(--border-subtle)' }}>
-                <div className="profile-label">
-                  <span>
-                    Soft Skills &amp; Behavioral Competencies ({form.softSkills.length})
-                  </span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    Recruiter-evaluated interpersonal skills
-                  </span>
-                </div>
-
-                {/* Active Soft Skills Pills Cloud */}
-                <div className="pills-cloud-box">
-                  {form.softSkills.length === 0 ? (
-                    <span style={{ fontSize: '0.825rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                      No soft skills tagged yet. Click quick-add options below.
-                    </span>
-                  ) : (
-                    form.softSkills.map(skill => (
-                      <span key={skill} className="active-skill-pill soft-skill">
-                        <span className="pill-dot"></span>
-                        <span>{skill}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveSoftSkill(skill)}
-                          className="pill-remove-btn"
-                          title={`Remove ${skill}`}
-                        >
-                          &times;
-                        </button>
-                      </span>
-                    ))
-                  )}
-                </div>
-
-                {/* Input for Soft Skills */}
-                <div className="pill-input-row">
-                  <input
-                    type="text"
-                    value={softInput}
-                    onChange={(e) => setSoftInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ',') {
-                        e.preventDefault();
-                        handleAddSoftSkill();
-                      }
-                    }}
-                    placeholder="Type soft skill (e.g. Critical Thinking) and press Enter..."
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleAddSoftSkill()}
-                    className="btn-add-pill"
-                    style={{ background: '#10B981' }}
-                  >
-                    <Icon name="plus" size={14} /> Add Competency
-                  </button>
-                </div>
-
-                {/* Popular Soft Skills Recommendations */}
-                <div className="recommendation-section">
-                  <div className="recommendation-label">
-                    <Icon name="sparkles" size={13} /> Quick Add Competencies
-                  </div>
-                  <div className="recommendation-pills-list">
-                    {POPULAR_SOFT_SKILLS.map(skill => {
-                      const isAdded = form.softSkills.some(
-                        s => s.toLowerCase() === skill.toLowerCase()
-                      );
-                      return (
-                        <button
-                          key={skill}
-                          type="button"
-                          disabled={isAdded}
-                          onClick={() => handleAddSoftSkill(skill)}
-                          className={`suggest-pill ${isAdded ? 'selected' : ''}`}
-                        >
-                          {isAdded ? (
-                            <>
-                              <Icon name="check" size={12} /> {skill}
-                            </>
-                          ) : (
-                            <>
-                              <Icon name="plus" size={12} /> {skill}
-                            </>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 4: Experience, Certifications & Projects */}
-            <div className="profile-section-card">
-              <div className="section-header">
-                <div className="section-icon-wrap" style={{ background: 'rgba(139, 92, 246, 0.1)', color: '#8B5CF6' }}>
-                  <Icon name="briefcase" size={20} />
-                </div>
-                <div>
-                  <h3 className="section-title">Certifications, Internships &amp; Projects</h3>
-                  <p className="section-desc">Key highlights that substantiate your hands-on engineering capabilities during technical interviews.</p>
-                </div>
-              </div>
-
-              <div className="profile-field-grid-2">
-                <div className="profile-input-group">
-                  <label className="profile-label">Professional Certifications</label>
-                  <textarea
-                    name="certifications"
-                    value={form.certifications}
-                    onChange={handleChange}
-                    placeholder="e.g. AWS Certified Solutions Architect Associate (2025), Meta Front-End Specialization"
-                    rows={3}
-                    className="profile-textarea"
-                  />
-                </div>
-
-                <div className="profile-input-group">
-                  <label className="profile-label">Internships &amp; Work Experience</label>
-                  <textarea
-                    name="internships"
-                    value={form.internships}
-                    onChange={handleChange}
-                    placeholder="e.g. Full Stack Engineering Intern at XYZ Tech (May - Jul 2025) &ndash; Built microservices in Go"
-                    rows={3}
-                    className="profile-textarea"
-                  />
-                </div>
-              </div>
-
-              <div className="profile-input-group" style={{ marginBottom: 0 }}>
-                <label className="profile-label">Key Projects &amp; Tech Stacks</label>
-                <textarea
-                  name="projects"
-                  value={form.projects}
-                  onChange={handleChange}
-                  placeholder="1. Campus Connect Placement Portal (React, Node, Express, SQLite/Mongo)&#10;2. Distributed Task Scheduler with Redis & Go&#10;3. Automated ATS Resume Parser using Gemini AI"
-                  rows={4}
-                  className="profile-textarea"
-                />
-              </div>
+            <div>
+              <h3 className="section-title">Institutional &amp; Personal Identity</h3>
+              <p className="section-desc">Manage your full candidate name, contact, and official university registration roll number.</p>
             </div>
           </div>
 
-          {/* Right Sidebar Dossier */}
-          <div className="profile-sidebar-col">
-            {/* Resume File Card */}
-            <div className="dossier-card">
-              <h4 className="dossier-card-title">
-                <span>Verified Placement Resume</span>
-                <Icon name="file" size={16} />
-              </h4>
-
-              {data?.student?.resume_filename ? (
-                <div className="resume-active-file-box">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                    <div className="file-info-icon">
-                      <Icon name="file" size={18} />
-                    </div>
-                    <div style={{ minWidth: 0 }}>
-                      <div className="file-meta-name" title={data.student.resume_original_name || 'Resume.pdf'}>
-                        {data.student.resume_original_name || 'Candidate_Resume.pdf'}
-                      </div>
-                      <div className="file-meta-sub">Active verified file</div>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn btn-outline btn-sm"
-                    onClick={() => alert(`Active Resume on Record: ${data.student.resume_original_name || 'Resume.pdf'}`)}
-                    style={{ padding: '4px 10px', fontSize: '0.75rem' }}
-                  >
-                    <Icon name="download" size={13} /> View
-                  </button>
-                </div>
-              ) : (
-                <div style={{ padding: '14px', borderRadius: 10, background: 'rgba(245, 158, 11, 0.08)', border: '1px dashed rgba(245, 158, 11, 0.3)', marginBottom: 14, textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.825rem', fontWeight: 600, color: '#F59E0B' }}>No Resume Uploaded</div>
-                  <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', marginTop: 2 }}>Upload a PDF resume to enable one-click drive applications.</div>
-                </div>
-              )}
-
-              <div style={{ marginTop: 10 }}>
-                <label style={{ display: 'block', fontSize: '0.775rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>
-                  {data?.student?.resume_filename ? 'Replace Current Resume' : 'Upload Resume File'} (PDF / DOCX)
-                </label>
-                <input
-                  type="file"
-                  accept=".pdf,.doc,.docx"
-                  onChange={handleResumeUpload}
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    fontSize: '0.8rem',
-                    border: '1px solid var(--border-subtle)',
-                    borderRadius: 8,
-                    background: 'var(--bg-surface-alt)',
-                    color: 'var(--text-main)',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </div>
+          <div className="profile-field-grid-3">
+            <div className="profile-input-group">
+              <label className="profile-label">
+                Full Name <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <input
+                type="text"
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                required
+                placeholder="Enter your full legal name"
+                className="profile-input"
+              />
             </div>
 
-            {/* Profile Checklist Card */}
-            <div className="dossier-card">
-              <h4 className="dossier-card-title">
-                <span>Verification Checklist</span>
-                <span className="profile-meta-chip chip-accent" style={{ fontSize: '0.7rem' }}>
-                  {completion}% Done
+            {/* UNLOCKED: Student ID / Roll No */}
+            <div className="profile-input-group">
+              <label className="profile-label">
+                <span>University Roll No / Student ID <span style={{ color: '#EF4444' }}>*</span></span>
+                <span style={{ fontSize: '0.725rem', color: '#10B981', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Icon name="unlock" size={12} /> Editable
                 </span>
-              </h4>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.825rem' }}>
-                  <Icon
-                    name={form.name && form.studentNo ? 'check-circle' : 'alert-circle'}
-                    size={16}
-                    style={{ color: form.name && form.studentNo ? '#10B981' : 'var(--text-muted)' }}
-                  />
-                  <span style={{ color: form.name && form.studentNo ? 'var(--text-main)' : 'var(--text-muted)' }}>
-                    Personal &amp; Roll Number Set
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.825rem' }}>
-                  <Icon
-                    name={form.cgpa > 0 ? 'check-circle' : 'alert-circle'}
-                    size={16}
-                    style={{ color: form.cgpa > 0 ? '#10B981' : 'var(--text-muted)' }}
-                  />
-                  <span style={{ color: form.cgpa > 0 ? 'var(--text-main)' : 'var(--text-muted)' }}>
-                    Academic CGPA Recorded ({form.cgpa})
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.825rem' }}>
-                  <Icon
-                    name={form.technical_skills.length >= 3 ? 'check-circle' : 'alert-circle'}
-                    size={16}
-                    style={{ color: form.technical_skills.length >= 3 ? '#10B981' : 'var(--text-muted)' }}
-                  />
-                  <span style={{ color: form.technical_skills.length >= 3 ? 'var(--text-main)' : 'var(--text-muted)' }}>
-                    3+ Technical Skills ({form.technical_skills.length} tagged)
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.825rem' }}>
-                  <Icon
-                    name={data?.student?.resume_filename ? 'check-circle' : 'alert-circle'}
-                    size={16}
-                    style={{ color: data?.student?.resume_filename ? '#10B981' : 'var(--text-muted)' }}
-                  />
-                  <span style={{ color: data?.student?.resume_filename ? 'var(--text-main)' : 'var(--text-muted)' }}>
-                    Placement Resume Attached
-                  </span>
-                </div>
+              </label>
+              <input
+                type="text"
+                name="studentNo"
+                value={form.studentNo}
+                onChange={handleChange}
+                required
+                placeholder="e.g. CS2023001 or 21BCE1042"
+                className="profile-input unlocked-highlight"
+              />
+              <div className="profile-hint">
+                Editable university registration roll number.
               </div>
             </div>
 
-            {/* Placement Cell Advisory */}
-            <div className="dossier-card" style={{ background: 'var(--bg-surface-alt)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <Icon name="info" size={16} style={{ color: 'var(--accent-cyan-600)' }} />
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)' }}>Placement Cell Notice</span>
-              </div>
-              <p style={{ fontSize: '0.785rem', color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 }}>
-                Recruiters filter candidates dynamically by technical skill badges and verified CGPA. Ensure your tags reflect your core expertise before applying to active drives.
-              </p>
+            <div className="profile-input-group">
+              <label className="profile-label">Phone Number</label>
+              <input
+                type="tel"
+                name="phone"
+                value={form.phone}
+                onChange={handleChange}
+                placeholder="+91 98765 43210"
+                className="profile-input"
+              />
+            </div>
+          </div>
+
+          <div className="profile-field-grid-3">
+            <div className="profile-input-group">
+              <label className="profile-label">
+                <span>Registered Email</span>
+                <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>OAuth Verified</span>
+              </label>
+              <input
+                type="email"
+                value={form.email || data?.student?.email || 'student@university.edu'}
+                disabled
+                className="profile-input"
+                style={{ opacity: 0.8, cursor: 'not-allowed', background: 'var(--bg-surface-alt)' }}
+              />
+            </div>
+
+            <div className="profile-input-group">
+              <label className="profile-label">Department / Branch</label>
+              <select
+                name="department"
+                value={form.department}
+                onChange={handleChange}
+                className="profile-select"
+              >
+                {departments.map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="profile-input-group">
+              <label className="profile-label">Graduation Year</label>
+              <input
+                type="number"
+                name="gradYear"
+                min="2024"
+                max="2030"
+                value={form.gradYear}
+                onChange={handleChange}
+                required
+                className="profile-input"
+              />
             </div>
           </div>
         </div>
 
-        {/* Sticky Save Bar */}
-        <div className="profile-sticky-action-bar">
+        {/* Card 2: Academic Qualifications & Eligibility Engine */}
+        <div className="profile-section-card">
+          <div className="section-header">
+            <div className="section-icon-wrap" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10B981' }}>
+              <Icon name="graduation" size={20} />
+            </div>
+            <div>
+              <h3 className="section-title">Academic Qualifications &amp; Drive Eligibility</h3>
+              <p className="section-desc">Academic cutoff criteria evaluated by recruiter algorithms during drive shortlisting.</p>
+            </div>
+          </div>
+
+          <div className="profile-field-grid-2">
+            <div className="profile-input-group">
+              <label className="profile-label">
+                College CGPA (out of 10) <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max="10"
+                name="cgpa"
+                value={form.cgpa}
+                onChange={handleChange}
+                required
+                className="profile-input"
+              />
+            </div>
+
+            <div className="profile-input-group">
+              <label className="profile-label">
+                Active Backlogs <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="10"
+                name="backlogs"
+                value={form.backlogs}
+                onChange={handleChange}
+                required
+                className="profile-input"
+              />
+            </div>
+          </div>
+
+          <div className="profile-field-grid-2">
+            <div className="profile-input-group">
+              <label className="profile-label">10th Grade Percentage (%)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max="100"
+                name="tenthPct"
+                value={form.tenthPct}
+                onChange={handleChange}
+                placeholder="e.g. 88.5"
+                className="profile-input"
+              />
+            </div>
+
+            <div className="profile-input-group">
+              <label className="profile-label">12th / Diploma Percentage (%)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max="100"
+                name="twelfthPct"
+                value={form.twelfthPct}
+                onChange={handleChange}
+                placeholder="e.g. 84.0"
+                className="profile-input"
+              />
+            </div>
+          </div>
+
+          {/* Real-time Eligibility Engine Output */}
+          <div style={{
+            padding: '14px 18px',
+            borderRadius: 12,
+            background: isSuperEligible
+              ? 'rgba(16, 185, 129, 0.08)'
+              : isStandardEligible
+              ? 'rgba(0, 150, 255, 0.08)'
+              : 'rgba(245, 158, 11, 0.08)',
+            border: `1px solid ${
+              isSuperEligible
+                ? 'rgba(16, 185, 129, 0.25)'
+                : isStandardEligible
+                ? 'rgba(0, 150, 255, 0.25)'
+                : 'rgba(245, 158, 11, 0.25)'
+            }`,
+            marginTop: 8
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Icon
+                name={isSuperEligible || isStandardEligible ? 'check-circle' : 'alert'}
+                size={20}
+                style={{
+                  color: isSuperEligible ? '#10B981' : isStandardEligible ? '#0096FF' : '#F59E0B'
+                }}
+              />
+              <div>
+                <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                  {isSuperEligible
+                    ? 'Super Dream & Tier-1 Qualified (CGPA ≥ 7.5, 0 Backlogs)'
+                    : isStandardEligible
+                    ? 'Standard Placement Drives Qualified (CGPA ≥ 6.0, ≤ 1 Backlog)'
+                    : 'Action Required: Backlogs / CGPA Needs Attention'}
+                </div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                  {isSuperEligible
+                    ? 'Your academic profile qualifies for Microsoft, TechNova, and tier-1 high-package drives.'
+                    : isStandardEligible
+                    ? 'Eligible for core enterprise drives. Keep backlogs at 0 to unlock all tier-1 campus drives.'
+                    : 'Most enterprise drives require CGPA ≥ 6.0 and zero active backlogs.'}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 3: Interactive Skills & Competencies Studio (PILLS UNLOCKED & FREE-FLOWING) */}
+        <div className="profile-section-card">
+          <div className="section-header">
+            <div className="section-icon-wrap" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B' }}>
+              <Icon name="zap" size={20} />
+            </div>
+            <div>
+              <h3 className="section-title">Interactive Skills Studio (Free-Flowing Pills &amp; Badges)</h3>
+              <p className="section-desc">Pills are flexible and free-flowing. Click any recommendation pill to add, or click × to remove.</p>
+            </div>
+          </div>
+
+          {/* TECHNICAL SKILLS SECTION */}
+          <div style={{ marginBottom: 28 }}>
+            <div className="profile-label">
+              <span>
+                Technical Skills &amp; Stacks ({form.technical_skills.length} tagged)
+              </span>
+              <span style={{ fontSize: '0.775rem', color: 'var(--text-muted)' }}>
+                Type and press Enter, comma, or pick from popular recommendation pills
+              </span>
+            </div>
+
+            {/* Active Technical Pills Cloud - Free Flowing */}
+            <div className="pills-cloud-box" style={{ minHeight: 56 }}>
+              {form.technical_skills.length === 0 ? (
+                <span style={{ fontSize: '0.825rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                  No technical skills added yet. Type below or click from popular recommendation pills.
+                </span>
+              ) : (
+                form.technical_skills.map(skill => (
+                  <span key={skill} className="active-skill-pill">
+                    <span className="pill-dot"></span>
+                    <span>{skill}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTechSkill(skill)}
+                      className="pill-remove-btn"
+                      title={`Remove ${skill}`}
+                    >
+                      &times;
+                    </button>
+                  </span>
+                ))
+              )}
+            </div>
+
+            {/* Input to type new tech skills */}
+            <div className="pill-input-row">
+              <input
+                type="text"
+                value={techInput}
+                onChange={(e) => setTechInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ',') {
+                    e.preventDefault();
+                    handleAddTechSkill();
+                  }
+                }}
+                placeholder="Type skill (e.g. React, Docker, Kubernetes, GraphQL) and press Enter..."
+              />
+              <button
+                type="button"
+                onClick={() => handleAddTechSkill()}
+                className="btn-add-pill"
+              >
+                <Icon name="plus" size={14} /> Add Skill
+              </button>
+            </div>
+
+            {/* Popular Tech Skills Recommendation Cloud */}
+            <div className="recommendation-section">
+              <div className="recommendation-label">
+                <Icon name="sparkles" size={13} /> Quick Add Recommended Skills
+              </div>
+              <div className="recommendation-pills-list">
+                {POPULAR_TECH_SKILLS.map(skill => {
+                  const isAdded = form.technical_skills.some(
+                    s => s.toLowerCase() === skill.toLowerCase()
+                  );
+                  return (
+                    <button
+                      key={skill}
+                      type="button"
+                      disabled={isAdded}
+                      onClick={() => handleAddTechSkill(skill)}
+                      className={`suggest-pill ${isAdded ? 'selected' : ''}`}
+                    >
+                      {isAdded ? (
+                        <>
+                          <Icon name="check" size={12} /> {skill}
+                        </>
+                      ) : (
+                        <>
+                          <Icon name="plus" size={12} /> {skill}
+                        </>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* SOFT SKILLS SECTION */}
+          <div style={{ paddingTop: 20, borderTop: '1px solid var(--border-subtle)' }}>
+            <div className="profile-label">
+              <span>
+                Soft Skills &amp; Behavioral Competencies ({form.softSkills.length} tagged)
+              </span>
+              <span style={{ fontSize: '0.775rem', color: 'var(--text-muted)' }}>
+                Evaluated by campus interviewers and recruiters
+              </span>
+            </div>
+
+            {/* Active Soft Skills Pills Cloud */}
+            <div className="pills-cloud-box" style={{ minHeight: 56 }}>
+              {form.softSkills.length === 0 ? (
+                <span style={{ fontSize: '0.825rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                  No soft skills tagged yet. Click quick-add options below.
+                </span>
+              ) : (
+                form.softSkills.map(skill => (
+                  <span key={skill} className="active-skill-pill soft-skill">
+                    <span className="pill-dot"></span>
+                    <span>{skill}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveSoftSkill(skill)}
+                      className="pill-remove-btn"
+                      title={`Remove ${skill}`}
+                    >
+                      &times;
+                    </button>
+                  </span>
+                ))
+              )}
+            </div>
+
+            {/* Input for Soft Skills */}
+            <div className="pill-input-row">
+              <input
+                type="text"
+                value={softInput}
+                onChange={(e) => setSoftInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ',') {
+                    e.preventDefault();
+                    handleAddSoftSkill();
+                  }
+                }}
+                placeholder="Type soft skill (e.g. Critical Thinking, System Design) and press Enter..."
+              />
+              <button
+                type="button"
+                onClick={() => handleAddSoftSkill()}
+                className="btn-add-pill"
+                style={{ background: '#10B981' }}
+              >
+                <Icon name="plus" size={14} /> Add Competency
+              </button>
+            </div>
+
+            {/* Popular Soft Skills Recommendations */}
+            <div className="recommendation-section">
+              <div className="recommendation-label">
+                <Icon name="sparkles" size={13} /> Quick Add Competencies
+              </div>
+              <div className="recommendation-pills-list">
+                {POPULAR_SOFT_SKILLS.map(skill => {
+                  const isAdded = form.softSkills.some(
+                    s => s.toLowerCase() === skill.toLowerCase()
+                  );
+                  return (
+                    <button
+                      key={skill}
+                      type="button"
+                      disabled={isAdded}
+                      onClick={() => handleAddSoftSkill(skill)}
+                      className={`suggest-pill ${isAdded ? 'selected' : ''}`}
+                    >
+                      {isAdded ? (
+                        <>
+                          <Icon name="check" size={12} /> {skill}
+                        </>
+                      ) : (
+                        <>
+                          <Icon name="plus" size={12} /> {skill}
+                        </>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 4: Experience, Certifications & Projects */}
+        <div className="profile-section-card">
+          <div className="section-header">
+            <div className="section-icon-wrap" style={{ background: 'rgba(139, 92, 246, 0.1)', color: '#8B5CF6' }}>
+              <Icon name="briefcase" size={20} />
+            </div>
+            <div>
+              <h3 className="section-title">Certifications, Internships &amp; Projects</h3>
+              <p className="section-desc">Highlights that substantiate your hands-on engineering capabilities during technical interview rounds.</p>
+            </div>
+          </div>
+
+          <div className="profile-field-grid-2">
+            <div className="profile-input-group">
+              <label className="profile-label">Professional Certifications</label>
+              <textarea
+                name="certifications"
+                value={form.certifications}
+                onChange={handleChange}
+                placeholder="e.g. AWS Certified Solutions Architect Associate (2025), Meta Front-End Specialization"
+                rows={3}
+                className="profile-textarea"
+              />
+            </div>
+
+            <div className="profile-input-group">
+              <label className="profile-label">Internships &amp; Work Experience</label>
+              <textarea
+                name="internships"
+                value={form.internships}
+                onChange={handleChange}
+                placeholder="e.g. Full Stack Engineering Intern at XYZ Tech (May - Jul 2025) &ndash; Built microservices in Go"
+                rows={3}
+                className="profile-textarea"
+              />
+            </div>
+          </div>
+
+          <div className="profile-input-group" style={{ marginBottom: 0 }}>
+            <label className="profile-label">Key Projects &amp; Tech Stacks</label>
+            <textarea
+              name="projects"
+              value={form.projects}
+              onChange={handleChange}
+              placeholder="1. Campus Connect Placement Portal (React, Node, Express, SQLite/Mongo)&#10;2. Distributed Task Scheduler with Redis & Go&#10;3. Automated ATS Resume Parser using Gemini AI"
+              rows={4}
+              className="profile-textarea"
+            />
+          </div>
+        </div>
+
+        {/* Card 5: Official Placement Resume (In Natural Flow, Not Locked to Side) */}
+        <div className="profile-section-card">
+          <div className="section-header">
+            <div className="section-icon-wrap" style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#EF4444' }}>
+              <Icon name="file" size={20} />
+            </div>
+            <div>
+              <h3 className="section-title">Official Placement Resume File</h3>
+              <p className="section-desc">The verified PDF resume automatically attached to all your campus recruitment drive applications.</p>
+            </div>
+          </div>
+
+          {data?.student?.resume_filename ? (
+            <div className="flex-between mb-4" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', background: 'var(--bg-surface-alt)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 42, height: 42, borderRadius: 10, background: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon name="file" size={22} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.925rem', color: 'var(--text-main)' }}>
+                    {data.student.resume_original_name || 'Candidate_Resume.pdf'}
+                  </div>
+                  <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)' }}>
+                    Active verified resume &bull; Attached to applications
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => alert(`Active Resume: ${data.student.resume_original_name || 'Resume.pdf'}`)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px' }}
+              >
+                <Icon name="download" size={14} /> Download / View File
+              </button>
+            </div>
+          ) : (
+            <div style={{ padding: '20px', borderRadius: 12, background: 'rgba(245, 158, 11, 0.08)', border: '1px dashed rgba(245, 158, 11, 0.3)', marginBottom: 16, textAlign: 'center' }}>
+              <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#F59E0B' }}>No Placement Resume Attached</div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 4 }}>Upload your verified PDF resume to enable 1-click applications for top companies.</div>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-main)' }}>
+              {data?.student?.resume_filename ? 'Upload Updated Resume File' : 'Upload Resume File'} (PDF, DOC, DOCX — Max 5MB)
+            </label>
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx"
+              onChange={handleResumeUpload}
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 10,
+                background: 'var(--bg-surface)',
+                color: 'var(--text-main)'
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Natural Form Actions Footer (Not Sticky, Not Locked at a Place) */}
+        <div className="profile-actions-footer">
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <span
               style={{
@@ -1000,20 +932,20 @@ export default function StudentProfile() {
                 boxShadow: isDirty ? '0 0 8px #F59E0B' : '0 0 8px #10B981'
               }}
             />
-            <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)' }}>
-              {isDirty ? 'Unsaved profile edits' : 'All credentials up to date'}
+            <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-main)' }}>
+              {isDirty ? 'You have unsaved profile changes' : 'All credentials and skills are up to date'}
             </span>
-            <span style={{ fontSize: '0.775rem', color: 'var(--text-muted)', display: 'none', md: 'inline' }}>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
               &bull; Shortcut: <kbd style={{ padding: '2px 6px', background: 'var(--bg-surface-alt)', border: '1px solid var(--border-subtle)', borderRadius: 4 }}>Ctrl+S</kbd>
             </span>
           </div>
 
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
             <button
               type="submit"
               className="btn btn-primary btn-lg"
               disabled={saving}
-              style={{ padding: '10px 24px', fontWeight: 700 }}
+              style={{ padding: '12px 28px', fontWeight: 700, borderRadius: 10 }}
             >
               {saving ? 'Saving Changes...' : 'Save Profile Changes →'}
             </button>

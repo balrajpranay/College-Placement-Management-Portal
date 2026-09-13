@@ -141,26 +141,72 @@ export default function AIAdvisor() {
     }
   };
 
+  const [minimized, setMinimized] = useState(false);
+
   return (
     <div id="campus-chatbot-widget" className="chatbot-widget">
       {/* Floating Trigger Button */}
-      <button
-        id="chatbot-toggle-btn"
-        className={`chatbot-trigger-btn ${isOpen ? 'active' : ''}`}
-        aria-label="Open Campus Connect AI Advisor"
-        title="Campus Connect AI Career Advisor"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <div className="chatbot-trigger-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-            <circle cx="9" cy="10" r="1" fill="currentColor"></circle>
-            <circle cx="15" cy="10" r="1" fill="currentColor"></circle>
-          </svg>
-        </div>
-        <span className="chatbot-trigger-label">AI Advisor</span>
-        <span className="chatbot-status-pulse" title="Gemini AI Online"></span>
-      </button>
+      {minimized ? (
+        <button
+          className="chatbot-trigger-btn minimized"
+          aria-label="Open Campus Connect AI Advisor"
+          title="Click to open AI Career Advisor (Minimized)"
+          onClick={() => {
+            setMinimized(false);
+            setIsOpen(true);
+          }}
+          style={{ width: 44, height: 44, padding: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div className="chatbot-trigger-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              <circle cx="9" cy="10" r="1" fill="currentColor"></circle>
+              <circle cx="15" cy="10" r="1" fill="currentColor"></circle>
+            </svg>
+          </div>
+          <span className="chatbot-status-pulse" title="Gemini AI Online"></span>
+        </button>
+      ) : (
+        <button
+          id="chatbot-toggle-btn"
+          className={`chatbot-trigger-btn ${isOpen ? 'active' : ''}`}
+          aria-label="Open Campus Connect AI Advisor"
+          title="Campus Connect AI Career Advisor"
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          <div className="chatbot-trigger-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              <circle cx="9" cy="10" r="1" fill="currentColor"></circle>
+              <circle cx="15" cy="10" r="1" fill="currentColor"></circle>
+            </svg>
+          </div>
+          <span className="chatbot-trigger-label">AI Advisor</span>
+          <span className="chatbot-status-pulse" title="Gemini AI Online"></span>
+          <span
+            className="chatbot-pill-dismiss"
+            title="Minimize pill"
+            onClick={(e) => {
+              e.stopPropagation();
+              setMinimized(true);
+            }}
+            style={{
+              marginLeft: 4,
+              opacity: 0.7,
+              fontSize: '0.75rem',
+              lineHeight: 1,
+              padding: '2px 5px',
+              borderRadius: '50%',
+              background: 'rgba(255, 255, 255, 0.15)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            ✕
+          </span>
+        </button>
+      )}
 
       {/* Floating Chatbot Modal Window */}
       <div id="chatbot-modal" className={`chatbot-modal ${isOpen ? 'active' : ''}`} aria-hidden={!isOpen}>

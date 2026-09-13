@@ -175,21 +175,23 @@ export default function RecruiterDashboard() {
                     </td>
                     <td className="cell-muted" style={{ padding: '14px 16px' }}>{d.deadline}</td>
                     <td style={{ padding: '14px 16px' }}>
-                      <span className="badge badge-brand" style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: 4, background: 'rgba(0, 150, 255, 0.12)', color: 'var(--brand-500)' }}>
+                      <span className="badge badge-brand" style={{ fontSize: '0.75rem', padding: '4px 12px', borderRadius: 9999, background: 'rgba(0, 150, 255, 0.12)', color: 'var(--accent-cyan-600)', border: '1px solid rgba(0, 150, 255, 0.25)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor' }} />
                         {d.applicant_count || 0} candidates
                       </span>
                     </td>
                     <td style={{ padding: '14px 16px' }}>
-                      <span className={`badge ${d.status === 'active' ? 'badge-success' : 'badge-gray'}`} style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: 4 }}>
+                      <span className={`badge ${d.status === 'active' ? 'badge-success' : 'badge-gray'}`} style={{ fontSize: '0.75rem', padding: '4px 12px', borderRadius: 9999, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor' }} />
                         {d.status ? d.status.charAt(0).toUpperCase() + d.status.slice(1) : 'Active'}
                       </span>
                     </td>
                     <td style={{ padding: '14px 16px' }}>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <Link to={`/recruiter/applicants?drive_id=${d.id}`} className="btn btn-outline btn-sm" style={{ padding: '4px 10px', fontSize: '0.8rem' }}>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <Link to={`/recruiter/applicants?drive_id=${d.id}`} className="btn btn-outline btn-sm" style={{ padding: '5px 12px', fontSize: '0.8rem', borderRadius: 8 }}>
                           Applicants
                         </Link>
-                        <Link to="/recruiter/drives" className="btn btn-ghost btn-sm" style={{ padding: '4px 10px', fontSize: '0.8rem' }}>
+                        <Link to="/recruiter/drives" className="btn btn-ghost btn-sm" style={{ padding: '5px 10px', fontSize: '0.8rem', borderRadius: 8 }}>
                           Edit
                         </Link>
                       </div>
