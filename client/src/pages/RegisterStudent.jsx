@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Icon from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
-import GitHubAuthButton from '../components/GitHubAuthButton';
+import GoogleAuthButton from '../components/GoogleAuthButton';
 import AuthLoadingScreen from '../components/AuthLoadingScreen';
 
 const DEPARTMENTS = [
@@ -118,11 +118,11 @@ export default function RegisterStudent() {
           
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: 4 }}>Create Student Account</h2>
           <p className="text-muted mb-6" style={{ marginBottom: 'var(--space-6)' }}>Enter your academic details to register for campus placements.</p>
-          {/* GitHub Student OAuth Fast Registration */}
+          {/* Google Student OAuth Fast Registration */}
           <div style={{ marginBottom: 'var(--space-5)' }}>
-            <GitHubAuthButton 
+            <GoogleAuthButton 
               role="student" 
-              actionText="Sign up with GitHub (1-Click Student Profile)" 
+              actionText="Sign up with Google (1-Click Student Profile)" 
             />
           </div>
 

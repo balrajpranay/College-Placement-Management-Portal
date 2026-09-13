@@ -77,6 +77,16 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('campus_user', JSON.stringify(authUser));
   };
 
+  const loginWithGoogle = async (code, state, role) => {
+    const { googleAuthCallbackApi } = await import('../services/api');
+    const res = await googleAuthCallbackApi({ code, state, role });
+    if (res && res.success && res.token) {
+      setAuthSession(res.token, res.user);
+      return res;
+    }
+    throw new Error(res?.message || 'Google authentication failed.');
+  };
+
   const loginWithGitHub = async (code, state, role) => {
     const { githubAuthCallbackApi } = await import('../services/api');
     const res = await githubAuthCallbackApi({ code, state, role });
@@ -98,6 +108,7 @@ export const AuthProvider = ({ children }) => {
     registerStudent,
     registerRecruiter,
     setAuthSession,
+    loginWithGoogle,
     loginWithGitHub
   };
 

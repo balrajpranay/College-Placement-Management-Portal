@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Icon from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
-import GitHubAuthButton from '../components/GitHubAuthButton';
+import GoogleAuthButton from '../components/GoogleAuthButton';
 import AuthLoadingScreen from '../components/AuthLoadingScreen';
 
 export default function Login() {
@@ -158,6 +158,22 @@ export default function Login() {
             >
               Placement Admin
             </button>
+          </div>
+
+          {/* Google OAuth Fast Authentication */}
+          <div style={{ marginBottom: 'var(--space-4)' }}>
+            <GoogleAuthButton 
+              role={role} 
+              actionText={role === 'student' ? 'Sign in with Google (Student)' : role === 'recruiter' ? 'Sign in with Google (Recruiter)' : 'Sign in with Google'} 
+            />
+          </div>
+
+          <div className="auth-divider-wrap" style={{ display: 'flex', alignItems: 'center', margin: '18px 0', gap: 12 }}>
+            <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
+            <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
+              or sign in with credentials
+            </span>
+            <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
           </div>
 
           {/* Zero-Overflow Responsive Alert Notification */}

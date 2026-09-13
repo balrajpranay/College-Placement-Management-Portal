@@ -17,6 +17,7 @@ import AISuite from './pages/AISuite';
 import Login from './pages/Login';
 import RegisterStudent from './pages/RegisterStudent';
 import RegisterRecruiter from './pages/RegisterRecruiter';
+import GoogleCallback from './pages/GoogleCallback';
 import GitHubCallback from './pages/GitHubCallback';
 import AuthLoadingPage from './pages/AuthLoadingPage';
 
@@ -70,8 +71,9 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register/student" element={<RegisterStudent />} />
             <Route path="/register/recruiter" element={<RegisterRecruiter />} />
+            <Route path="/auth/google/callback" element={<GoogleCallback />} />
             <Route path="/auth/github/callback" element={<GitHubCallback />} />
-            <Route path="/auth/callback" element={<GitHubCallback />} />
+            <Route path="/auth/callback" element={<GoogleCallback />} />
             <Route path="/auth/loading" element={<AuthLoadingPage />} />
           </Route>
 

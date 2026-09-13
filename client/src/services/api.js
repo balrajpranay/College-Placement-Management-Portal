@@ -58,6 +58,20 @@ export async function registerRecruiterApi(data) {
   return handleResponse(res);
 }
 
+export async function getGoogleAuthUrlApi(role = 'student') {
+  const res = await fetch(`${API_BASE_URL}/auth/google/url?role=${encodeURIComponent(role)}`);
+  return handleResponse(res);
+}
+
+export async function googleAuthCallbackApi(payload) {
+  const res = await fetch(`${API_BASE_URL}/auth/google/callback`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  return handleResponse(res);
+}
+
 export async function getGithubAuthUrlApi(role = 'student') {
   const res = await fetch(`${API_BASE_URL}/auth/github/url?role=${encodeURIComponent(role)}`);
   return handleResponse(res);

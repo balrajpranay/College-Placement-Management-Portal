@@ -9,6 +9,11 @@ router.post('/register/recruiter', authController.registerRecruiter);
 router.post('/register/company', authController.registerCompany);
 router.get('/me', protect, authController.getMe);
 
+// Google OAuth Endpoints
+router.get('/google/url', authController.getGoogleAuthUrl);
+router.post('/google/callback', authController.handleGoogleAuth);
+router.get('/google/callback', authController.handleGoogleAuth);
+
 // GitHub OAuth Endpoints
 router.get('/github/url', authController.getGithubAuthUrl);
 router.post('/github/callback', authController.handleGithubAuth);

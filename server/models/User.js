@@ -11,7 +11,7 @@ const UserSchema = new mongoose.Schema({
   passwordHash: {
     type: String,
     required: function() {
-      return this.authProvider === 'local' && !this.githubId;
+      return this.authProvider === 'local' && !this.googleId && !this.githubId;
     }
   },
   role: {
@@ -25,6 +25,10 @@ const UserSchema = new mongoose.Schema({
   },
   avatar: {
     type: String
+  },
+  googleId: {
+    type: String,
+    sparse: true
   },
   githubId: {
     type: String,

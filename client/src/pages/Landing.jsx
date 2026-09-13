@@ -67,7 +67,7 @@ const activeDrivesSchedule = [
 const aiDemos = {
   eligibility: {
     user: "What are the eligibility requirements for Tier-1 placement drives?",
-    bot: "🎯 <strong>Tier-1 Drive Eligibility Standards:</strong><br><br>• <strong>CGPA Cutoff:</strong> 7.5+ with 0 active backlogs across semesters 1–6.<br>• <strong>Core Branches:</strong> Computer Science, IT, Electronics & Communication.<br>• <strong>Rounds:</strong> Online DSA Assessment, System Design/Tech Interview, HR Culture round.<br><br>💡 <em>Tip: Ensure your GitHub repositories and resume projects are verified before the drive date.</em>"
+    bot: "🎯 <strong>Tier-1 Drive Eligibility Standards:</strong><br><br>• <strong>CGPA Cutoff:</strong> 7.5+ with 0 active backlogs across semesters 1–6.<br>• <strong>Core Branches:</strong> Computer Science, IT, Electronics & Communication.<br>• <strong>Rounds:</strong> Online DSA Assessment, System Design/Tech Interview, HR Culture round.<br><br>💡 <em>Tip: Ensure your project portfolio and resume credentials are verified before the drive date.</em>"
   },
   pminternship: {
     user: "How does the Prime Minister's Internship Scheme work?",
