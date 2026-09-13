@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import Icon from '../components/Icon';
 import AIAdvisor from '../components/AIAdvisor';
@@ -35,6 +35,40 @@ export default function StudentLayout() {
   const isAllActive = isOpportunitiesRoute && !jobTypeQuery;
   const isPlacementsActive = isOpportunitiesRoute && (jobTypeQuery === 'Full-time');
   const isInternshipsActive = isOpportunitiesRoute && (jobTypeQuery === 'Internship' || jobTypeQuery === 'PM Internship Scheme');
+
+  const [topSearch, setTopSearch] = useState(() => {
+    return queryParams.get('q') || '';
+  });
+  const searchInputRef = useRef(null);
+
+  // Sync topSearch with URL changes
+  useEffect(() => {
+    const currentQ = new URLSearchParams(location.search).get('q') || '';
+    setTopSearch(currentQ);
+  }, [location.search]);
+
+  // Ctrl+K keyboard shortcut to focus topbar search input
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const handleTopSearchSubmit = (e) => {
+    e.preventDefault();
+    const query = topSearch.trim();
+    if (query) {
+      // Search from ALL opportunities (clearing job_type filter to search entire 520+ pool)
+      navigate(`/student/opportunities?q=${encodeURIComponent(query)}&page=1`);
+    } else {
+      navigate(`/student/opportunities?page=1`);
+    }
+  };
 
   return (
     <div className="app-shell app-layout">
@@ -209,14 +243,39 @@ export default function StudentLayout() {
             >
               <Icon name="menu" size={20} />
             </button>
-            <div className="topbar-search">
+            <form onSubmit={handleTopSearchSubmit} className="topbar-search" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <input
+                ref={searchInputRef}
                 type="text"
-                placeholder="Quick search opportunities... (Ctrl+K)"
-                onClick={() => navigate('/student/opportunities')}
-                readOnly
+                value={topSearch}
+                onChange={(e) => setTopSearch(e.target.value)}
+                placeholder="Search across all opportunities (Ctrl+K)..."
+                style={{ width: '100%', paddingRight: topSearch ? '28px' : '14px' }}
               />
-            </div>
+              {topSearch && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTopSearch('');
+                    navigate('/student/opportunities?page=1');
+                  }}
+                  style={{
+                    position: 'absolute',
+                    right: 8,
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    padding: 4,
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}
+                  title="Clear search"
+                >
+                  <Icon name="x" size={14} />
+                </button>
+              )}
+            </form>
           </div>
 
           <div className="topbar-right">
