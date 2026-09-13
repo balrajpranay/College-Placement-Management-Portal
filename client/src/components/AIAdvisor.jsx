@@ -189,19 +189,6 @@ export default function AIAdvisor() {
           </div>
         </div>
 
-        {/* Quick Mode Selector Inside Widget */}
-        <div className="chatbot-mode-bar">
-          <button className={`widget-mode-btn ${mode === 'advisor' ? 'active' : ''}`} onClick={() => setMode('advisor')}>
-            Advisor
-          </button>
-          <button className={`widget-mode-btn ${mode === 'tutor' ? 'active' : ''}`} onClick={() => setMode('tutor')}>
-            Tutor / Mock
-          </button>
-          <button className={`widget-mode-btn ${mode === 'chat' ? 'active' : ''}`} onClick={() => setMode('chat')}>
-            General Chat
-          </button>
-        </div>
-
         {/* Quick Starter Chips */}
         <div id="chatbot-starter-chips" className="chatbot-chips-bar">
           {starterChips.map((chip, idx) => (
@@ -249,7 +236,7 @@ export default function AIAdvisor() {
             type="text"
             id="chatbot-input"
             className="chatbot-input"
-            placeholder="Ask advisor, tutor, or chat..."
+            placeholder="Ask your AI Career Advisor..."
             value={inputVal}
             onChange={(e) => setInputVal(e.target.value)}
             autoComplete="off"
