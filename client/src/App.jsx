@@ -17,7 +17,6 @@ import AISuite from './pages/AISuite';
 import Login from './pages/Login';
 import RegisterStudent from './pages/RegisterStudent';
 import RegisterRecruiter from './pages/RegisterRecruiter';
-import VerificationPage from './pages/VerificationPage';
 
 // Student Portal Pages
 import StudentDashboard from './pages/student/Dashboard';

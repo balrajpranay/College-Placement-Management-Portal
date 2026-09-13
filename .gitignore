@@ -12,18 +12,7 @@ server/node_modules/
 dist/
 client/dist/
 
-# Database Files
-placement.db
-
-# Python Virtual Environments & Cache
-.venv
-venv/
-env/
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
 # OS & System Logs
 .DS_Store
 *.log
+
