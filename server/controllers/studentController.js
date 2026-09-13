@@ -669,6 +669,11 @@ exports.updateProfile = async (req, res) => {
 
     // Build update object
     const updateData = {};
+    if (body.studentNo !== undefined && String(body.studentNo).trim()) {
+      updateData.studentNo = String(body.studentNo).trim();
+    } else if (body.student_no !== undefined && String(body.student_no).trim()) {
+      updateData.studentNo = String(body.student_no).trim();
+    }
     if (body.name !== undefined) updateData.name = body.name.trim();
     if (body.phone !== undefined) updateData.phone = body.phone.trim();
     if (body.department !== undefined) updateData.department = body.department.trim();
@@ -679,7 +684,9 @@ exports.updateProfile = async (req, res) => {
     if (body.tenthPct !== undefined && body.tenthPct !== '') updateData.tenthPct = Number(body.tenthPct);
     if (body.twelfthPct !== undefined && body.twelfthPct !== '') updateData.twelfthPct = Number(body.twelfthPct);
     if (body.backlogs !== undefined) updateData.backlogs = Number(body.backlogs);
-    if (body.softSkills !== undefined) updateData.softSkills = body.softSkills;
+    if (body.softSkills !== undefined) {
+      updateData.softSkills = Array.isArray(body.softSkills) ? body.softSkills.join(', ') : String(body.softSkills);
+    }
     if (body.certifications !== undefined) updateData.certifications = body.certifications;
     if (body.projects !== undefined) updateData.projects = body.projects;
     if (body.internships !== undefined) updateData.internships = body.internships;
@@ -720,6 +727,7 @@ exports.updateProfile = async (req, res) => {
 
     // 2. Also keep in-memory fallback updated
     const student = studentStore.profile;
+    if (updateData.studentNo !== undefined) student.studentNo = updateData.studentNo;
     if (updateData.name !== undefined) student.name = updateData.name;
     if (updateData.phone !== undefined) student.phone = updateData.phone;
     if (updateData.department !== undefined) student.department = updateData.department;
