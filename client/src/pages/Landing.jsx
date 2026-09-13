@@ -83,6 +83,18 @@ const aiDemos = {
   }
 };
 
+const partnerLogos = [
+  { name: 'Google', logo: '/static/images/companies/google.svg' },
+  { name: 'Amazon', logo: '/static/images/companies/amazon.svg' },
+  { name: 'Microsoft', logo: '/static/images/companies/microsoft.svg' },
+  { name: 'Infosys', logo: '/static/images/companies/infosys.svg' },
+  { name: 'Deloitte', logo: '/static/images/companies/deloitte.svg' },
+  { name: 'TCS', logo: '/static/images/companies/tcs.svg' },
+  { name: 'Tech Mahindra', logo: '/static/images/companies/techmahindra.svg' },
+  { name: 'Wipro', logo: '/static/images/companies/wipro.svg' },
+  { name: 'L&T Infotech', logo: '/static/images/companies/ltimindtree.svg' }
+];
+
 export default function Landing() {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
@@ -92,6 +104,7 @@ export default function Landing() {
   const [aiDemoOutput, setAiDemoOutput] = useState(aiDemos.eligibility);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [globalBanner, setGlobalBanner] = useState(null);
+  const [partnerMotionMode, setPartnerMotionMode] = useState('orbit');
 
   const handleSecureApply = async (job) => {
     setGlobalBanner(null);
@@ -293,32 +306,87 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* 2. RECRUITER LOGO STRIP & PARTNERS */}
+      {/* 2. RECRUITER LOGO STRIP & PARTNERS (CIRCULAR MOVEMENT) */}
       <section className="partner-ticker-section">
         <div className="container">
-          <div className="text-center mb-4">
-            <span className="text-xs text-muted font-semibold uppercase tracking-wider">Top Hiring Partners &amp; Corporate Networks</span>
+          <div className="partner-ticker-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className="text-xs text-muted font-semibold uppercase tracking-wider">
+                Top Hiring Partners &amp; Corporate Networks
+              </span>
+            </div>
+            <div className="partner-mode-toggle">
+              <button
+                type="button"
+                onClick={() => setPartnerMotionMode('orbit')}
+                className={`partner-mode-btn ${partnerMotionMode === 'orbit' ? 'active' : ''}`}
+                title="Circular 3D Orbit Motion"
+              >
+                <span>⟳</span> Circular Orbit
+              </button>
+              <button
+                type="button"
+                onClick={() => setPartnerMotionMode('loop')}
+                className={`partner-mode-btn ${partnerMotionMode === 'loop' ? 'active' : ''}`}
+                title="Continuous Circular Loop"
+              >
+                <span>⇄</span> Infinite Flow
+              </button>
+            </div>
           </div>
-          <div className="partner-logos-row" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap', gap: 32 }}>
-            {[
-              { name: 'Google', logo: '/static/images/companies/google.svg' },
-              { name: 'Amazon', logo: '/static/images/companies/amazon.svg' },
-              { name: 'Microsoft', logo: '/static/images/companies/microsoft.svg' },
-              { name: 'Infosys', logo: '/static/images/companies/infosys.svg' },
-              { name: 'Deloitte', logo: '/static/images/companies/deloitte.svg' },
-              { name: 'TCS', logo: '/static/images/companies/tcs.svg' },
-              { name: 'Tech Mahindra', logo: '/static/images/companies/techmahindra.svg' },
-              { name: 'Wipro', logo: '/static/images/companies/wipro.svg' },
-              { name: 'L&T Infotech', logo: '/static/images/companies/ltimindtree.svg' }
-            ].map(p => (
-              <div key={p.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <img src={p.logo} alt={p.name} style={{ width: 24, height: 24, objectFit: 'contain' }} />
+
+          {partnerMotionMode === 'orbit' ? (
+            /* Mode 1: 3D Circular Orbit - Literal Circular Motion */
+            <div className="partner-orbit-viewport">
+              <div className="partner-orbit-stage">
+                <div className="partner-orbit-hub">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--brand-500)' }}>
+                    <Icon name="award" size={15} />
+                    <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      Campus Connect
+                    </span>
+                  </div>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                    Hiring Ecosystem
+                  </span>
                 </div>
-                <span className="partner-logo-item" style={{ fontWeight: 600 }}>{p.name}</span>
+
+                <div className="partner-orbit-ring">
+                  {partnerLogos.map((p, idx) => {
+                    const angle = idx * (360 / partnerLogos.length);
+                    return (
+                      <div
+                        key={p.name}
+                        className="orbit-node"
+                        style={{
+                          transform: `rotateY(${angle}deg) translateZ(320px)`
+                        }}
+                      >
+                        <div className="orbit-node-card">
+                          <img src={p.logo} alt={p.name} style={{ width: 22, height: 22, objectFit: 'contain' }} />
+                          <span style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-main)' }}>{p.name}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ) : (
+            /* Mode 2: Infinite Circular Loop (Marquee) */
+            <div className="partner-marquee-container">
+              <div className="partner-marquee-track">
+                {[...partnerLogos, ...partnerLogos, ...partnerLogos].map((p, idx) => (
+                  <div key={`${p.name}-${idx}`} className="partner-pill">
+                    <div className="partner-pill-icon">
+                      <img src={p.logo} alt={p.name} />
+                    </div>
+                    <span className="partner-pill-name">{p.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

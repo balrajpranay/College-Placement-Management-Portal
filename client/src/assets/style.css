@@ -4086,33 +4086,243 @@ html[data-theme="dark"] .theme-toggle-btn .theme-icon-sun {
   flex-shrink: 0;
 }
 
-/* 2. Partner Ticker */
+/* 2. Partner Ticker - Circular Movement Modes */
 .partner-ticker-section {
   padding: var(--space-8) 0;
   border-top: 1px solid var(--border-subtle);
   border-bottom: 1px solid var(--border-subtle);
   background: var(--bg-surface-alt);
+  position: relative;
+  overflow: hidden;
 }
 
-.partner-logos-row {
+.partner-ticker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: var(--space-5);
+}
+
+.partner-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  padding: 3px;
+  border-radius: 9999px;
+}
+
+.partner-mode-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 9999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.partner-mode-btn:hover {
+  color: var(--text-main);
+}
+
+.partner-mode-btn.active {
+  background: var(--brand-500, #3b82f6);
+  color: #ffffff;
+  box-shadow: 0 1px 4px rgba(59, 130, 246, 0.3);
+}
+
+/* Mode 1: Infinite Circular Loop (Marquee) */
+.partner-marquee-container {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  padding: 8px 0;
+}
+
+.partner-marquee-track {
+  display: flex;
+  width: max-content;
+  align-items: center;
+  gap: 24px;
+  animation: circularMarquee 32s linear infinite;
+  will-change: transform;
+}
+
+.partner-marquee-track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes circularMarquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-33.3333%);
+  }
+}
+
+.partner-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 20px;
+  border-radius: 9999px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  white-space: nowrap;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  user-select: none;
+  cursor: default;
+}
+
+.partner-pill:hover {
+  transform: translateY(-2px);
+  border-color: var(--brand-500, #3b82f6);
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.18);
+}
+
+.partner-pill-icon {
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-8);
-  flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
-.partner-logo-item {
-  font-family: var(--font-display, sans-serif);
-  font-size: 1.15rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--text-faint);
-  transition: color var(--transition-fast);
+.partner-pill-icon img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
 }
 
-.partner-logo-item:hover {
-  color: var(--brand-600);
+.partner-pill-name {
+  font-size: 0.925rem;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.01em;
+}
+
+/* Mode 2: 3D Circular Orbit Movement */
+.partner-orbit-viewport {
+  position: relative;
+  width: 100%;
+  height: 280px;
+  perspective: 1100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.partner-orbit-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.partner-orbit-hub {
+  position: absolute;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 22px;
+  border-radius: 9999px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 0 30px rgba(59, 130, 246, 0.2);
+  pointer-events: none;
+  text-align: center;
+}
+
+.partner-orbit-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  animation: orbitRingSpin 24s linear infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.partner-orbit-stage:hover .partner-orbit-ring,
+.partner-orbit-stage:hover .orbit-node-card {
+  animation-play-state: paused;
+}
+
+@keyframes orbitRingSpin {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(360deg);
+  }
+}
+
+.orbit-node {
+  position: absolute;
+  transform-style: preserve-3d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.orbit-node-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  white-space: nowrap;
+  animation: orbitCounterSpin 24s linear infinite;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  user-select: none;
+  cursor: default;
+}
+
+.orbit-node-card:hover {
+  transform: scale(1.08);
+  border-color: var(--brand-500);
+  box-shadow: 0 6px 22px rgba(59, 130, 246, 0.35);
+}
+
+@keyframes orbitCounterSpin {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(-360deg);
+  }
+}
+
+@media (max-width: 768px) {
+  .partner-orbit-viewport {
+    height: 240px;
+    perspective: 800px;
+  }
 }
 
 /* 3. Stats Banner */
