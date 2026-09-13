@@ -24,6 +24,14 @@ const CompanySchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  hrPosition: {
+    type: String,
+    trim: true
+  },
+  govId: {
+    type: String,
+    trim: true
+  },
   email: {
     type: String,
     trim: true

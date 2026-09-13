@@ -962,16 +962,20 @@ exports.getProfile = async (req, res) => {
       success: true,
       company: {
         id: company.id || company._id,
-        name: company.name,
-        industry: company.industry || '',
+        name: company.name || '',
         website: company.website || '',
-        hr_contact: company.hr_contact || company.hrContact || '',
-        hrContact: company.hr_contact || company.hrContact || '',
-        email: company.email,
-        phone: company.phone || '',
         location: company.location || '',
-        description: company.description || '',
-        logo_filename: company.logo_filename || company.logoFilename || null,
+        industry: company.industry || company.domain || '',
+        domain: company.industry || company.domain || '',
+        email: company.email || '',
+        hr_contact: company.hrContact || company.hr_contact || '',
+        hrContact: company.hrContact || company.hr_contact || '',
+        hr_position: company.hrPosition || company.hr_position || '',
+        hrPosition: company.hrPosition || company.hr_position || '',
+        gov_id: company.govId || company.gov_id || '',
+        govId: company.govId || company.gov_id || '',
+        phone: company.phone || company.mobile || '',
+        mobile: company.phone || company.mobile || '',
         approved: company.approved
       }
     });
@@ -989,7 +993,22 @@ exports.getProfile = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     const email = req.user?.email || 'hr@technova.com';
-    const { name, industry, website, hr_contact, hrContact, phone, location, description } = req.body;
+    const { 
+      name, 
+      website, 
+      location, 
+      industry, 
+      domain, 
+      email: contactEmail, 
+      hr_contact, 
+      hrContact, 
+      hr_position, 
+      hrPosition, 
+      gov_id, 
+      govId, 
+      phone, 
+      mobile 
+    } = req.body;
 
     if (!name || !name.trim()) {
       return res.status(400).json({
@@ -998,20 +1017,34 @@ exports.updateProfile = async (req, res) => {
       });
     }
 
-    const contactName = hr_contact || hrContact || '';
+    const compName = name.trim();
+    const compWebsite = (website || '').trim();
+    const compLocation = (location || '').trim();
+    const compDomain = (domain || industry || '').trim();
+    const compEmail = (contactEmail || email || '').trim();
+    const hrName = (hrContact || hr_contact || '').trim();
+    const hrPos = (hrPosition || hr_position || '').trim();
+    const govIdentifier = (govId || gov_id || '').trim();
+    const compPhone = (mobile || phone || '').trim();
 
     // Update in-memory fallback
     const current = getCompanyByEmail(email);
     const updated = {
       ...current,
-      name: name.trim(),
-      industry: industry ? industry.trim() : '',
-      website: website ? website.trim() : '',
-      hr_contact: contactName.trim(),
-      hrContact: contactName.trim(),
-      phone: phone ? phone.trim() : '',
-      location: location ? location.trim() : '',
-      description: description ? description.trim() : ''
+      name: compName,
+      website: compWebsite,
+      location: compLocation,
+      industry: compDomain,
+      domain: compDomain,
+      email: compEmail,
+      hr_contact: hrName,
+      hrContact: hrName,
+      hr_position: hrPos,
+      hrPosition: hrPos,
+      gov_id: govIdentifier,
+      govId: govIdentifier,
+      phone: compPhone,
+      mobile: compPhone
     };
     recruiterStore.companies.set(email, updated);
 
@@ -1022,13 +1055,15 @@ exports.updateProfile = async (req, res) => {
           { email },
           {
             $set: {
-              name: updated.name,
-              industry: updated.industry,
-              website: updated.website,
-              hrContact: updated.hrContact,
-              phone: updated.phone,
-              location: updated.location,
-              description: updated.description
+              name: compName,
+              website: compWebsite,
+              location: compLocation,
+              industry: compDomain,
+              email: compEmail,
+              hrContact: hrName,
+              hrPosition: hrPos,
+              govId: govIdentifier,
+              phone: compPhone
             }
           },
           { new: true, upsert: true }
