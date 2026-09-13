@@ -31,7 +31,7 @@ export default function Login() {
   useEffect(() => {
     if (isAuthenticated && user) {
       const redirectPath = {
-        student: location.state?.from || '/student/dashboard',
+        student: location.state?.from || '/student/opportunities',
         recruiter: '/recruiter/dashboard',
         admin: '/admin/dashboard'
       }[user.role] || '/';
@@ -67,7 +67,7 @@ export default function Login() {
       setSuccess(res.message || 'Login successful! Redirecting...');
       
       const destination = {
-        student: location.state?.from || '/student/dashboard',
+        student: location.state?.from || '/student/opportunities',
         recruiter: '/recruiter/dashboard',
         admin: '/admin/dashboard'
       }[res.user.role] || '/';

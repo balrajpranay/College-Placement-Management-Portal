@@ -31,6 +31,7 @@ export default function StudentLayout() {
   const jobTypeQuery = queryParams.get('job_type') || queryParams.get('type') || '';
   const isOpportunitiesRoute = location.pathname.startsWith('/student/opportunities') || location.pathname.startsWith('/student/jobs');
 
+  const isAllActive = isOpportunitiesRoute && !jobTypeQuery;
   const isPlacementsActive = isOpportunitiesRoute && (jobTypeQuery === 'Full-time');
   const isInternshipsActive = isOpportunitiesRoute && (jobTypeQuery === 'Internship' || jobTypeQuery === 'PM Internship Scheme');
 
@@ -47,7 +48,7 @@ export default function StudentLayout() {
       {/* Sidebar Navigation Shell matching Flask student/_sidebar.html */}
       <aside className={`sidebar app-sidebar ${mobileOpen ? 'open' : ''}`}>
         <div className="sidebar-brand">
-          <NavLink to="/" className="brand-lockup">
+          <NavLink to="/student/opportunities" className="brand-lockup">
             <div className="brand-logo-wrap">
               <img
                 src="/static/images/logo.png"
@@ -89,6 +90,18 @@ export default function StudentLayout() {
 
           {/* Section 2: Opportunities Hub matching Flask */}
           <div className="sidebar-section-label">Opportunities Hub</div>
+          <NavLink
+            to="/student/opportunities"
+            className={() => `sidebar-link ${isAllActive ? 'active' : ''}`}
+            onClick={() => setMobileOpen(false)}
+          >
+            <Icon name="briefcase" size={18} />
+            <span>All Opportunities</span>
+            <span className="badge badge-brand" style={{ fontSize: '0.65rem', padding: '2px 5px', marginLeft: 'auto' }}>
+              520+
+            </span>
+          </NavLink>
+
           <NavLink
             to="/student/opportunities?job_type=Full-time"
             className={() => `sidebar-link ${isPlacementsActive ? 'active' : ''}`}
