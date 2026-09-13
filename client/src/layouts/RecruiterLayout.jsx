@@ -94,6 +94,7 @@ export default function RecruiterLayout() {
 
           <NavLink
             to="/recruiter/drives"
+            end
             className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
             onClick={() => setMobileOpen(false)}
           >
