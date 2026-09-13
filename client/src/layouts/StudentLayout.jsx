@@ -133,7 +133,7 @@ export default function StudentLayout() {
             <Icon name="briefcase" size={18} />
             <span>All Opportunities</span>
             <span className="badge badge-brand" style={{ fontSize: '0.65rem', padding: '2px 5px', marginLeft: 'auto' }}>
-              520+
+              600+
             </span>
           </NavLink>
 

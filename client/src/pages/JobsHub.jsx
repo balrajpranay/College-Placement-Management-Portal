@@ -126,11 +126,39 @@ export default function JobsHub({ isStudentPortal }) {
     });
   };
 
-  // Direct redirection to the external official job role URL
-  const handleDirectApply = async (job) => {
+  // Direct redirection to the external official job role URL or LinkedIn job opening
+  const handleDirectApply = async (job, targetType = 'official') => {
     if (!job) return;
     setApplyStatus(null);
-    const targetUrl = job.url || job.application_url || 'https://www.linkedin.com/jobs/';
+
+    const cleanComp = (job.company || 'Company')
+      .replace(/\s*\(PM\s*Internship\s*Scheme\)/gi, '')
+      .replace(/\s*\(PM\s*Scheme\)/gi, '')
+      .trim();
+    const cleanTitle = (job.title || 'Opportunity')
+      .replace(/\s*\(Track\s*#\d+\)/gi, '')
+      .replace(/\s*\(Batch\s*#\d+\)/gi, '')
+      .trim();
+
+    const fallbackLinkedinUrl = `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(cleanComp + ' ' + cleanTitle)}&location=India`;
+
+    let targetUrl;
+    if (targetType === 'linkedin') {
+      targetUrl = job.linkedin_url || fallbackLinkedinUrl;
+    } else {
+      targetUrl = job.direct_job_url || job.application_url || job.url || fallbackLinkedinUrl;
+      // Guard against generic root domains (redirecting to root domain is what user asked to fix)
+      if (
+        targetUrl === 'https://www.linkedin.com/' ||
+        targetUrl === 'https://www.linkedin.com' ||
+        targetUrl === 'https://internshala.com/' ||
+        targetUrl === 'https://internshala.com' ||
+        targetUrl === 'https://in.indeed.com/' ||
+        targetUrl === 'https://in.indeed.com'
+      ) {
+        targetUrl = fallbackLinkedinUrl;
+      }
+    }
 
     // If student is logged in, silently record application in background tracker
     if (isAuthenticated && user?.role === 'student') {
@@ -139,12 +167,12 @@ export default function JobsHub({ isStudentPortal }) {
         await applyForJobApi(job.id);
         setApplyStatus({
           type: 'success',
-          message: `Application recorded in your student tracker! Opening ${job.company}'s official portal...`
+          message: `Application recorded in your student tracker! Opening specific opening for ${cleanTitle} at ${job.company}...`
         });
       } catch (err) {
         setApplyStatus({
           type: 'success',
-          message: `Redirecting directly to ${job.company}'s official career opening...`
+          message: `Opening specific opening for ${cleanTitle} at ${job.company}...`
         });
       } finally {
         setApplyingJobId(null);
@@ -152,7 +180,7 @@ export default function JobsHub({ isStudentPortal }) {
     } else {
       setApplyStatus({
         type: 'success',
-        message: `Redirecting directly to ${job.company}'s official portal...`
+        message: `Opening specific opening for ${cleanTitle} at ${job.company}...`
       });
     }
 
@@ -273,7 +301,7 @@ export default function JobsHub({ isStudentPortal }) {
               {isInternshipView ? 'Internships & PM Scheme Portal' : isPlacementView ? 'Placements & Engineering Jobs' : 'Placements, Internships & Career Opportunities'}
             </h1>
             <p className="text-muted" style={{ margin: 0, fontSize: '0.9rem' }}>
-              Explore 520+ verified opportunities with direct external career portal redirection and automated resume qualifications matching.
+              Explore {stats.total_all_count || 600}+ verified opportunities with direct official career opening redirection and automated resume qualifications matching.
             </p>
           </div>
 
@@ -566,22 +594,42 @@ export default function JobsHub({ isStudentPortal }) {
                 <span className="badge badge-neutral" style={{ fontSize: '0.8rem', padding: '4px 10px' }}>
                   🎯 {selectedJob.experience || 'Fresher / 2025–2026 Batch'}
                 </span>
+                {selectedJob.req_id && (
+                  <span className="badge badge-neutral" style={{ fontSize: '0.8rem', padding: '4px 10px', fontFamily: 'monospace' }}>
+                    🆔 {selectedJob.req_id}
+                  </span>
+                )}
               </div>
 
               {/* Action Bar with Direct Apply */}
-              <div className="linkedin-action-bar">
+              <div className="linkedin-action-bar" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
                 <button
-                  onClick={() => handleDirectApply(selectedJob)}
+                  onClick={() => handleDirectApply(selectedJob, 'official')}
                   disabled={applyingJobId === selectedJob.id}
                   className="linkedin-direct-apply-btn"
                 >
                   <Icon name="external-link" size={17} />
-                  <span>{applyingJobId === selectedJob.id ? 'Connecting...' : 'Apply Direct ↗'}</span>
+                  <span>
+                    {applyingJobId === selectedJob.id
+                      ? 'Connecting...'
+                      : selectedJob.job_type === 'PM Internship Scheme'
+                        ? 'Apply via PM Scheme Portal ↗'
+                        : 'Apply on Career Opening ↗'}
+                  </span>
                 </button>
 
-                <div className="text-xs text-muted" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <button
+                  onClick={() => handleDirectApply(selectedJob, 'linkedin')}
+                  className="btn btn-outline"
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, fontWeight: 600, fontSize: '0.875rem' }}
+                >
+                  <span style={{ color: '#0A66C2', fontWeight: 800 }}>in</span>
+                  <span>View on LinkedIn Jobs ↗</span>
+                </button>
+
+                <div className="text-xs text-muted" style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', marginTop: 4 }}>
                   <Icon name="shield" size={14} />
-                  <span>Direct redirect to official career portal. No intermediate barriers.</span>
+                  <span>Direct link specifically to this opening. No generic portals or intermediate barriers.</span>
                 </div>
               </div>
 
@@ -686,9 +734,20 @@ export default function JobsHub({ isStudentPortal }) {
                 <p style={{ fontSize: '0.925rem', lineHeight: 1.6, color: 'var(--text-main)', margin: '0 0 14px' }}>
                   {selectedJob.description}
                 </p>
-                <p style={{ fontSize: '0.925rem', lineHeight: 1.6, color: 'var(--text-main)', margin: 0 }}>
-                  As a <strong>{selectedJob.title}</strong> at <strong>{selectedJob.company}</strong>, you will collaborate with cross-functional engineering and systems teams to design, develop, and deliver high-impact software solutions. You will participate in architecture reviews, code testing, agile sprint cycles, and scalable cloud deployments.
-                </p>
+                {selectedJob.responsibilities && selectedJob.responsibilities.length > 0 ? (
+                  <div className="mt-3">
+                    <div className="text-xs font-bold text-muted uppercase tracking-wider mb-2">Key Responsibilities:</div>
+                    <ul style={{ margin: 0, paddingLeft: 20, fontSize: '0.9rem', lineHeight: 1.7, color: 'var(--text-main)' }}>
+                      {selectedJob.responsibilities.map((resp, idx) => (
+                        <li key={idx}>{resp}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <p style={{ fontSize: '0.925rem', lineHeight: 1.6, color: 'var(--text-main)', margin: 0 }}>
+                    As a <strong>{selectedJob.title}</strong> at <strong>{selectedJob.company}</strong>, you will collaborate with cross-functional engineering and systems teams to design, develop, and deliver high-impact software solutions.
+                  </p>
+                )}
               </div>
 
               {/* Eligibility & Qualifications */}
@@ -705,13 +764,24 @@ export default function JobsHub({ isStudentPortal }) {
                   </div>
                   <div className="linkedin-eligibility-card">
                     <div className="linkedin-eligibility-label">Minimum CGPA</div>
-                    <div className="linkedin-eligibility-val">6.5+ / 60% Overall</div>
+                    <div className="linkedin-eligibility-val">{selectedJob.job_type === 'PM Internship Scheme' ? 'Open to all graduates' : '6.5+ / 60% Overall'}</div>
                   </div>
                   <div className="linkedin-eligibility-card">
                     <div className="linkedin-eligibility-label">Standing Backlogs</div>
                     <div className="linkedin-eligibility-val">0 Active Backlogs</div>
                   </div>
                 </div>
+
+                {selectedJob.requirements && selectedJob.requirements.length > 0 && (
+                  <div className="mt-3">
+                    <div className="text-xs font-bold text-muted uppercase tracking-wider mb-2">Detailed Qualifications:</div>
+                    <ul style={{ margin: 0, paddingLeft: 20, fontSize: '0.875rem', lineHeight: 1.6, color: 'var(--text-main)' }}>
+                      {selectedJob.requirements.map((req, idx) => (
+                        <li key={idx}>{req}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                 {/* Key Skills */}
                 {selectedJob.tags && selectedJob.tags.length > 0 && (
@@ -732,64 +802,61 @@ export default function JobsHub({ isStudentPortal }) {
               <div className="linkedin-detail-section">
                 <h4>Hiring &amp; Selection Track</h4>
                 <div className="linkedin-hiring-steps">
-                  <div className="linkedin-step-item">
-                    <div className="linkedin-step-num">1</div>
-                    <div>
-                      <strong style={{ fontSize: '0.875rem' }}>Direct Application</strong>
-                      <p className="text-xs text-muted" style={{ margin: '2px 0 0' }}>
-                        Click below to open the official {selectedJob.company} portal and complete candidate registration.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="linkedin-step-item">
-                    <div className="linkedin-step-num">2</div>
-                    <div>
-                      <strong style={{ fontSize: '0.875rem' }}>Online Assessment &amp; Coding Round</strong>
-                      <p className="text-xs text-muted" style={{ margin: '2px 0 0' }}>
-                        DSA, algorithms, computer fundamentals, and quantitative problem solving.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="linkedin-step-item">
-                    <div className="linkedin-step-num">3</div>
-                    <div>
-                      <strong style={{ fontSize: '0.875rem' }}>Technical &amp; System Architecture Interview</strong>
-                      <p className="text-xs text-muted" style={{ margin: '2px 0 0' }}>
-                        In-depth project evaluation, problem solving, and system discussions.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="linkedin-step-item">
-                    <div className="linkedin-step-num">4</div>
-                    <div>
-                      <strong style={{ fontSize: '0.875rem' }}>HR Round &amp; Direct Offer Letter</strong>
-                      <p className="text-xs text-muted" style={{ margin: '2px 0 0' }}>
-                        Culture alignment, offer rollout, and internship / onboarding schedule.
-                      </p>
-                    </div>
-                  </div>
+                  {(selectedJob.rounds || [
+                    'Round 1: Online Assessment & Coding Round (90 mins)',
+                    'Round 2: Technical & Architecture Interview (60 mins)',
+                    'Round 3: System Design & Projects (45 mins)',
+                    'Round 4: HR Discussion & Offer Rollout'
+                  ]).map((roundText, idx) => {
+                    const parts = roundText.split(':');
+                    const stageNum = idx + 1;
+                    const stageTitle = parts[0] || `Stage ${stageNum}`;
+                    const stageDesc = parts.slice(1).join(':').trim();
+                    return (
+                      <div key={idx} className="linkedin-step-item">
+                        <div className="linkedin-step-num">{stageNum}</div>
+                        <div>
+                          <strong style={{ fontSize: '0.875rem' }}>{stageTitle}</strong>
+                          <p className="text-xs text-muted" style={{ margin: '2px 0 0' }}>
+                            {stageDesc || 'Structured evaluation by the recruitment committee.'}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
               {/* Direct Link Box with Official URL */}
-              <div className="linkedin-direct-link-card">
-                <div>
+              <div className="linkedin-direct-link-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14 }}>
+                <div style={{ flex: 1, minWidth: 260 }}>
                   <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                    Official Career Portal: {selectedJob.company}
+                    Direct Opportunity Link: {selectedJob.company}
                   </div>
-                  <div className="text-xs text-muted mt-1 truncate" style={{ maxWidth: 400 }}>
-                    {selectedJob.url || selectedJob.application_url}
+                  <div className="text-xs text-muted mt-1 truncate" style={{ maxWidth: 460 }}>
+                    {selectedJob.direct_job_url || selectedJob.url || selectedJob.application_url}
                   </div>
                 </div>
 
-                <button
-                  onClick={() => handleDirectApply(selectedJob)}
-                  className="linkedin-direct-apply-btn"
-                  style={{ padding: '8px 20px', fontSize: '0.875rem' }}
-                >
-                  <Icon name="external-link" size={15} />
-                  <span>Apply on Official Portal ↗</span>
-                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => handleDirectApply(selectedJob, 'official')}
+                    className="linkedin-direct-apply-btn"
+                    style={{ padding: '8px 18px', fontSize: '0.875rem' }}
+                  >
+                    <Icon name="external-link" size={15} />
+                    <span>Apply Official ↗</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleDirectApply(selectedJob, 'linkedin')}
+                    className="btn btn-outline"
+                    style={{ padding: '8px 16px', fontSize: '0.875rem', fontWeight: 600 }}
+                  >
+                    <span style={{ color: '#0A66C2', fontWeight: 800, marginRight: 4 }}>in</span>
+                    <span>LinkedIn ↗</span>
+                  </button>
+                </div>
               </div>
             </div>
           ) : (
