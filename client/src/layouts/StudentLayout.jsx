@@ -166,7 +166,7 @@ export default function StudentLayout() {
             <Icon name="award" size={18} />
             <span>Skill-Up Opportunities</span>
             <span className="badge badge-success" style={{ fontSize: '0.65rem', padding: '2px 5px', marginLeft: 'auto' }}>
-              28 Free
+              50 Free
             </span>
           </NavLink>
 

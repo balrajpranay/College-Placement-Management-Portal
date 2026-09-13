@@ -386,10 +386,10 @@ exports.applyForJob = async (req, res) => {
   });
 };
 
-// GET /api/jobs/skill-up (Returns the 28 curated student skill-up opportunities)
+// GET /api/jobs/skill-up (Returns the 50 curated student skill-up opportunities)
 exports.getSkillUpOpportunities = async (req, res) => {
   const skillUpData = require('../data/skillUpData');
-  const { q, category, status } = req.query;
+  const { q, category, provider, status } = req.query;
 
   let filtered = [...skillUpData];
 
@@ -403,6 +403,10 @@ exports.getSkillUpOpportunities = async (req, res) => {
       item.eligibility.toLowerCase().includes(queryStr) ||
       (item.category && item.category.toLowerCase().includes(queryStr))
     );
+  }
+
+  if (provider) {
+    filtered = filtered.filter(item => item.provider.toLowerCase() === provider.toLowerCase());
   }
 
   if (category) {

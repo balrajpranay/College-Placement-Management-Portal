@@ -5,6 +5,7 @@ import { SKILL_UP_OPPORTUNITIES } from '../../data/skillUpData';
 export default function SkillUp() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedProvider, setSelectedProvider] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
 
   // Extract unique categories for filter
@@ -16,7 +17,16 @@ export default function SkillUp() {
     return Array.from(cats).sort();
   }, []);
 
-  // Filtered dataset based on search, category, and status
+  // Extract unique providers for filter
+  const providers = useMemo(() => {
+    const provs = new Set();
+    SKILL_UP_OPPORTUNITIES.forEach(item => {
+      if (item.provider) provs.add(item.provider);
+    });
+    return Array.from(provs).sort();
+  }, []);
+
+  // Filtered dataset based on search, category, provider, and status
   const filteredOpportunities = useMemo(() => {
     return SKILL_UP_OPPORTUNITIES.filter(item => {
       const q = searchQuery.toLowerCase().trim();
@@ -31,19 +41,21 @@ export default function SkillUp() {
       );
 
       const matchesCategory = !selectedCategory || item.category === selectedCategory;
+      const matchesProvider = !selectedProvider || item.provider === selectedProvider;
       const matchesStatus = !selectedStatus || (
         selectedStatus === 'Open'
           ? (item.status.toLowerCase().includes('open') || item.status.toLowerCase().includes('available'))
           : item.status.toLowerCase().includes(selectedStatus.toLowerCase())
       );
 
-      return matchesSearch && matchesCategory && matchesStatus;
+      return matchesSearch && matchesCategory && matchesProvider && matchesStatus;
     });
-  }, [searchQuery, selectedCategory, selectedStatus]);
+  }, [searchQuery, selectedCategory, selectedProvider, selectedStatus]);
 
   const clearFilters = () => {
     setSearchQuery('');
     setSelectedCategory('');
+    setSelectedProvider('');
     setSelectedStatus('');
   };
 
@@ -65,23 +77,26 @@ export default function SkillUp() {
             <div className="flex-align-center mb-2" style={{ gap: 8 }}>
               <span className="live-pulse-dot"></span>
               <span className="badge badge-success" style={{ fontSize: '0.75rem' }}>
-                ⭐ 28 Verified Student Resources
+                ⭐ {SKILL_UP_OPPORTUNITIES.length} Verified Course Curricula
               </span>
               <span className="badge badge-accent" style={{ fontSize: '0.75rem' }}>
-                100% Free / Self-Paced
+                10 Providers × 5 Specific Courses
+              </span>
+              <span className="badge badge-brand" style={{ fontSize: '0.75rem' }}>
+                Direct Course Redirection
               </span>
             </div>
             <h1 className="h2" style={{ margin: '0 0 6px', fontWeight: 800 }}>
               Skill-Up Opportunities
             </h1>
             <p className="text-muted" style={{ margin: 0, fontSize: '0.95rem' }}>
-              Curated free certifications, hands-on learning pathways, virtual labs, and skill development resources for engineering and college students.
+              Direct access to 50 accredited free courses across top industry leaders (ServiceNow, Microsoft, Google, AWS, IBM, Cisco, Infosys, IITs/NPTEL, Oracle, Fortinet). No generic homepages—every link leads directly to the specific course curriculum.
             </p>
           </div>
 
           <div className="header-stat-pill" style={{ background: 'var(--bg-surface-alt)', padding: '12px 20px', borderRadius: 10, border: '1px solid var(--border-color)', textAlign: 'center' }}>
-            <div className="text-xs text-muted font-bold uppercase tracking-wider">Total Resources</div>
-            <div className="h3 text-brand" style={{ margin: 0, fontWeight: 800 }}>28 Free Programs</div>
+            <div className="text-xs text-muted font-bold uppercase tracking-wider">Curated Courses</div>
+            <div className="h3 text-brand" style={{ margin: 0, fontWeight: 800 }}>{SKILL_UP_OPPORTUNITIES.length} Free Programs</div>
           </div>
         </div>
       </div>
@@ -92,7 +107,7 @@ export default function SkillUp() {
           <div className="search-input-wrap" style={{ flex: 1, minWidth: 240 }}>
             <input
               type="text"
-              placeholder="Search 28 opportunities by provider, skill, topic (e.g. Python, AI, Azure, Cisco, NPTEL)..."
+              placeholder={`Search ${SKILL_UP_OPPORTUNITIES.length} courses by title, skill, provider (e.g. ServiceNow, Python, AWS, Azure, NPTEL)...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="form-control"
@@ -102,12 +117,26 @@ export default function SkillUp() {
 
           <div className="search-select-wrap">
             <select
+              value={selectedProvider}
+              onChange={(e) => setSelectedProvider(e.target.value)}
+              className="form-control"
+              style={{ padding: '10px 14px', borderRadius: 6, border: '1px solid var(--border-color)', background: 'var(--bg-surface)' }}
+            >
+              <option value="">All Providers ({providers.length})</option>
+              {providers.map((p) => (
+                <option key={p} value={p}>{p} (5 courses)</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="search-select-wrap">
+            <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="form-control"
               style={{ padding: '10px 14px', borderRadius: 6, border: '1px solid var(--border-color)', background: 'var(--bg-surface)' }}
             >
-              <option value="">All Categories (28)</option>
+              <option value="">All Domains ({categories.length})</option>
               {categories.map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
@@ -127,7 +156,7 @@ export default function SkillUp() {
             </select>
           </div>
 
-          {(searchQuery || selectedCategory || selectedStatus) && (
+          {(searchQuery || selectedCategory || selectedProvider || selectedStatus) && (
             <button
               type="button"
               onClick={clearFilters}
@@ -138,6 +167,26 @@ export default function SkillUp() {
               Reset
             </button>
           )}
+        </div>
+
+        {/* Quick Provider Chips */}
+        <div className="source-chips-row mt-4 pt-3 flex-align-center" style={{ borderTop: '1px solid var(--border-subtle)', gap: 8, flexWrap: 'wrap', marginTop: 16, paddingTop: 12 }}>
+          <span className="text-xs text-muted font-bold uppercase tracking-wider">Providers:</span>
+          <button
+            className={`source-chip ${!selectedProvider ? 'active' : ''}`}
+            onClick={() => setSelectedProvider('')}
+          >
+            🌟 All Providers
+          </button>
+          {providers.map((prov) => (
+            <button
+              key={prov}
+              className={`source-chip ${selectedProvider === prov ? 'active' : ''}`}
+              onClick={() => setSelectedProvider(prov === selectedProvider ? '' : prov)}
+            >
+              {prov}
+            </button>
+          ))}
         </div>
 
         {/* Quick Category Chips */}
@@ -164,7 +213,8 @@ export default function SkillUp() {
       {/* Results Header */}
       <div className="flex-between mb-4" style={{ alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div className="font-semibold text-sm" style={{ color: 'var(--text-main)' }}>
-          Showing {filteredOpportunities.length} of {SKILL_UP_OPPORTUNITIES.length} free skill-up programs
+          Showing {filteredOpportunities.length} of {SKILL_UP_OPPORTUNITIES.length} free course curricula
+          {selectedProvider && <span className="text-brand"> · Provider: {selectedProvider}</span>}
           {selectedCategory && <span className="text-brand"> · Domain: {selectedCategory}</span>}
           {searchQuery && <span className="text-brand"> · Matching &quot;{searchQuery}&quot;</span>}
         </div>
