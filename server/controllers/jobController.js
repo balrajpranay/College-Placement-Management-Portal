@@ -413,9 +413,39 @@ const ALL_JOBS = generateComprehensiveJobs();
 exports.getJobs = async (req, res) => {
   const { q, category, work_mode, job_type, experience, source, page = 1, limit = 12 } = req.query;
 
-  let filtered = [...ALL_JOBS];
+  // 1. Base Filter (Search Query, Work Mode, Category, Source) without job_type constraint
+  let baseFiltered = [...ALL_JOBS];
 
-  // 1. Strict Category / Job Type Filter
+  if (q) {
+    const queryStr = q.toLowerCase();
+    baseFiltered = baseFiltered.filter(j => 
+      j.title.toLowerCase().includes(queryStr) || 
+      (j.company && j.company.toLowerCase().includes(queryStr)) ||
+      (j.company_name && j.company_name.toLowerCase().includes(queryStr)) ||
+      (j.location && j.location.toLowerCase().includes(queryStr)) ||
+      (j.tags && j.tags.some(t => t.toLowerCase().includes(queryStr)))
+    );
+  }
+
+  if (work_mode) {
+    baseFiltered = baseFiltered.filter(j => j.work_mode.toLowerCase() === work_mode.toLowerCase());
+  }
+
+  if (category) {
+    baseFiltered = baseFiltered.filter(j => j.category.toLowerCase() === category.toLowerCase());
+  }
+
+  if (source) {
+    baseFiltered = baseFiltered.filter(j => j.source.toLowerCase().includes(source.toLowerCase()));
+  }
+
+  // Dynamic counts for each category tab matching the current query!
+  const totalAllCount = baseFiltered.length;
+  const totalPlacementsCount = baseFiltered.filter(j => j.job_type === 'Full-time').length;
+  const totalInternshipsCount = baseFiltered.filter(j => j.job_type === 'Internship' || j.job_type === 'PM Internship Scheme').length;
+
+  // 2. Apply Job Type Filter
+  let filtered = [...baseFiltered];
   if (job_type) {
     const jt = job_type.toLowerCase();
     if (jt === 'full-time' || jt === 'fulltime' || jt === 'placements' || jt === 'campus placement drive') {
@@ -427,44 +457,12 @@ exports.getJobs = async (req, res) => {
     }
   }
 
-  // 2. Search Query Filter
-  if (q) {
-    const queryStr = q.toLowerCase();
-    filtered = filtered.filter(j => 
-      j.title.toLowerCase().includes(queryStr) || 
-      (j.company && j.company.toLowerCase().includes(queryStr)) ||
-      (j.company_name && j.company_name.toLowerCase().includes(queryStr)) ||
-      (j.location && j.location.toLowerCase().includes(queryStr)) ||
-      (j.tags && j.tags.some(t => t.toLowerCase().includes(queryStr)))
-    );
-  }
-
-  // 3. Work Mode Filter
-  if (work_mode) {
-    filtered = filtered.filter(j => j.work_mode.toLowerCase() === work_mode.toLowerCase());
-  }
-
-  // 4. Category Filter
-  if (category) {
-    filtered = filtered.filter(j => j.category.toLowerCase() === category.toLowerCase());
-  }
-
-  // 5. Source Filter
-  if (source) {
-    filtered = filtered.filter(j => j.source.toLowerCase().includes(source.toLowerCase()));
-  }
-
   const totalMatching = filtered.length;
   const perPage = Math.min(100, Math.max(1, parseInt(limit, 10) || 12));
   const totalPages = Math.max(1, Math.ceil(totalMatching / perPage));
   const pageNum = Math.min(totalPages, Math.max(1, parseInt(page, 10) || 1));
   const startIndex = (pageNum - 1) * perPage;
   const paginatedJobs = filtered.slice(startIndex, startIndex + perPage);
-
-  // Global counts across entire dataset
-  const totalAllCount = ALL_JOBS.length;
-  const totalPlacementsCount = ALL_JOBS.filter(j => j.job_type === 'Full-time').length;
-  const totalInternshipsCount = ALL_JOBS.filter(j => j.job_type === 'Internship' || j.job_type === 'PM Internship Scheme').length;
 
   const relevantFeaturedCompanies = !job_type
     ? FEATURED_MNC_COMPANIES

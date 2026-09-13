@@ -82,10 +82,10 @@ export default function JobsHub({ isStudentPortal }) {
       if (res && res.data) {
         setJobs(res.data);
         setStats({
-          total_jobs: res.total_jobs || res.data.length,
-          total_all_count: res.total_all_count || 520,
-          total_placements_count: res.total_placements_count || 260,
-          total_internships_count: res.total_internships_count || 260,
+          total_jobs: res.total_jobs !== undefined ? res.total_jobs : res.data.length,
+          total_all_count: res.total_all_count !== undefined ? res.total_all_count : 600,
+          total_placements_count: res.total_placements_count !== undefined ? res.total_placements_count : 300,
+          total_internships_count: res.total_internships_count !== undefined ? res.total_internships_count : 300,
           total_pages: res.total_pages || 1
         });
         if (res.featured_companies) {
@@ -301,7 +301,11 @@ export default function JobsHub({ isStudentPortal }) {
               {isInternshipView ? 'Internships & PM Scheme Portal' : isPlacementView ? 'Placements & Engineering Jobs' : 'Placements, Internships & Career Opportunities'}
             </h1>
             <p className="text-muted" style={{ margin: 0, fontSize: '0.9rem' }}>
-              Explore {stats.total_all_count || 600}+ verified opportunities with direct official career opening redirection and automated resume qualifications matching.
+              {urlQ ? (
+                <>Found <strong>{stats.total_jobs}</strong> verified {stats.total_jobs === 1 ? 'opening' : 'openings'} matching &ldquo;{urlQ}&rdquo;.</>
+              ) : (
+                `Explore ${stats.total_all_count || 600}+ verified opportunities with direct official career opening redirection and automated resume qualifications matching.`
+              )}
             </p>
           </div>
 
@@ -421,9 +425,11 @@ export default function JobsHub({ isStudentPortal }) {
         <div className="linkedin-jobs-list-pane">
           <div className="linkedin-list-header flex-between" style={{ alignItems: 'center' }}>
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>Jobs based on your preferences</h3>
+              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>
+                {urlQ ? `Opportunities matching "${urlQ}"` : 'Jobs based on your preferences'}
+              </h3>
               <p className="text-xs text-muted" style={{ margin: '2px 0 0' }}>
-                {stats.total_jobs}+ verified openings · Direct career portal redirection
+                {stats.total_jobs} verified {stats.total_jobs === 1 ? 'opening' : 'openings'}{urlQ ? ` matching "${urlQ}"` : ''} · Direct career portal redirection
               </p>
             </div>
             <span className="badge badge-neutral" style={{ fontSize: '0.75rem', fontWeight: 600 }}>
