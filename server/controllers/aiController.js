@@ -126,18 +126,25 @@ async function dispatchQuery(mode, messages, userContext) {
   if (apiKey) {
     try {
       const systemPrompt = SYSTEM_PROMPTS[mode] || SYSTEM_PROMPTS.advisor;
-      const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+      const modelName = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
       const contents = messages.map((m, idx) => ({
         role: m.role === 'user' || m.role === 'human' ? 'user' : 'model',
-        parts: [{ text: idx === 0 && m.role === 'user' ? `${systemPrompt}\n\nUser question: ${m.content}` : m.content }]
+        parts: [{ text: idx === 0 && m.role === 'user' ? `${systemPrompt}\n\nUser Question: ${m.content}` : (m.content || '') }]
       }));
+
+      const payload = {
+        contents,
+        system_instruction: {
+          parts: [{ text: systemPrompt }]
+        }
+      };
 
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents })
+        body: JSON.stringify(payload)
       });
 
       if (res.ok) {
@@ -147,6 +154,9 @@ async function dispatchQuery(mode, messages, userContext) {
         if (text) {
           return { success: true, mode, response: text };
         }
+      } else {
+        const errData = await res.text();
+        console.warn(`[Gemini API HTTP ${res.status}]:`, errData);
       }
     } catch (e) {
       console.error('[Gemini AI Fetch Error]:', e);
