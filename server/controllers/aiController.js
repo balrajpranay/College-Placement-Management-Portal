@@ -1,8 +1,21 @@
+const fs = require('fs');
+const path = require('path');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 const ChatSession = require('../models/ChatSession');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'campus_connect_jwt_secret_dev_key';
+
+// Load SKILL.md intelligence specification
+let SKILL_INTELLIGENCE = '';
+try {
+  const skillPath = path.join(__dirname, '../skills/SKILL.md');
+  if (fs.existsSync(skillPath)) {
+    SKILL_INTELLIGENCE = fs.readFileSync(skillPath, 'utf8');
+  }
+} catch (err) {
+  console.warn('[AIController] Could not load SKILL.md:', err.message);
+}
 
 // In-memory chat storage fallback for local dev / standalone mode per user ID
 // userKey -> { advisor: [], tutor: [], chat: [] }
@@ -28,23 +41,32 @@ const getUserKey = (req) => {
 
 const SYSTEM_PROMPTS = {
   advisor: `You are "Campus Connect AI Career Advisor", a specialized placement strategist and career counselor for students and graduates.
+Master Directives:
+${SKILL_INTELLIGENCE}
+
 Core Responsibilities:
 - Guide candidates through on-campus placement drive eligibility (CGPA thresholds, active backlog limits, department branch qualification).
 - Explain application stages (Applied -> Under Review -> Shortlisted -> Interview Scheduled -> Selected).
 - Provide company-specific preparation strategies for top recruiters (TechNova, Infosys, TCS, L&T, Wipro, Amazon, Google, Microsoft, Deloitte).
 - Guide users on national internship initiatives like the Prime Minister's Internship Scheme (PM Internship Scheme: 21-24 years age, Rs 5,000/mo stipend + Rs 6,000 grant, 12 months duration).
-- Review and advise on resume tailoring, technical skills highlights, and placement timeline planning.
-Tone: Professional, supportive, strategic, and practical. Use markdown formatting with bullet points and bold key terms.`,
+- Review and advise on resume tailoring (Google XYZ formula), technical skills highlights, and placement timeline planning.
+Tone: Highly intelligent, structured, professional, pedagogical, and practical. Format answers with clear bold headings, bullet points, and code blocks where applicable.`,
 
   tutor: `You are "Campus Connect AI Tutor & Interview Coach", an interactive technical tutor, coding instructor, and mock interview simulator.
+Master Directives:
+${SKILL_INTELLIGENCE}
+
 Core Responsibilities:
-- Explain Data Structures & Algorithms (Arrays, Linked Lists, Trees, Graphs, Dynamic Programming) with clean code examples in Python, Java, C++, or JavaScript.
+- Explain Data Structures & Algorithms (Arrays, Linked Lists, Trees, Graphs, Dynamic Programming) with clean, well-commented code examples in Python, Java, C++, or JavaScript.
 - Conduct interactive mock technical and behavioral interviews (STAR method, system design, object-oriented design).
 - Break down complex computer science concepts (DBMS, Operating Systems, Computer Networks, REST APIs, Cloud).
-- If the user asks for a coding question or practice, give a realistic placement coding challenge with constraints, example inputs/outputs, and guide them through optimal time/space complexity.
-Tone: Pedagogical, encouraging, clear, and structured with readable code blocks.`,
+- If the user asks for a coding question or practice, give a realistic placement coding challenge with constraints, example inputs/outputs, and guide them step-by-step through optimal time/space complexity derivations.
+Tone: Deeply technical, pedagogical, encouraging, clear, and structured with readable code blocks and Big-O proofs.`,
 
   chat: `You are "Campus Connect AI Assistant", an intelligent, knowledgeable, and versatile conversational assistant.
+Master Directives:
+${SKILL_INTELLIGENCE}
+
 Core Responsibilities:
 - Answer both general-purpose questions (programming, technology trends, science, productivity, academic writing) and Campus Connect platform inquiries.
 - Provide comprehensive, natural, and context-aware responses with high factual accuracy.
@@ -99,19 +121,7 @@ async function dispatchQuery(mode, messages, userContext) {
   const lastMsg = messages[messages.length - 1];
   const query = (lastMsg ? lastMsg.content : '').toLowerCase();
 
-  // 1. Check instant knowledge base for common student topics
-  if (query.includes('pm internship') || query.includes('stipend') || query.includes('pm scheme') || query.includes('pminternship')) {
-    return { success: true, mode, response: KNOWLEDGE_BASE.pm_scheme };
-  }
-  if (query.includes('eligib') || query.includes('cutoff') || query.includes('criteria')) {
-    return { success: true, mode, response: KNOWLEDGE_BASE.eligibility };
-  }
-  if (query.includes('mock') || query.includes('coding') || query.includes('dsa') || query.includes('problem') || query.includes('binary tree')) {
-    return { success: true, mode, response: KNOWLEDGE_BASE.mock_coding };
-  }
-  if (query.includes('resume') || query.includes('cv') || query.includes('polish') || query.includes('ats')) {
-    return { success: true, mode, response: KNOWLEDGE_BASE.resume_tips };
-  }
+  // 1. Quick greetings
   if (['hi', 'hello', 'hey', 'namaste'].some(g => query.trim() === g)) {
     const greetings = {
       advisor: `👋 **Hello! I'm your Campus Connect AI Career Advisor.**\n\nHow can I help you today? You can ask about:\n- **Drive Eligibility Rules** (CGPA & backlogs)\n- **PM Internship Scheme** details & stipends\n- **Resume Review** & tailoring strategies\n- **Company-Specific** placement prep`,
@@ -121,7 +131,7 @@ async function dispatchQuery(mode, messages, userContext) {
     return { success: true, mode, response: greetings[mode] || greetings.advisor };
   }
 
-  // 2. If GEMINI_API_KEY is configured in env, call Google Gemini API
+  // 2. Call Google Gemini API with SKILL.md Master Directives
   const apiKey = process.env.GEMINI_API_KEY;
   if (apiKey) {
     try {
@@ -129,9 +139,9 @@ async function dispatchQuery(mode, messages, userContext) {
       const modelName = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
-      const contents = messages.map((m, idx) => ({
+      const contents = messages.map((m) => ({
         role: m.role === 'user' || m.role === 'human' ? 'user' : 'model',
-        parts: [{ text: idx === 0 && m.role === 'user' ? `${systemPrompt}\n\nUser Question: ${m.content}` : (m.content || '') }]
+        parts: [{ text: m.content || '' }]
       }));
 
       const payload = {
@@ -161,6 +171,20 @@ async function dispatchQuery(mode, messages, userContext) {
     } catch (e) {
       console.error('[Gemini AI Fetch Error]:', e);
     }
+  }
+
+  // 3. Fallback knowledge base if API key is absent or offline
+  if (query.includes('pm internship') || query.includes('stipend') || query.includes('pm scheme') || query.includes('pminternship')) {
+    return { success: true, mode, response: KNOWLEDGE_BASE.pm_scheme };
+  }
+  if (query.includes('eligib') || query.includes('cutoff') || query.includes('criteria')) {
+    return { success: true, mode, response: KNOWLEDGE_BASE.eligibility };
+  }
+  if (query.includes('mock') || query.includes('coding') || query.includes('dsa') || query.includes('problem') || query.includes('binary tree')) {
+    return { success: true, mode, response: KNOWLEDGE_BASE.mock_coding };
+  }
+  if (query.includes('resume') || query.includes('cv') || query.includes('polish') || query.includes('ats')) {
+    return { success: true, mode, response: KNOWLEDGE_BASE.resume_tips };
   }
 
   // 3. Fallback intelligent assistance

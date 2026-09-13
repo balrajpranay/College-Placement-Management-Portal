@@ -112,7 +112,21 @@ export default function AIAdvisor() {
 
   const formatText = (text) => {
     if (!text) return '';
-    let formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    let formatted = text;
+    // Replace code blocks
+    formatted = formatted.replace(/```([\s\S]*?)```/g, '<pre style="background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 6px; overflow-x: auto; font-family: monospace; font-size: 0.8rem; margin: 6px 0; border: 1px solid var(--border-subtle);"><code>$1</code></pre>');
+    // Replace inline code
+    formatted = formatted.replace(/`([^`]+)`/g, '<code style="background: rgba(0,0,0,0.25); padding: 2px 5px; border-radius: 4px; font-family: monospace; font-size: 0.88em;">$1</code>');
+    // Replace headings
+    formatted = formatted.replace(/^#### (.*?)$/gm, '<h5 style="margin: 10px 0 4px; font-weight: 700; color: var(--brand-500, #0096FF);">$1</h5>');
+    formatted = formatted.replace(/^### (.*?)$/gm, '<h4 style="margin: 12px 0 4px; font-weight: 700; font-size: 0.95rem; color: var(--text-main);">$1</h4>');
+    formatted = formatted.replace(/^## (.*?)$/gm, '<h3 style="margin: 14px 0 6px; font-weight: 800; font-size: 1.05rem; color: var(--text-main); border-bottom: 1px solid var(--border-subtle); padding-bottom: 2px;">$1</h3>');
+    // Replace bold
+    formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    // Replace bullet points
+    formatted = formatted.replace(/^\* (.*?)$/gm, '<li style="margin-left: 16px; list-style-type: disc;">$1</li>');
+    formatted = formatted.replace(/^- (.*?)$/gm, '<li style="margin-left: 16px; list-style-type: disc;">$1</li>');
+    // Replace newlines
     formatted = formatted.replace(/\n/g, '<br />');
     return formatted;
   };
