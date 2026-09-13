@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import Icon from '../components/Icon';
 import AIAdvisor from '../components/AIAdvisor';
+import ErrorBoundary from '../components/ErrorBoundary';
 import { useAuth } from '../context/AuthContext';
 
 export default function StudentLayout() {
@@ -244,19 +245,23 @@ export default function StudentLayout() {
               className="btn btn-outline btn-sm header-signout-btn"
               title="Sign Out"
             >
-              <Icon name="log-out" size={14} /> <span>Sign Out</span>
+              <Icon name="logout" size={14} /> <span>Sign Out</span>
             </button>
           </div>
         </header>
 
         {/* Page Content Slot */}
         <main className="page-content app-content">
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
 
       {/* Floating AI Advisor Widget */}
-      <AIAdvisor />
+      <ErrorBoundary>
+        <AIAdvisor />
+      </ErrorBoundary>
     </div>
   );
 }

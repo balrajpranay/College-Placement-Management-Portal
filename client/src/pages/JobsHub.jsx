@@ -52,7 +52,8 @@ export default function JobsHub({ isStudentPortal }) {
   const [feedbackGiven, setFeedbackGiven] = useState(null);
   const [savedJobs, setSavedJobs] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem('saved_jobs') || '[]');
+      const parsed = JSON.parse(localStorage.getItem('saved_jobs') || '[]');
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }
@@ -89,7 +90,7 @@ export default function JobsHub({ isStudentPortal }) {
         // Automatically select the first job or preserve existing selection
         if (res.data.length > 0) {
           setSelectedJob((prev) => {
-            if (prev && res.data.some((j) => j.id === prev.id)) {
+            if (prev && res.data.some((j) => j && j.id === prev.id)) {
               return prev;
             }
             return res.data[0];
@@ -108,8 +109,10 @@ export default function JobsHub({ isStudentPortal }) {
   }, [urlJobType, urlQ, urlCategory, urlWorkMode, urlPage]);
 
   const toggleSaveJob = (jobId) => {
+    if (!jobId) return;
     setSavedJobs((prev) => {
-      const next = prev.includes(jobId) ? prev.filter((id) => id !== jobId) : [...prev, jobId];
+      const current = Array.isArray(prev) ? prev : [];
+      const next = current.includes(jobId) ? current.filter((id) => id !== jobId) : [...current, jobId];
       try {
         localStorage.setItem('saved_jobs', JSON.stringify(next));
       } catch (e) {
@@ -155,33 +158,41 @@ export default function JobsHub({ isStudentPortal }) {
 
   // Student profile qualifications match evaluation
   const calculateQualificationMatch = (job) => {
-    if (!job) return { score: 92, matched: ['Problem Solving', 'Data Structures', 'Python'], missing: [] };
+    if (!job) return { score: 90, matched: ['Problem Solving', 'Data Structures', 'Python'], missing: [] };
 
-    const rawStudentSkills = user?.technical_skills || user?.skills || 'Python, Java, React, SQL, Problem Solving, Git, C++';
+    let rawStudentSkills = user?.profile?.skills || user?.technical_skills || user?.skills || 'Python, Java, React, SQL, Problem Solving, Git, C++';
+    if (Array.isArray(rawStudentSkills)) {
+      rawStudentSkills = rawStudentSkills.join(', ');
+    } else if (typeof rawStudentSkills !== 'string') {
+      rawStudentSkills = String(rawStudentSkills || 'Python, React, SQL');
+    }
+
     const studentSkillsArr = rawStudentSkills
-      .toString()
       .toLowerCase()
       .split(/[,|]/)
-      .map((s) => s.trim());
+      .map((s) => s.trim())
+      .filter(Boolean);
 
     const matched = [];
     const missing = [];
 
-    const jobTags = job.tags || ['Software Engineering', 'Problem Solving'];
+    const jobTags = Array.isArray(job.tags) ? job.tags : ['Software Engineering', 'Problem Solving'];
     jobTags.forEach((tag) => {
-      const lower = tag.toLowerCase();
+      if (!tag) return;
+      const strTag = String(tag);
+      const lower = strTag.toLowerCase();
       const isMatch = studentSkillsArr.some((s) => s.includes(lower) || lower.includes(s)) ||
-        ['full-time', 'internship', 'fresher', 'graduate', 'engineering', 'trainee'].some((kw) => lower.includes(kw));
+        ['full-time', 'internship', 'fresher', 'graduate', 'engineering', 'trainee', 'software', 'digital'].some((kw) => lower.includes(kw));
 
       if (isMatch) {
-        matched.push(tag);
+        matched.push(strTag);
       } else {
-        missing.push(tag);
+        missing.push(strTag);
       }
     });
 
-    if (matched.length === 0 && jobTags.length > 0) {
-      matched.push(jobTags[0]);
+    if (matched.length === 0 && jobTags.length > 0 && jobTags[0]) {
+      matched.push(String(jobTags[0]));
     }
 
     const total = matched.length + missing.length;
@@ -240,7 +251,7 @@ export default function JobsHub({ isStudentPortal }) {
   const isAllView = !urlJobType;
 
   const matchData = selectedJob ? calculateQualificationMatch(selectedJob) : null;
-  const isSaved = selectedJob && savedJobs.includes(selectedJob.id);
+  const isSaved = Boolean(selectedJob && Array.isArray(savedJobs) && savedJobs.includes(selectedJob.id));
 
   return (
     <div className={`jobs-hub-container linkedin-hub-wrapper ${isPortalView ? 'student-portal-hub-view' : 'public-hub-view'}`}>
@@ -403,8 +414,10 @@ export default function JobsHub({ isStudentPortal }) {
               </div>
             ) : (
               jobs.map((job) => {
-                const isCurrent = selectedJob && selectedJob.id === job.id;
-                const alumniCount = ((job.id.charCodeAt(job.id.length - 1) * 3) % 28) + 5;
+                if (!job) return null;
+                const isCurrent = Boolean(selectedJob && selectedJob.id === job.id);
+                const safeId = String(job.id || '1');
+                const alumniCount = ((safeId.charCodeAt(safeId.length - 1) * 3) % 28) + 5;
 
                 return (
                   <div
@@ -591,7 +604,7 @@ export default function JobsHub({ isStudentPortal }) {
                   <div className="flex-align-center" style={{ gap: 6 }}>
                     <CompanyLogo logo={selectedJob.logo} companyName={selectedJob.company} size={30} />
                     <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#0A66C2', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700 }}>
-                      {(user?.name || 'S')[0]}
+                      {String(user?.name || user?.email || 'S')[0].toUpperCase()}
                     </div>
                   </div>
                 </div>
