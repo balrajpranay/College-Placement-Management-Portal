@@ -173,12 +173,12 @@ export default function Landing() {
           {/* Left Hero Copy */}
           <div className="landing-hero-content">
             <div className="hero-season-badge">
-              <span className="live-pulse-dot"></span>
+              <span className="live-pulse-dot" aria-hidden="true"></span>
               <span>Placement Season 2025–2026 Live</span>
             </div>
 
             <h1 className="landing-hero-title">
-              Your next opportunity <br />starts on <span className="text-gradient">campus</span>.
+              Your next opportunity <br />starts on campus.
             </h1>
 
             <p className="landing-hero-subtitle">
@@ -516,7 +516,7 @@ export default function Landing() {
               <p className="journey-step-desc text-xs text-muted" style={{ lineHeight: 1.5 }}>Track technical tests, GDs, and HR slots on an integrated interview calendar.</p>
             </div>
 
-            <div className="card journey-step-card highlight" style={{ padding: 'var(--space-5)', textAlign: 'left', border: '2px solid var(--accent-cyan-500)' }}>
+            <div className="card journey-step-card highlight" style={{ padding: 'var(--space-5)', textAlign: 'left', border: '1px solid var(--accent-cyan-500)' }}>
               <div className="journey-step-num" style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--success-500)', marginBottom: 6 }}>06</div>
               <h3 className="journey-step-title" style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 4 }}>Secure Offer</h3>
               <p className="journey-step-desc text-xs text-muted" style={{ lineHeight: 1.5 }}>Receive official placement confirmation, offer letters, and institutional records.</p>
@@ -574,20 +574,20 @@ export default function Landing() {
               </div>
 
               {/* Right Live Simulator Window */}
-              <div className="ai-simulator-window card" style={{ background: '#08172E', color: '#F1F5F9', padding: 'var(--space-6)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)' }}>
-                <div className="ai-sim-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 10, marginBottom: 14 }}>
+              <div className="ai-simulator-window card" style={{ padding: 'var(--space-6)', borderRadius: 12, border: '1px solid var(--border-subtle)' }}>
+                <div className="ai-sim-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: 10, marginBottom: 14 }}>
                   <div className="flex-align-center" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span className="live-pulse-dot"></span>
-                    <span className="font-bold text-xs" style={{ color: '#38BDF8', letterSpacing: '0.05em' }}>AI CAREER ADVISOR (LIVE PREVIEW)</span>
+                    <span className="live-pulse-dot" aria-hidden="true"></span>
+                    <span className="font-bold text-xs" style={{ color: 'var(--accent-cyan-600)', letterSpacing: '0.05em' }}>AI CAREER ADVISOR (LIVE PREVIEW)</span>
                   </div>
-                  <span className="badge badge-neutral" style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.1)', color: '#CBD5E1' }}>Gemini 3.5 Flash</span>
+                  <span className="badge badge-neutral" style={{ fontSize: '0.65rem' }}>Gemini 3.5 Flash</span>
                 </div>
 
                 <div className="ai-sim-body">
-                  <div className="ai-sim-user" style={{ background: 'rgba(0,150,255,0.15)', padding: '8px 12px', borderRadius: 8, fontSize: '0.85rem', marginBottom: 12, borderLeft: '3px solid var(--accent-cyan-500)', opacity: isAiLoading ? 0.5 : 1 }}>
+                  <div className="ai-sim-user" style={{ background: 'var(--bg-surface-alt)', border: '1px solid var(--border-subtle)', color: 'var(--text-main)', padding: '10px 14px', borderRadius: 8, fontSize: '0.875rem', marginBottom: 12, opacity: isAiLoading ? 0.6 : 1 }}>
                     "{aiDemoOutput.user}"
                   </div>
-                  <div className="ai-sim-bot" style={{ fontSize: '0.85rem', lineHeight: 1.6, color: '#CBD5E1' }} dangerouslySetInnerHTML={{ __html: isAiLoading ? '<span style="color:#94A3B8;">Generating verified intelligence...</span>' : aiDemoOutput.bot }} />
+                  <div className="ai-sim-bot" style={{ fontSize: '0.875rem', lineHeight: 1.6, color: 'var(--text-main)' }} dangerouslySetInnerHTML={{ __html: isAiLoading ? '<span style="color:var(--text-muted);">Generating verified intelligence...</span>' : aiDemoOutput.bot }} />
                 </div>
               </div>
             </div>
@@ -677,7 +677,7 @@ export default function Landing() {
           <div className="stories-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--space-6)' }}>
             <div className="card story-card" style={{ padding: 'var(--space-6)' }}>
               <div className="flex-align-center mb-3" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                <div className="story-avatar" style={{ width: 40, height: 40, borderRadius: 20, background: '#0B2545', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>AK</div>
+                <div className="story-avatar" style={{ width: 40, height: 40, borderRadius: 20, background: 'var(--brand-navy-900)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>AK</div>
                 <div>
                   <h3 className="h4" style={{ margin: '0 0 2px', fontSize: '1rem', fontWeight: 700 }}>Aarav Kapoor</h3>
                   <div className="text-xs text-muted">B.Tech CSE · Placed at <strong>TechNova</strong></div>
@@ -691,7 +691,7 @@ export default function Landing() {
 
             <div className="card story-card" style={{ padding: 'var(--space-6)' }}>
               <div className="flex-align-center mb-3" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                <div className="story-avatar" style={{ width: 40, height: 40, borderRadius: 20, background: '#0F766E', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>NM</div>
+                <div className="story-avatar" style={{ width: 40, height: 40, borderRadius: 20, background: 'var(--success-700)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>NM</div>
                 <div>
                   <h3 className="h4" style={{ margin: '0 0 2px', fontSize: '1rem', fontWeight: 700 }}>Neha Menon</h3>
                   <div className="text-xs text-muted">B.Tech ECE · Placed at <strong>FinEdge Analytics</strong></div>
@@ -705,7 +705,7 @@ export default function Landing() {
 
             <div className="card story-card" style={{ padding: 'var(--space-6)' }}>
               <div className="flex-align-center mb-3" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                <div className="story-avatar" style={{ width: 40, height: 40, borderRadius: 20, background: '#7C3AED', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>RV</div>
+                <div className="story-avatar" style={{ width: 40, height: 40, borderRadius: 20, background: 'var(--accent-cyan-700)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>RV</div>
                 <div>
                   <h3 className="h4" style={{ margin: '0 0 2px', fontSize: '1rem', fontWeight: 700 }}>Rohan Verma</h3>
                   <div className="text-xs text-muted">B.Tech IT · Selected for <strong>PM Internship</strong></div>

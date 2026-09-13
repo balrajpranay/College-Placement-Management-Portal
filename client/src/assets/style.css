@@ -127,6 +127,19 @@
   
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-base: 220ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Impeccable Design Token Aliases & Fallbacks */
+  --border-color: var(--border-subtle);
+  --font-display: 'Plus Jakarta Sans', var(--font-sans);
+  --font-body: var(--font-sans);
+  --brand-700: var(--brand-navy-700);
+  --brand-600: var(--brand-navy-600);
+  --brand-500: var(--brand-navy-500);
+  --brand-400: var(--brand-navy-400);
+  --brand-300: var(--brand-navy-300);
+  --brand-50:  var(--brand-navy-50);
+  --transition-bounce: 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
 }
 
 /* Dark Mode Tokens */
@@ -6289,4 +6302,249 @@ textarea:focus {
   flex: 1;
   height: 1px;
   background: var(--border-subtle);
+}
+
+/* ==========================================================================
+   IMPECCABLE BROWSER SURFACES & REFINEMENT
+   Themed text selection, custom scrollbar, focus visible, and smooth rendering
+   ========================================================================== */
+::selection {
+  background-color: rgba(0, 150, 255, 0.22);
+  color: inherit;
+}
+
+::-moz-selection {
+  background-color: rgba(0, 150, 255, 0.22);
+  color: inherit;
+}
+
+/* Custom Scrollbar for all modern browsers */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-app);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--slate-300);
+  border-radius: 9999px;
+  border: 2px solid var(--bg-app);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: var(--slate-700);
+  border: 2px solid var(--bg-app);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-cyan-500);
+}
+
+/* Focus Visible Rings (Craft Floor) */
+:focus-visible {
+  outline: 2px solid var(--accent-cyan-500);
+  outline-offset: 2px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent-cyan-500);
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+   IMPECCABLE LANDING PAGE COMPREHENSIVE STYLES
+   ========================================================================== */
+.landing-opportunities-section {
+  padding: var(--space-12) 0;
+  position: relative;
+}
+
+.opportunity-panel {
+  animation: fadeInPanel 0.25s ease-out;
+}
+
+@keyframes fadeInPanel {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.landing-job-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+}
+
+.landing-job-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--accent-cyan-400);
+}
+
+[data-theme="dark"] .landing-job-card:hover {
+  border-color: var(--accent-cyan-500);
+  box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.6), 0 0 16px rgba(0, 150, 255, 0.15);
+}
+
+/* AI Interactive Career Section */
+.ai-interactive-section {
+  padding: var(--space-12) 0;
+  position: relative;
+}
+
+.ai-interactive-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-md);
+  position: relative;
+  overflow: hidden;
+}
+
+.ai-interactive-box::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #0096FF, #38BDF8, #6366F1);
+}
+
+/* Featured Corporate Partner Grid & Cards */
+.company-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-6);
+}
+
+.company-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xs);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+}
+
+.company-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--accent-cyan-400);
+}
+
+[data-theme="dark"] .company-card:hover {
+  border-color: var(--accent-cyan-500);
+  box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.6), 0 0 16px rgba(0, 150, 255, 0.12);
+}
+
+.company-card-name {
+  font-family: var(--font-display);
+  letter-spacing: -0.015em;
+}
+
+.company-card-action {
+  transition: gap 0.15s ease, color 0.15s ease;
+}
+
+.company-card:hover .company-card-action {
+  color: var(--accent-cyan-500) !important;
+  gap: 8px;
+}
+
+/* Journey Step Cards Polish */
+.journey-step-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xs);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.journey-step-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--accent-cyan-400);
+}
+
+/* Success Story Cards Polish */
+.story-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xs);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.story-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Stat Box Polish */
+.stat-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xs);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-box:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Hero Section Subtle Ambient Mesh Glow */
+.landing-hero {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(1200px 600px at 50% -10%, rgba(0, 150, 255, 0.07), transparent 70%);
+}
+
+[data-theme="dark"] .landing-hero {
+  background: radial-gradient(1200px 600px at 50% -10%, rgba(0, 150, 255, 0.14), transparent 70%);
+}
+
+.landing-hero::before {
+  content: '';
+  position: absolute;
+  top: -200px;
+  right: -100px;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Hero Season Pill */
+.hero-season-badge {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-xs);
+  transition: border-color 0.15s ease;
+}
+
+.hero-season-badge:hover {
+  border-color: var(--accent-cyan-400);
+}
+
+/* Active Drives Schedule Table Card */
+.active-drives-table-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+}
+
+.active-drives-table-card table tr:hover td {
+  background: var(--bg-hover);
 }
