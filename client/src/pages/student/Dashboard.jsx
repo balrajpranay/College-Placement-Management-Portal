@@ -64,7 +64,7 @@ export default function StudentDashboard() {
             <Link to="/student/drives" className="btn btn-primary">
               <Icon name="briefcase" size={16} /> Browse Opportunities
             </Link>
-            <Link to="/ai" className="btn btn-outline">
+            <Link to="/student/ai-suite" className="btn btn-outline">
               <Icon name="award" size={16} /> AI Career Advisor
             </Link>
           </div>

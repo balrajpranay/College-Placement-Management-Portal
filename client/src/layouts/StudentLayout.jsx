@@ -125,7 +125,7 @@ export default function StudentLayout() {
           {/* Section 3: AI Career Suite */}
           <div className="sidebar-section-label">AI Career Suite</div>
           <NavLink
-            to="/ai-suite"
+            to="/student/ai-suite"
             className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
             onClick={() => setMobileOpen(false)}
           >

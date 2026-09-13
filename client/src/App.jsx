@@ -85,6 +85,7 @@ export default function App() {
             <Route path="opportunities" element={<JobsHub isStudentPortal={true} />} />
             <Route path="jobs" element={<JobsHub isStudentPortal={true} />} />
             <Route path="skill-up" element={<StudentSkillUp />} />
+            <Route path="ai-suite" element={<AISuite />} />
             <Route path="drives" element={<StudentDrives />} />
             <Route path="drives/:id" element={<StudentDriveDetail />} />
             <Route path="applications" element={<StudentApplications />} />
