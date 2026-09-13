@@ -47,6 +47,10 @@ export default function JobsHub({ isStudentPortal }) {
   const [jobs, setJobs] = useState([]);
   const [featuredCompanies, setFeaturedCompanies] = useState([]);
   const [stats, setStats] = useState({ total_jobs: 520, total_all_count: 520, total_placements_count: 260, total_internships_count: 260, total_pages: 44 });
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState(urlQ);
+  const [applyStatus, setApplyStatus] = useState(null);
+  const [applyingJobId, setApplyingJobId] = useState(null);
   const [selectedJob, setSelectedJob] = useState(null);
   const [showMatchDetails, setShowMatchDetails] = useState(false);
   const [feedbackGiven, setFeedbackGiven] = useState(null);
