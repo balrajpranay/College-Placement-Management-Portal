@@ -10,12 +10,34 @@ const UserSchema = new mongoose.Schema({
   },
   passwordHash: {
     type: String,
-    required: [true, 'Password hash is required']
+    required: function() {
+      return this.authProvider === 'local' && !this.githubId;
+    }
   },
   role: {
     type: String,
     enum: ['student', 'admin', 'recruiter'],
     required: [true, 'Role is required']
+  },
+  name: {
+    type: String,
+    trim: true
+  },
+  avatar: {
+    type: String
+  },
+  githubId: {
+    type: String,
+    sparse: true
+  },
+  githubUsername: {
+    type: String,
+    trim: true
+  },
+  authProvider: {
+    type: String,
+    enum: ['local', 'github', 'google'],
+    default: 'local'
   },
   isActive: {
     type: Boolean,

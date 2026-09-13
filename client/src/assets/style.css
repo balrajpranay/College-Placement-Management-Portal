@@ -5916,3 +5916,377 @@ textarea:focus {
   border-color: #38BDF8;
 }
 
+
+/* ==========================================================================
+   IMPECCABLE AUTHENTICATION CRAFT & GITHUB OAUTH STYLES
+   ========================================================================== */
+
+/* Fullscreen Impeccable Loading Overlay */
+.impeccable-auth-loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: #080C14;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow: hidden;
+  font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+}
+
+/* Atmospheric Ambient Orbs */
+.auth-ambient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.auth-ambient-orb.orb-primary {
+  width: 500px;
+  height: 500px;
+  top: -100px;
+  right: -100px;
+  background: radial-gradient(circle, rgba(10, 102, 194, 0.45) 0%, rgba(14, 165, 233, 0.15) 50%, transparent 70%);
+  animation: orbFloat 12s ease-in-out infinite alternate;
+}
+
+.auth-ambient-orb.orb-accent {
+  width: 480px;
+  height: 480px;
+  bottom: -100px;
+  left: -100px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.35) 0%, rgba(168, 85, 247, 0.15) 50%, transparent 70%);
+  animation: orbFloat 16s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes orbFloat {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(40px, 30px) scale(1.15); }
+}
+
+.auth-ambient-grid {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+/* Central Glassmorphic Card */
+.impeccable-auth-loading-card {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 480px;
+  background: rgba(15, 23, 42, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 24px;
+  padding: 44px 36px 36px;
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.65),
+    0 0 40px -10px rgba(14, 165, 233, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  text-align: center;
+  animation: cardFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes cardFadeUp {
+  0% { opacity: 0; transform: translateY(20px) scale(0.97); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Dual Docking Badges with Holographic Energy Bridge */
+.auth-dock-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 28px;
+  height: 100px;
+}
+
+.auth-orbit-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(14, 165, 233, 0.25);
+  pointer-events: none;
+}
+
+.auth-orbit-ring.ring-1 {
+  width: 140px;
+  height: 140px;
+  border-color: rgba(14, 165, 233, 0.2);
+  animation: ringPulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.auth-orbit-ring.ring-2 {
+  width: 190px;
+  height: 190px;
+  border-color: rgba(99, 102, 241, 0.15);
+  animation: ringPulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite 0.8s;
+}
+
+.auth-orbit-ring.ring-3 {
+  width: 240px;
+  height: 240px;
+  border-color: rgba(255, 255, 255, 0.05);
+  animation: ringPulse 5s cubic-bezier(0.4, 0, 0.6, 1) infinite 1.6s;
+}
+
+@keyframes ringPulse {
+  0% { transform: scale(0.85); opacity: 0.8; }
+  50% { transform: scale(1.05); opacity: 0.3; }
+  100% { transform: scale(0.85); opacity: 0.8; }
+}
+
+.auth-dock-node {
+  position: relative;
+  z-index: 3;
+  width: 68px;
+  height: 68px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+  transition: transform 0.3s ease;
+}
+
+.auth-dock-node.node-github {
+  background: linear-gradient(135deg, #24292e 0%, #161b22 100%);
+  color: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 24px rgba(255, 255, 255, 0.15);
+}
+
+.auth-dock-node.node-campus {
+  background: linear-gradient(135deg, #0284C7 0%, #0369A1 100%);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  box-shadow: 0 0 28px rgba(14, 165, 233, 0.35);
+}
+
+.auth-node-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+/* Energy Bridge */
+.auth-dock-bridge {
+  position: relative;
+  width: 64px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.auth-bridge-line {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #24292e, #38BDF8, #0284C7);
+}
+
+.auth-bridge-dot {
+  position: absolute;
+  top: -3px;
+  left: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #38BDF8;
+  box-shadow: 0 0 12px #38BDF8, 0 0 20px #0284C7;
+  animation: bridgeDotTravel 1.4s ease-in-out infinite;
+}
+
+@keyframes bridgeDotTravel {
+  0% { left: -10px; opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { left: 64px; opacity: 0; }
+}
+
+/* Headings */
+.auth-loading-title {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #FFFFFF;
+  letter-spacing: -0.02em;
+  margin: 0 0 8px;
+}
+
+.auth-loading-subtitle {
+  font-size: 0.925rem;
+  color: #94A3B8;
+  line-height: 1.5;
+  margin: 0 0 24px;
+}
+
+/* Dynamic Step Pill */
+.auth-step-pill {
+  background: rgba(30, 41, 59, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.auth-step-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #38BDF8;
+  box-shadow: 0 0 12px #38BDF8;
+  flex-shrink: 0;
+  animation: pulseDot 1.2s ease-in-out infinite;
+}
+
+@keyframes pulseDot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.3); opacity: 0.6; }
+}
+
+.auth-step-text-wrap {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.auth-step-message {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #F8FAFC;
+  line-height: 1.3;
+}
+
+.auth-step-sub {
+  font-size: 0.775rem;
+  color: #64748B;
+  margin-top: 2px;
+}
+
+/* Glowing Gradient Progress Bar */
+.auth-progress-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 24px;
+  position: relative;
+}
+
+.auth-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #0A66C2 0%, #38BDF8 50%, #34D399 100%);
+  background-size: 200% 100%;
+  border-radius: 999px;
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
+  animation: shimmerProgress 2s linear infinite;
+}
+
+@keyframes shimmerProgress {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+/* Trust Badges Row */
+.auth-trust-badges {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.auth-trust-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #94A3B8;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 4px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+
+.auth-trust-pill svg {
+  color: #38BDF8;
+}
+
+/* ==========================================================================
+   GITHUB BUTTON STYLES (For Login and Registration Pages)
+   ========================================================================== */
+
+.btn-github {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 18px;
+  border-radius: 10px;
+  background: #24292E;
+  color: #FFFFFF;
+  font-weight: 600;
+  font-size: 0.925rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-github:hover {
+  background: #1B1F23;
+  color: #FFFFFF;
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25), 0 0 12px rgba(255, 255, 255, 0.1);
+}
+
+.btn-github:active {
+  transform: translateY(0);
+}
+
+.btn-github svg {
+  flex-shrink: 0;
+}
+
+.auth-divider-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  color: var(--text-muted);
+  font-size: 0.775rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.auth-divider-wrap::before,
+.auth-divider-wrap::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-subtle);
+}

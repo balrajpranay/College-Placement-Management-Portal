@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Icon from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
+import GitHubAuthButton from '../components/GitHubAuthButton';
+import AuthLoadingScreen from '../components/AuthLoadingScreen';
 
 const DEPARTMENTS = [
   "Computer Science",
@@ -116,6 +118,22 @@ export default function RegisterStudent() {
           
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: 4 }}>Create Student Account</h2>
           <p className="text-muted mb-6" style={{ marginBottom: 'var(--space-6)' }}>Enter your academic details to register for campus placements.</p>
+          {/* GitHub Student OAuth Fast Registration */}
+          <div style={{ marginBottom: 'var(--space-5)' }}>
+            <GitHubAuthButton 
+              role="student" 
+              actionText="Sign up with GitHub (1-Click Student Profile)" 
+            />
+          </div>
+
+          <div className="auth-divider-wrap" style={{ display: 'flex', alignItems: 'center', margin: '18px 0', gap: 12 }}>
+            <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
+            <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
+              or register with academic credentials
+            </span>
+            <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
+          </div>
+
 
           {error && (
             <div className="alert-box alert-danger-box">

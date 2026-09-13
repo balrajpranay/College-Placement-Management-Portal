@@ -17,6 +17,8 @@ import AISuite from './pages/AISuite';
 import Login from './pages/Login';
 import RegisterStudent from './pages/RegisterStudent';
 import RegisterRecruiter from './pages/RegisterRecruiter';
+import GitHubCallback from './pages/GitHubCallback';
+import AuthLoadingPage from './pages/AuthLoadingPage';
 
 // Student Portal Pages
 import StudentDashboard from './pages/student/Dashboard';
@@ -68,6 +70,9 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register/student" element={<RegisterStudent />} />
             <Route path="/register/recruiter" element={<RegisterRecruiter />} />
+            <Route path="/auth/github/callback" element={<GitHubCallback />} />
+            <Route path="/auth/callback" element={<GitHubCallback />} />
+            <Route path="/auth/loading" element={<AuthLoadingPage />} />
           </Route>
 
           {/* Student Portal (Protected for role === 'student') */}

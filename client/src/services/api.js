@@ -58,6 +58,20 @@ export async function registerRecruiterApi(data) {
   return handleResponse(res);
 }
 
+export async function getGithubAuthUrlApi(role = 'student') {
+  const res = await fetch(`${API_BASE_URL}/auth/github/url?role=${encodeURIComponent(role)}`);
+  return handleResponse(res);
+}
+
+export async function githubAuthCallbackApi(payload) {
+  const res = await fetch(`${API_BASE_URL}/auth/github/callback`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  return handleResponse(res);
+}
+
 export async function getCurrentUserApi() {
   const res = await fetch(`${API_BASE_URL}/auth/me`, {
     headers: { ...getAuthHeader() }

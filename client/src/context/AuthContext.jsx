@@ -69,6 +69,24 @@ export const AuthProvider = ({ children }) => {
     return await registerRecruiterApi(formData);
   };
 
+  const setAuthSession = (authToken, authUser) => {
+    setToken(authToken);
+    setUser(authUser);
+    localStorage.setItem('campus_jwt_token', authToken);
+    localStorage.setItem('cc_token', authToken);
+    localStorage.setItem('campus_user', JSON.stringify(authUser));
+  };
+
+  const loginWithGitHub = async (code, state, role) => {
+    const { githubAuthCallbackApi } = await import('../services/api');
+    const res = await githubAuthCallbackApi({ code, state, role });
+    if (res && res.success && res.token) {
+      setAuthSession(res.token, res.user);
+      return res;
+    }
+    throw new Error(res?.message || 'GitHub authentication failed.');
+  };
+
   const value = {
     user,
     token,
@@ -78,7 +96,9 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     registerStudent,
-    registerRecruiter
+    registerRecruiter,
+    setAuthSession,
+    loginWithGitHub
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

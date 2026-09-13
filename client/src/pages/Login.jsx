@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Icon from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
+import GitHubAuthButton from '../components/GitHubAuthButton';
+import AuthLoadingScreen from '../components/AuthLoadingScreen';
 
 export default function Login() {
   const navigate = useNavigate();
