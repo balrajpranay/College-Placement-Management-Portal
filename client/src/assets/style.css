@@ -139,7 +139,6 @@
   --brand-300: var(--brand-navy-300);
   --brand-50:  var(--brand-navy-50);
   --transition-bounce: 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
-
 }
 
 /* Dark Mode Tokens */
@@ -169,11 +168,15 @@
   --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.6);
   --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.7);
   --shadow-xl: 0 20px 32px rgba(0, 0, 0, 0.8);
+
+  /* Dark mode brand tint overrides */
+  --brand-50:         rgba(0, 150, 255, 0.08);
+  --brand-100:        rgba(0, 150, 255, 0.16);
+  --brand-navy-50:    rgba(0, 150, 255, 0.08);
+  --brand-navy-100:   rgba(0, 150, 255, 0.16);
 }
 
-/* ==========================================================================
-   Base Styles & Reset
-   ========================================================================== */
+/* Base Styles & Reset */
 *, *::before, *::after {
   box-sizing: border-box;
 }
@@ -187,7 +190,7 @@ body {
   font-family: var(--font-sans);
   background-color: var(--bg-app);
   color: var(--text-main);
-  font-size: 0.9375rem; /* 15px */
+  font-size: 0.9375rem;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

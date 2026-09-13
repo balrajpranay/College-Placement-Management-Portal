@@ -73,25 +73,25 @@ export default function RecruiterNotifications() {
   };
 
   return (
-    <div className="recruiter-notifications-page" style={{ maxWidth: 960, margin: '0 auto' }}>
-      {/* Header Section matching Flask templates/recruiter/notifications.html */}
-      <div className="flex-between mb-6" style={{ flexWrap: 'wrap', gap: '1rem', alignItems: 'center' }}>
+    <div className="recruiter-notifications-page" style={{ width: '100%', maxWidth: '100%', margin: 0 }}>
+      {/* Header Section */}
+      <div className="flex-between mb-6" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16, marginBottom: 'var(--space-6)' }}>
         <div>
           <h1 className="h2" style={{ margin: '0 0 var(--space-1)', fontSize: '1.85rem', fontWeight: 800 }}>
             Recruiter Notifications
           </h1>
-          <p className="text-muted" style={{ margin: 0 }}>
+          <p className="text-muted" style={{ margin: 0, fontSize: '0.925rem' }}>
             Drive submissions, applicant alerts, and placement office notices.
           </p>
         </div>
 
-        <div className="flex-align-center" style={{ gap: '0.75rem' }}>
+        <div className="flex-align-center" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllRead}
               disabled={actionLoading}
-              className="btn btn-outline btn-sm"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              className="btn btn-primary btn-sm"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 9999, padding: '7px 16px', fontWeight: 600 }}
             >
               <Icon name="check" size={14} />
               <span>Mark All as Read ({unreadCount})</span>
@@ -103,43 +103,43 @@ export default function RecruiterNotifications() {
             disabled={loading}
             className="btn btn-outline btn-sm"
             title="Refresh notifications"
-            style={{ padding: '6px 10px' }}
+            style={{ width: 36, height: 36, padding: 0, borderRadius: 10, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
           >
-            <Icon name="rotate-cw" size={14} />
+            <Icon name="rotate-cw" size={16} />
           </button>
         </div>
       </div>
 
       {error && (
-        <div className="alert-box alert-danger-box mb-4" style={{ marginBottom: '1.5rem' }}>
+        <div className="alert-box alert-danger-box mb-6" style={{ marginBottom: 20 }}>
           <div className="alert-box-icon"><Icon name="alert-circle" size={18} /></div>
           <div className="alert-box-text">{error}</div>
         </div>
       )}
 
-      {/* Filter Tabs */}
-      <div className="filter-bar mb-4" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+      {/* Filter Tabs as free-flowing pills */}
+      <div className="filter-bar mb-6" style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
         <button
           onClick={() => setFilter('all')}
           className={`btn btn-sm ${filter === 'all' ? 'btn-primary' : 'btn-outline'}`}
-          style={{ borderRadius: 20 }}
+          style={{ borderRadius: 9999, padding: '6px 16px', fontWeight: 600, fontSize: '0.825rem' }}
         >
           All ({items.length})
         </button>
         <button
           onClick={() => setFilter('unread')}
           className={`btn btn-sm ${filter === 'unread' ? 'btn-primary' : 'btn-outline'}`}
-          style={{ borderRadius: 20 }}
+          style={{ borderRadius: 9999, padding: '6px 16px', fontWeight: 600, fontSize: '0.825rem' }}
         >
           Unread ({unreadCount})
         </button>
       </div>
 
-      {/* Notifications Card Container */}
-      <div className="card card-flush" style={{ padding: 0, overflow: 'hidden' }}>
+      {/* Notifications Card Container - Full Width */}
+      <div className="card card-flush" style={{ padding: 0, overflow: 'hidden', width: '100%', borderRadius: 'var(--radius-xl)', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)' }}>
         {loading ? (
           <div className="text-center" style={{ padding: '60px 0' }}>
-            <div className="spinner mb-3" style={{ width: 32, height: 32, border: '3px solid var(--border-subtle)', borderTopColor: 'var(--brand-primary, #0096FF)', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' }}></div>
+            <div className="spinner mb-3" style={{ width: 34, height: 34, border: '3px solid var(--border-subtle)', borderTopColor: 'var(--accent-cyan-500)', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }}></div>
             <p className="text-muted text-sm" style={{ margin: 0 }}>Loading notifications...</p>
           </div>
         ) : displayedItems.length > 0 ? (
@@ -151,50 +151,50 @@ export default function RecruiterNotifications() {
               <div
                 key={n.id}
                 style={{
-                  padding: '16px 24px',
+                  padding: '18px 24px',
                   borderBottom: '1px solid var(--border-subtle)',
+                  borderLeft: isUnread ? '4px solid #0096FF' : '4px solid transparent',
                   display: 'flex',
-                  gap: 14,
+                  gap: 16,
                   alignItems: 'flex-start',
-                  background: isUnread ? 'var(--brand-50, rgba(0, 150, 255, 0.04))' : 'transparent',
-                  transition: 'background 0.2s ease'
+                  background: isUnread ? 'rgba(0, 150, 255, 0.06)' : 'transparent',
+                  transition: 'all 0.15s ease'
                 }}
               >
                 {/* Icon Circle */}
                 <div
-                  className="stat-icon brand"
                   style={{
-                    width: 36,
-                    height: 36,
+                    width: 40,
+                    height: 40,
                     flexShrink: 0,
-                    borderRadius: 8,
-                    background: isUnread ? 'var(--brand-navy-100, #E0F2FE)' : 'var(--brand-navy-50, #F0F9FF)',
-                    color: isUnread ? 'var(--brand-navy-800, #0369A1)' : 'var(--brand-navy-600, #0284C7)',
+                    borderRadius: 10,
+                    background: isUnread ? 'rgba(0, 150, 255, 0.15)' : 'var(--bg-surface-alt)',
+                    color: isUnread ? '#0096FF' : 'var(--text-muted)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center'
                   }}
                 >
-                  <Icon name={iconName} size={16} />
+                  <Icon name={iconName} size={18} />
                 </div>
 
                 {/* Content Block */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="flex-align-center" style={{ gap: '0.5rem', marginBottom: 4 }}>
-                    <div className="text-sm font-medium" style={{ lineHeight: 1.5, color: 'var(--text-main)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                    <div style={{ fontSize: '0.925rem', fontWeight: isUnread ? 700 : 500, lineHeight: 1.5, color: 'var(--text-main)' }}>
                       {n.message}
                     </div>
                     {isUnread && (
                       <span
-                        className="badge badge-brand"
                         style={{
-                          fontSize: '0.68rem',
-                          padding: '0.15rem 0.45rem',
-                          borderRadius: 12,
-                          background: 'var(--brand-600, #0096FF)',
+                          fontSize: '0.7rem',
+                          padding: '2px 8px',
+                          borderRadius: 9999,
+                          background: '#0096FF',
                           color: '#FFFFFF',
-                          fontWeight: 600,
-                          flexShrink: 0
+                          fontWeight: 700,
+                          flexShrink: 0,
+                          letterSpacing: '0.02em'
                         }}
                       >
                         New
@@ -202,16 +202,16 @@ export default function RecruiterNotifications() {
                     )}
                   </div>
 
-                  <div className="flex-align-center" style={{ gap: '1rem', marginTop: 4 }}>
-                    <span className="text-xs text-faint" style={{ color: 'var(--text-faint)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 6 }}>
+                    <span style={{ fontSize: '0.775rem', color: 'var(--text-muted)' }}>
                       {n.created_at}
                     </span>
 
                     {n.link && (
                       <Link
                         to={n.link}
-                        className="text-xs text-primary"
-                        style={{ fontWeight: 600, textDecoration: 'none' }}
+                        className="text-brand font-semibold"
+                        style={{ fontSize: '0.775rem', color: 'var(--accent-cyan-600)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                       >
                         View Details &rarr;
                       </Link>
@@ -225,23 +225,22 @@ export default function RecruiterNotifications() {
                     onClick={(e) => handleMarkRead(n.id, e)}
                     className="btn btn-ghost btn-sm"
                     title="Mark as read"
-                    style={{ padding: '4px 8px', fontSize: '0.75rem', color: 'var(--text-muted)' }}
+                    style={{ padding: '6px 10px', fontSize: '0.75rem', color: 'var(--text-muted)', borderRadius: 8 }}
                   >
-                    <Icon name="check" size={14} />
+                    <Icon name="check" size={16} />
                   </button>
                 )}
               </div>
             );
           })
         ) : (
-          /* Empty State matching Flask template */
-          <div className="empty-state" style={{ padding: '48px 24px', textAlign: 'center' }}>
-            <div className="empty-icon" style={{ margin: '0 auto 12px', color: 'var(--text-muted)' }}>
-              <Icon name="bell" size={28} />
+          <div className="empty-state" style={{ padding: '60px 24px', textAlign: 'center' }}>
+            <div className="empty-icon" style={{ width: 52, height: 52, borderRadius: 14, background: 'rgba(0, 150, 255, 0.1)', color: 'var(--accent-cyan-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <Icon name="bell" size={26} />
             </div>
-            <h4 style={{ margin: '0 0 6px', fontWeight: 700 }}>No new notifications</h4>
+            <h4 style={{ margin: '0 0 6px', fontWeight: 700, fontSize: '1.1rem' }}>No notifications found</h4>
             <p className="text-muted text-sm" style={{ margin: 0 }}>
-              {filter === 'unread' ? 'You have read all your notifications.' : 'You are completely caught up.'}
+              {filter === 'unread' ? 'You have caught up with all your unread notifications.' : 'No notification records available.'}
             </p>
           </div>
         )}
