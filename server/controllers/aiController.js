@@ -10,8 +10,11 @@ const JWT_SECRET = process.env.JWT_SECRET || 'campus_connect_jwt_secret_dev_key'
 let SKILL_INTELLIGENCE = '';
 try {
   const skillPath = path.join(__dirname, '../skills/SKILL.md');
+  const rootSkillPath = path.join(process.cwd(), 'server/skills/SKILL.md');
   if (fs.existsSync(skillPath)) {
     SKILL_INTELLIGENCE = fs.readFileSync(skillPath, 'utf8');
+  } else if (fs.existsSync(rootSkillPath)) {
+    SKILL_INTELLIGENCE = fs.readFileSync(rootSkillPath, 'utf8');
   }
 } catch (err) {
   console.warn('[AIController] Could not load SKILL.md:', err.message);

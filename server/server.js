@@ -19,7 +19,17 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/static', express.static(path.join(__dirname, '../static')));
 
-
+// Database readiness middleware for Vercel Serverless and Production
+app.use(async (req, res, next) => {
+  try {
+    if (process.env.MONGODB_URI) {
+      await connectDB();
+    }
+  } catch (err) {
+    console.warn('[MongoDB Middleware] Connection notice:', err.message);
+  }
+  next();
+});
 // Health Check Endpoint
 app.get('/api/health', (req, res) => {
   res.json({

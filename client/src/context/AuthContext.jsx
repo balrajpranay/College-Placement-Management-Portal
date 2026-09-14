@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { loginApi, registerStudentApi, registerRecruiterApi, getMeApi } from '../services/api';
+import { loginApi, registerStudentApi, registerRecruiterApi, getMeApi, googleAuthCallbackApi, githubAuthCallbackApi } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -78,7 +78,6 @@ export const AuthProvider = ({ children }) => {
   };
 
   const loginWithGoogle = async (code, state, role) => {
-    const { googleAuthCallbackApi } = await import('../services/api');
     const res = await googleAuthCallbackApi({ code, state, role });
     if (res && res.success && res.token) {
       setAuthSession(res.token, res.user);
@@ -88,7 +87,6 @@ export const AuthProvider = ({ children }) => {
   };
 
   const loginWithGitHub = async (code, state, role) => {
-    const { githubAuthCallbackApi } = await import('../services/api');
     const res = await githubAuthCallbackApi({ code, state, role });
     if (res && res.success && res.token) {
       setAuthSession(res.token, res.user);
