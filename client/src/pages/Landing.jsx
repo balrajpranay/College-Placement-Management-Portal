@@ -104,7 +104,7 @@ export default function Landing() {
   const [aiDemoOutput, setAiDemoOutput] = useState(aiDemos.eligibility);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [globalBanner, setGlobalBanner] = useState(null);
-  const [partnerMotionMode, setPartnerMotionMode] = useState('orbit');
+  const [partnerMotionMode, setPartnerMotionMode] = useState('loop');
 
   const handleSecureApply = async (job) => {
     setGlobalBanner(null);
@@ -318,19 +318,19 @@ export default function Landing() {
             <div className="partner-mode-toggle">
               <button
                 type="button"
+                onClick={() => setPartnerMotionMode('loop')}
+                className={`partner-mode-btn ${partnerMotionMode === 'loop' ? 'active' : ''}`}
+                title="Continuous Infinite Flow Loop"
+              >
+                <span>⇄</span> Infinite Flow
+              </button>
+              <button
+                type="button"
                 onClick={() => setPartnerMotionMode('orbit')}
                 className={`partner-mode-btn ${partnerMotionMode === 'orbit' ? 'active' : ''}`}
                 title="Circular 3D Orbit Motion"
               >
                 <span>⟳</span> Circular Orbit
-              </button>
-              <button
-                type="button"
-                onClick={() => setPartnerMotionMode('loop')}
-                className={`partner-mode-btn ${partnerMotionMode === 'loop' ? 'active' : ''}`}
-                title="Continuous Circular Loop"
-              >
-                <span>⇄</span> Infinite Flow
               </button>
             </div>
           </div>
@@ -363,7 +363,12 @@ export default function Landing() {
                         }}
                       >
                         <div className="orbit-node-card">
-                          <img src={p.logo} alt={p.name} style={{ width: 22, height: 22, objectFit: 'contain' }} />
+                          <img
+                            src={p.logo}
+                            alt={p.name}
+                            style={{ width: 22, height: 22, objectFit: 'contain' }}
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
                           <span style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-main)' }}>{p.name}</span>
                         </div>
                       </div>
@@ -379,7 +384,11 @@ export default function Landing() {
                 {[...partnerLogos, ...partnerLogos, ...partnerLogos].map((p, idx) => (
                   <div key={`${p.name}-${idx}`} className="partner-pill">
                     <div className="partner-pill-icon">
-                      <img src={p.logo} alt={p.name} />
+                      <img
+                        src={p.logo}
+                        alt={p.name}
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
                     </div>
                     <span className="partner-pill-name">{p.name}</span>
                   </div>

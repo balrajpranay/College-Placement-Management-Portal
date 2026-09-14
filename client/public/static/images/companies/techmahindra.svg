@@ -1,4 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 40">
-  <rect width="100" height="40" rx="8" fill="#E31837"/>
-  <text x="50" y="26" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-weight="900" font-size="16" fill="#FFFFFF" text-anchor="middle">Tech M</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <rect width="48" height="48" rx="10" fill="#1E293B"/>
+  <path fill="#E31837" d="M14 13h20v5H26.5v17h-5V18H14v-5z"/>
+  <path fill="#FFFFFF" d="M11 25l6-6 6 6-3.5 3.5-2.5-2.5-2.5 2.5z"/>
+  <path fill="#E31837" d="M25 25l6 6 6-6-3.5-3.5-2.5 2.5-2.5-2.5z"/>
 </svg>

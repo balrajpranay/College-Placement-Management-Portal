@@ -8,8 +8,8 @@ export default function RecruiterPlaceholder({ title, stepNote }) {
   const getPageTitle = () => {
     if (title) return title;
     const path = location.pathname;
-    if (path.includes('create')) return 'Post Placement Drive';
-    if (path.includes('drives')) return 'Managed Drives';
+    if (path.includes('create')) return 'Post Opportunity';
+    if (path.includes('drives')) return 'Managed Opportunities';
     if (path.includes('applicants')) return 'Candidate Pipeline';
     if (path.includes('interviews')) return 'Interview Schedule';
     if (path.includes('results')) return 'Placement Results';

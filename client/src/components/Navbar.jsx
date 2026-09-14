@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Icon from './Icon';
+import { BrandLockup } from './Logo';
 import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('campus_theme') || 'light';
   });
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -28,20 +29,32 @@ export default function Navbar() {
     setMobileMenuOpen(false);
   };
 
+  const getDashboardLink = () => {
+    if (!user) return '/login';
+    switch (user.role) {
+      case 'student': return '/student/dashboard';
+      case 'recruiter': return '/recruiter/dashboard';
+      case 'admin': return '/admin/dashboard';
+      default: return '/login';
+    }
+  };
+
+  const getRoleBadge = () => {
+    if (!user) return null;
+    switch (user.role) {
+      case 'student': return <span className="badge badge-brand">Student</span>;
+      case 'recruiter': return <span className="badge badge-accent">Recruiter</span>;
+      case 'admin': return <span className="badge badge-warning">Admin</span>;
+      default: return null;
+    }
+  };
+
   const isActive = (path) => location.pathname === path;
 
   return (
     <header className="navbar">
       <div className="container navbar-inner">
-        <Link to="/" className="brand-lockup">
-          <div className="brand-logo-wrap">
-            <img src="/static/images/logo.png" alt="Campus Connect" className="brand-logo-img" />
-          </div>
-          <div className="brand-text-block">
-            <span className="brand-name">Campus Connect</span>
-            <span className="brand-sub">Placement Portal</span>
-          </div>
-        </Link>
+        <BrandLockup size={36} />
 
         <nav className={`nav-links ${mobileMenuOpen ? 'open' : ''}`} id="main-nav-links">
           <Link to="/" className={`nav-link ${isActive('/') ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>

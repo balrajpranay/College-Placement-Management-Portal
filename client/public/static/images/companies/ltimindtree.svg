@@ -1,4 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 40">
-  <rect width="100" height="40" rx="8" fill="#003057"/>
-  <text x="50" y="26" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-weight="900" font-size="12" fill="#00A3E0" text-anchor="middle">LTIMindtree</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <rect width="48" height="48" rx="10" fill="#003057"/>
+  <path fill="#00A3E0" d="M12 14h6v15h9v5H12V14z"/>
+  <path fill="#FFFFFF" d="M29 14h6v20h-6V14z"/>
+  <circle cx="32" cy="9" r="2.8" fill="#00A3E0"/>
 </svg>

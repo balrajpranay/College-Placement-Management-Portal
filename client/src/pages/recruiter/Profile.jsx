@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import Icon from '../../components/Icon';
 import { getRecruiterProfileApi, updateRecruiterProfileApi } from '../../services/api';
 
 export default function RecruiterProfile() {
+  const [company, setCompany] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     website: '',
@@ -18,12 +20,15 @@ export default function RecruiterProfile() {
   const [saving, setSaving] = useState(false);
   const [alert, setAlert] = useState(null);
 
+  const isApproved = company?.approved === true || company?.approved === 'true';
+
   useEffect(() => {
     async function fetchProfile() {
       try {
         setLoading(true);
         const res = await getRecruiterProfileApi();
         if (res?.company) {
+          setCompany(res.company);
           setFormData({
             name: res.company.name || '',
             website: res.company.website || '',
@@ -121,6 +126,132 @@ export default function RecruiterProfile() {
         >
           <Icon name={alert.type === 'success' ? 'check' : 'alert-circle'} size={18} />
           <span style={{ fontWeight: 500 }}>{alert.message}</span>
+        </div>
+      )}
+
+      {/* Verification Status Card matching Corporate Access Control */}
+      {isApproved ? (
+        <div
+          className="card mb-6"
+          style={{
+            background: 'rgba(16, 185, 129, 0.08)',
+            border: '1px solid rgba(16, 185, 129, 0.3)',
+            borderRadius: 'var(--radius-lg, 12px)',
+            padding: '16px 20px',
+            marginBottom: 24,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 16
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: '50%',
+                background: 'rgba(16, 185, 129, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--success-500, #10b981)',
+                flexShrink: 0
+              }}
+            >
+              <Icon name="check" size={22} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <h4 style={{ margin: 0, fontWeight: 700, fontSize: '1rem', color: 'var(--text-main)' }}>
+                  Verified Partner Organization
+                </h4>
+                <span
+                  className="badge badge-success"
+                  style={{
+                    padding: '2px 8px',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    borderRadius: 4,
+                    background: 'rgba(16, 185, 129, 0.2)',
+                    color: 'var(--success-500, #10b981)'
+                  }}
+                >
+                  Authorized
+                </span>
+              </div>
+              <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                Your organization is verified by the Placement Administrator. You are fully authorized to post opportunities (placements, jobs, internships, skills) and select candidates.
+              </p>
+            </div>
+          </div>
+          <Link
+            to="/recruiter/drives/create"
+            className="btn btn-primary btn-sm"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              fontWeight: 600,
+              textDecoration: 'none'
+            }}
+          >
+            <Icon name="plus" size={16} /> Post Opportunity
+          </Link>
+        </div>
+      ) : (
+        <div
+          className="card mb-6"
+          style={{
+            background: 'rgba(239, 68, 68, 0.08)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: 'var(--radius-lg, 12px)',
+            padding: '16px 20px',
+            marginBottom: 24,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 14
+          }}
+        >
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: '50%',
+              background: 'rgba(239, 68, 68, 0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--danger-500, #ef4444)',
+              flexShrink: 0
+            }}
+          >
+            <Icon name="alert-circle" size={22} />
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h4 style={{ margin: 0, fontWeight: 700, fontSize: '1rem', color: 'var(--danger-500, #ef4444)' }}>
+                Pending Administrator Verification
+              </h4>
+              <span
+                className="badge badge-warning"
+                style={{
+                  padding: '2px 8px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  borderRadius: 4,
+                  background: 'rgba(245, 158, 11, 0.2)',
+                  color: 'var(--warning-500, #f59e0b)'
+                }}
+              >
+                Posting & Selection Restricted
+              </span>
+            </div>
+            <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+              Your company profile is awaiting approval from the College Placement Cell administrator. Once verified, you will be authorized to post opportunities and select candidates.
+            </p>
+          </div>
         </div>
       )}
 

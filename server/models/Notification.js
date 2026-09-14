@@ -32,6 +32,21 @@ const NotificationSchema = new mongoose.Schema({
   link: {
     type: String
   },
+  meetUrl: {
+    type: String
+  },
+  roundName: {
+    type: String
+  },
+  scheduledDate: {
+    type: String
+  },
+  scheduledTime: {
+    type: String
+  },
+  instructions: {
+    type: String
+  },
   isRead: {
     type: Boolean,
     default: false

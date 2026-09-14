@@ -25,6 +25,14 @@ const DriveSchema = new mongoose.Schema({
     type: String,
     default: 'Full-Time'
   },
+  category: {
+    type: String,
+    default: 'Placements'
+  },
+  opportunityType: {
+    type: String,
+    default: 'Placement'
+  },
   minCgpa: {
     type: Number,
     default: 0

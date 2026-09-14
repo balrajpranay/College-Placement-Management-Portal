@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import Icon from '../../components/Icon';
 import { getStudentNotificationsApi } from '../../services/api';
 
@@ -7,6 +8,15 @@ export default function StudentNotifications() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('all');
+  const [copiedId, setCopiedId] = useState(null);
+
+  const handleCopy = (id, text) => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2500);
+    }
+  };
 
   const loadNotifs = useCallback(async () => {
     try {
@@ -87,40 +97,80 @@ export default function StudentNotifications() {
         ) : displayedItems.length > 0 ? (
           displayedItems.map((n) => {
             const isUnread = !n.is_read && !n.isRead;
+            const meetUrl = n.meet_url || n.meetUrl || (typeof n.message === 'string' ? n.message.match(/https:\/\/meet\.google\.com\/[a-z0-9-]+/i)?.[0] : null);
+            const roundName = n.round_name || n.roundName || (n.title && n.title.includes(':') ? n.title.split(':')[1]?.trim() : '');
+            const schedDate = n.scheduled_date || n.scheduledDate;
+            const schedTime = n.scheduled_time || n.scheduledTime;
+            const instructions = n.instructions;
+            const isSelection = Boolean(n.title?.toLowerCase().includes('select') || n.message?.toLowerCase().includes('select'));
+
             return (
               <div
                 key={n.id}
                 style={{
                   padding: '18px 24px',
                   borderBottom: '1px solid var(--border-subtle)',
-                  borderLeft: isUnread ? '4px solid #0096FF' : '4px solid transparent',
+                  borderLeft: isSelection ? '4px solid #16a34a' : isUnread ? '4px solid #0096FF' : '4px solid transparent',
                   display: 'flex',
                   gap: 16,
                   alignItems: 'flex-start',
-                  background: isUnread ? 'rgba(0, 150, 255, 0.06)' : 'transparent',
+                  background: isSelection ? 'rgba(22, 163, 74, 0.05)' : isUnread ? 'rgba(0, 150, 255, 0.06)' : 'transparent',
                   transition: 'all 0.15s ease'
                 }}
               >
                 <div
                   style={{
-                    width: 40,
-                    height: 40,
+                    width: 42,
+                    height: 42,
                     flexShrink: 0,
                     borderRadius: 10,
-                    background: isUnread ? 'rgba(0, 150, 255, 0.15)' : 'var(--bg-surface-alt)',
-                    color: isUnread ? '#0096FF' : 'var(--text-muted)',
+                    background: isSelection ? 'rgba(22, 163, 74, 0.18)' : isUnread ? 'rgba(0, 150, 255, 0.15)' : 'var(--bg-surface-alt)',
+                    color: isSelection ? '#16a34a' : isUnread ? '#0096FF' : 'var(--text-muted)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center'
                   }}
                 >
-                  <Icon name={n.type === 'interview' ? 'video' : n.type === 'drive' ? 'briefcase' : 'bell'} size={18} />
+                  <Icon name={meetUrl ? 'video' : n.type === 'interview' ? 'video' : n.type === 'drive' ? 'briefcase' : 'bell'} size={20} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
-                    <div style={{ fontSize: '0.925rem', fontWeight: isUnread ? 700 : 500, lineHeight: 1.5, color: 'var(--text-main)' }}>
-                      {n.message}
-                    </div>
+                    {isSelection && (
+                      <span
+                        style={{
+                          fontSize: '0.725rem',
+                          padding: '3px 10px',
+                          borderRadius: 9999,
+                          background: '#16a34a',
+                          color: '#FFFFFF',
+                          fontWeight: 800,
+                          flexShrink: 0,
+                          letterSpacing: '0.02em',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4
+                        }}
+                      >
+                        <Icon name="check" size={12} /> Candidate Selected
+                      </span>
+                    )}
+
+                    {roundName && (
+                      <span
+                        style={{
+                          fontSize: '0.725rem',
+                          padding: '3px 8px',
+                          borderRadius: 6,
+                          background: 'var(--bg-surface-alt)',
+                          border: '1px solid var(--border-subtle)',
+                          color: 'var(--text-main)',
+                          fontWeight: 600
+                        }}
+                      >
+                        {roundName}
+                      </span>
+                    )}
+
                     {isUnread && (
                       <span
                         style={{
@@ -138,7 +188,74 @@ export default function StudentNotifications() {
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)', marginTop: 4 }}>
+
+                  {/* Announcement Message */}
+                  <div style={{ fontSize: '0.95rem', fontWeight: isUnread ? 700 : 500, lineHeight: 1.5, color: 'var(--text-main)', marginTop: 4 }}>
+                    {n.message}
+                  </div>
+
+                  {/* Schedule Details Chips */}
+                  {(schedDate || schedTime) && (
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+                      {schedDate && (
+                        <span style={{ fontSize: '0.775rem', background: 'var(--bg-surface-alt)', padding: '3px 10px', borderRadius: 6, border: '1px solid var(--border-subtle)', display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--text-main)' }}>
+                          <Icon name="calendar" size={13} /> {schedDate}
+                        </span>
+                      )}
+                      {schedTime && (
+                        <span style={{ fontSize: '0.775rem', background: 'var(--bg-surface-alt)', padding: '3px 10px', borderRadius: 6, border: '1px solid var(--border-subtle)', display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--text-main)' }}>
+                          <Icon name="clock" size={13} /> {schedTime}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Special Candidate Instructions Box */}
+                  {instructions && (
+                    <div style={{ margin: '10px 0', padding: '10px 14px', background: 'rgba(0, 150, 255, 0.08)', borderRadius: 8, border: '1px solid rgba(0, 150, 255, 0.2)', fontSize: '0.825rem', color: 'var(--text-main)' }}>
+                      <strong style={{ color: 'var(--accent-cyan-600)' }}>📋 Candidate Instructions:</strong> {instructions}
+                    </div>
+                  )}
+
+                  {/* Google Meet & Interview Actions */}
+                  {meetUrl && (
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginTop: 12 }}>
+                      <a
+                        href={meetUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-sm btn-primary"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          fontWeight: 700,
+                          background: 'linear-gradient(135deg, #0096FF, #0066FF)',
+                          boxShadow: '0 2px 8px rgba(0, 150, 255, 0.3)'
+                        }}
+                      >
+                        <Icon name="video" size={14} /> Join Google Meet →
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(n.id, meetUrl)}
+                        className="btn btn-sm btn-outline"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                      >
+                        <Icon name="copy" size={13} />
+                        {copiedId === n.id ? '✓ Copied Link' : 'Copy Meet Link'}
+                      </button>
+                      <Link
+                        to="/student/interviews"
+                        className="btn btn-sm btn-ghost"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--accent-cyan-600)', fontSize: '0.825rem' }}
+                      >
+                        <Icon name="calendar" size={13} /> View Interview Calendar &rarr;
+                      </Link>
+                    </div>
+                  )}
+
+                  <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)', marginTop: 8 }}>
                     {n.created_at}
                   </div>
                 </div>

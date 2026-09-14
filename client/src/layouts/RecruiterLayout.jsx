@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import Icon from '../components/Icon';
+import { BrandLockup } from '../components/Logo';
 import { useAuth } from '../context/AuthContext';
 
 export default function RecruiterLayout() {
@@ -41,23 +42,7 @@ export default function RecruiterLayout() {
       {/* Sidebar Navigation Shell matching Flask recruiter/_sidebar.html */}
       <aside className={`sidebar app-sidebar ${mobileOpen ? 'open' : ''}`}>
         <div className="sidebar-brand">
-          <NavLink to="/" className="brand-lockup">
-            <div className="brand-logo-wrap">
-              <img
-                src="/static/images/logo.png"
-                alt="Campus Connect"
-                className="brand-logo-img"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = '/static/images/companies/infosys.svg';
-                }}
-              />
-            </div>
-            <div className="brand-text-block">
-              <span className="brand-name">Campus Connect</span>
-              <span className="brand-sub">Recruiter Portal</span>
-            </div>
-          </NavLink>
+          <BrandLockup to="/recruiter/dashboard" textLight={true} size={34} />
         </div>
 
         <nav className="sidebar-nav">
@@ -89,7 +74,7 @@ export default function RecruiterLayout() {
             onClick={() => setMobileOpen(false)}
           >
             <Icon name="plus" size={18} />
-            <span>Post Placement Drive</span>
+            <span>Post Opportunity</span>
           </NavLink>
 
           <NavLink
@@ -99,7 +84,7 @@ export default function RecruiterLayout() {
             onClick={() => setMobileOpen(false)}
           >
             <Icon name="briefcase" size={18} />
-            <span>Managed Drives</span>
+            <span>Managed Opportunities</span>
           </NavLink>
 
           <NavLink

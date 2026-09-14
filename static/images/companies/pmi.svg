@@ -1,4 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 40">
-  <rect width="100" height="40" rx="8" fill="#FF6B00"/>
-  <text x="50" y="26" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-weight="900" font-size="17" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.5">PM SCHEME</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <rect width="48" height="48" rx="10" fill="#0B132B"/>
+  <circle cx="24" cy="24" r="17" fill="none" stroke="#F59E0B" stroke-width="2.5"/>
+  <circle cx="24" cy="24" r="6" fill="#1D4ED8"/>
+  <path fill="#F59E0B" d="M24 11v5M24 32v5M11 24h5M32 24h5M15 15l3.5 3.5M29.5 29.5L33 33M15 33l3.5-3.5M29.5 18.5L33 15"/>
+  <circle cx="24" cy="24" r="2.5" fill="#FFFFFF"/>
 </svg>

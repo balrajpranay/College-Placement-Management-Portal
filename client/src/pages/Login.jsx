@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Icon from '../components/Icon';
+import { BrandLockup } from '../components/Logo';
 import { useAuth } from '../context/AuthContext';
 import GoogleAuthButton from '../components/GoogleAuthButton';
 import AuthLoadingScreen from '../components/AuthLoadingScreen';
@@ -21,6 +22,7 @@ export default function Login() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [authSuccessRole, setAuthSuccessRole] = useState(null);
 
   // Read message or targetJob from location state if redirected from Apply button
   useEffect(() => {
@@ -62,21 +64,29 @@ export default function Login() {
     e.preventDefault();
     setError('');
     setSuccess('');
+
+    if (!email.trim() || !password.trim()) {
+      setError('Please enter both your registered email and password.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      const res = await login(email, password, role);
+      const res = await login(email.trim(), password, role);
       setSuccess(res.message || 'Login successful! Redirecting...');
+      const userRole = res?.user?.role || role;
+      setAuthSuccessRole(userRole);
       
       const destination = {
-        student: location.state?.from || '/student/opportunities',
+        student: location.state?.from || '/student/dashboard',
         recruiter: '/recruiter/dashboard',
         admin: '/admin/dashboard'
-      }[res.user.role] || '/';
+      }[userRole] || '/';
 
       setTimeout(() => {
         navigate(destination, { replace: true, state: location.state });
-      }, 500);
+      }, 600);
     } catch (err) {
       setError(err.message || 'Authentication failed. Please verify your credentials and role.');
     } finally {
@@ -86,17 +96,10 @@ export default function Login() {
 
   return (
     <div className="auth-shell">
+      {authSuccessRole && <AuthLoadingScreen role={authSuccessRole} />}
       <div className="auth-visual">
         <div className="auth-visual-top">
-          <Link to="/" className="brand-lockup" style={{ alignSelf: 'flex-start' }}>
-            <div className="brand-logo-wrap">
-              <img src="/static/images/logo.png" alt="Campus Connect" className="brand-logo-img" />
-            </div>
-            <div className="brand-text-block">
-              <span className="brand-name" style={{ color: '#FFFFFF' }}>Campus Connect</span>
-              <span className="brand-sub">Placement Portal</span>
-            </div>
-          </Link>
+          <BrandLockup textLight={true} size={40} style={{ alignSelf: 'flex-start' }} />
           <div className="auth-visual-body">
             <h2>Your Career Path Starts Here</h2>
             <p>A unified placement portal connecting students, recruiters, and placement officers with automated eligibility and AI coaching.</p>

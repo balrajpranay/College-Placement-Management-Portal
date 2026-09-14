@@ -43,7 +43,7 @@ export default function RecruiterDrives() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
         <div style={{ textAlign: 'center' }}>
           <div className="spinner mb-3" style={{ width: 36, height: 36, border: '3px solid var(--border-subtle)', borderTopColor: 'var(--accent-cyan-500)', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' }}></div>
-          <p className="text-muted text-sm">Loading managed placement drives...</p>
+          <p className="text-muted text-sm">Loading managed opportunities...</p>
         </div>
       </div>
     );
@@ -55,14 +55,14 @@ export default function RecruiterDrives() {
       <div className="flex-between mb-8" style={{ flexWrap: 'wrap', gap: 16, alignItems: 'center', marginBottom: 'var(--space-8)' }}>
         <div>
           <h1 className="h2" style={{ margin: '0 0 var(--space-1)' }}>
-            Managed Placement Drives
+            Managed Opportunities
           </h1>
           <p className="text-muted" style={{ margin: 0 }}>
-            All recruitment postings created by your organization.
+            All recruitment opportunities (placements, jobs, internships, skills) created by your organization.
           </p>
         </div>
         <Link to="/recruiter/drives/create" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <Icon name="plus" size={16} /> Post New Drive
+          <Icon name="plus" size={16} /> Post Opportunity
         </Link>
       </div>
 
@@ -153,12 +153,12 @@ export default function RecruiterDrives() {
             <div className="empty-icon mb-3" style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(0, 150, 255, 0.12)', color: 'var(--brand-500)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
               <Icon name="briefcase" size={24} />
             </div>
-            <h4 style={{ margin: '0 0 6px' }}>No placement drives posted yet</h4>
+            <h4 style={{ margin: '0 0 6px' }}>No opportunities posted yet</h4>
             <p className="text-muted mb-4" style={{ margin: '0 0 16px', fontSize: '0.9rem' }}>
-              Create your first recruitment drive to publish open campus roles.
+              Post your first opportunity to reach qualified students across campus.
             </p>
             <Link to="/recruiter/drives/create" className="btn btn-primary btn-sm">
-              Create Drive
+              Post Opportunity
             </Link>
           </div>
         )}

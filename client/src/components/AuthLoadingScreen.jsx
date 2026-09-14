@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { LogoIcon } from './Logo';
 
 const MILESTONES = [
   { progress: 25, message: "Connecting to secure Google OAuth gateway...", sub: "Establishing cryptographic handshake" },
@@ -87,15 +88,7 @@ export default function AuthLoadingScreen({
 
           {/* Campus Connect Crest */}
           <div className="auth-dock-node node-campus" title="Campus Connect Portal">
-            <img
-              src="/static/images/logo.png"
-              alt="Campus Connect"
-              className="auth-node-logo"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = '/static/images/companies/google.svg';
-              }}
-            />
+            <LogoIcon size={34} />
           </div>
         </div>
 

@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Icon from '../components/Icon';
+import { BrandLockup } from '../components/Logo';
 import { useAuth } from '../context/AuthContext';
 import GoogleAuthButton from '../components/GoogleAuthButton';
-import AuthLoadingScreen from '../components/AuthLoadingScreen';
 
 export default function RegisterRecruiter() {
   const navigate = useNavigate();
@@ -66,15 +66,7 @@ export default function RegisterRecruiter() {
     <div className="auth-shell">
       <div className="auth-visual">
         <div className="auth-visual-top">
-          <Link to="/" className="brand-lockup" style={{ alignSelf: 'flex-start' }}>
-            <div className="brand-logo-wrap">
-              <img src="/static/images/logo.png" alt="Campus Connect" className="brand-logo-img" />
-            </div>
-            <div className="brand-text-block">
-              <span className="brand-name" style={{ color: '#FFFFFF' }}>Campus Connect</span>
-              <span className="brand-sub">Placement Portal</span>
-            </div>
-          </Link>
+          <BrandLockup textLight={true} size={40} style={{ alignSelf: 'flex-start' }} />
           <div className="auth-visual-body">
             <h2>Hire Exceptional Campus Talent</h2>
             <p>Publish recruitment drives, review verified candidate portfolios, and manage your entire hiring funnel in one modern dashboard.</p>
@@ -109,6 +101,7 @@ export default function RegisterRecruiter() {
           
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: 4 }}>Register Corporate Account</h2>
           <p className="text-muted mb-6" style={{ marginBottom: 'var(--space-6)' }}>New company accounts are verified by the placement cell prior to drive publication.</p>
+          
           {/* Google Recruiter OAuth Fast Registration */}
           <div style={{ marginBottom: 'var(--space-5)' }}>
             <GoogleAuthButton 
@@ -124,7 +117,6 @@ export default function RegisterRecruiter() {
             </span>
             <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
           </div>
-
 
           {error && (
             <div className="alert-box alert-danger-box">
@@ -164,18 +156,18 @@ export default function RegisterRecruiter() {
                   name="industry"
                   value={form.industry}
                   onChange={handleChange}
-                  placeholder="e.g. Software / Fintech"
+                  placeholder="e.g. Enterprise Software"
                   style={{ width: '100%', padding: '9px 12px', borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)' }}
                 />
               </div>
               <div className="form-group">
-                <label className="form-label" style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: 4 }}>Company Website</label>
+                <label className="form-label" style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: 4 }}>Headquarters Location</label>
                 <input
-                  type="url"
-                  name="website"
-                  value={form.website}
+                  type="text"
+                  name="location"
+                  value={form.location}
                   onChange={handleChange}
-                  placeholder="https://company.com"
+                  placeholder="e.g. Bengaluru, India"
                   style={{ width: '100%', padding: '9px 12px', borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)' }}
                 />
               </div>
@@ -183,16 +175,13 @@ export default function RegisterRecruiter() {
 
             <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 'var(--space-4)' }}>
               <div className="form-group">
-                <label className="form-label" style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: 4 }}>
-                  HR / Recruiter Contact Name <span className="required" style={{ color: '#EF4444' }}>*</span>
-                </label>
+                <label className="form-label" style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: 4 }}>HR Contact Name</label>
                 <input
                   type="text"
                   name="hr_contact"
                   value={form.hr_contact}
                   onChange={handleChange}
-                  placeholder="Contact person"
-                  required
+                  placeholder="e.g. Priya Nair"
                   style={{ width: '100%', padding: '9px 12px', borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)' }}
                 />
               </div>
@@ -211,41 +200,20 @@ export default function RegisterRecruiter() {
 
             <div className="form-group" style={{ marginBottom: 'var(--space-4)' }}>
               <label className="form-label" style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: 4 }}>
-                Work / Corporate Email <span className="required" style={{ color: '#EF4444' }}>*</span>
+                Corporate Email Address <span className="required" style={{ color: '#EF4444' }}>*</span>
               </label>
               <input
                 type="email"
                 name="email"
                 value={form.email}
                 onChange={handleChange}
-                placeholder="hr@company.com"
+                placeholder="recruitment@technova.com"
                 required
                 style={{ width: '100%', padding: '9px 12px', borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)' }}
               />
-            </div>
-
-            <div className="form-group" style={{ marginBottom: 'var(--space-4)' }}>
-              <label className="form-label" style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: 4 }}>Office Location / Headquarter</label>
-              <input
-                type="text"
-                name="location"
-                value={form.location}
-                onChange={handleChange}
-                placeholder="e.g. Bengaluru, India"
-                style={{ width: '100%', padding: '9px 12px', borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)' }}
-              />
-            </div>
-
-            <div className="form-group" style={{ marginBottom: 'var(--space-4)' }}>
-              <label className="form-label" style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: 4 }}>Company Overview</label>
-              <textarea
-                name="description"
-                value={form.description}
-                onChange={handleChange}
-                placeholder="Brief summary of company operations, culture, and business domain."
-                rows={2}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', resize: 'vertical' }}
-              />
+              <div className="form-hint" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                Please use your official company work email address.
+              </div>
             </div>
 
             <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 'var(--space-6)' }}>
@@ -258,7 +226,7 @@ export default function RegisterRecruiter() {
                   name="password"
                   value={form.password}
                   onChange={handleChange}
-                  placeholder="At least 6 characters"
+                  placeholder="Min 6 chars"
                   required
                   style={{ width: '100%', padding: '9px 12px', borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)' }}
                 />
@@ -283,14 +251,14 @@ export default function RegisterRecruiter() {
               type="submit"
               className="btn btn-primary btn-block btn-lg"
               disabled={isSubmitting}
-              style={{ width: '100%', padding: '11px 16px', fontSize: '1rem', fontWeight: 700 }}
+              style={{ width: '100%', padding: '11px 16px', fontSize: '1rem', fontWeight: 700, borderRadius: 8, cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
             >
-              {isSubmitting ? 'Submitting Application...' : 'Register Recruiter Account →'}
+              {isSubmitting ? 'Submitting Application...' : 'Register Corporate Account →'}
             </button>
           </form>
 
           <p className="text-sm text-muted text-center" style={{ marginTop: 'var(--space-6)', textAlign: 'center', fontSize: '0.85rem' }}>
-            Already have a recruiter account? <Link to="/login?role=recruiter" className="text-brand font-semibold" style={{ color: 'var(--accent-cyan-600)' }}>Sign in here</Link>
+            Already registered? <Link to="/login?role=recruiter" className="text-brand font-semibold" style={{ color: 'var(--accent-cyan-600)' }}>Sign in here</Link>
           </p>
         </div>
       </div>

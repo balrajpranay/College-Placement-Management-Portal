@@ -30,7 +30,7 @@ router.get('/interviews', recruiterController.getInterviews);
 router.get('/interviews/:id', recruiterController.getInterviewById);
 router.post('/interviews', recruiterController.scheduleInterview);
 router.put('/interviews/:id', recruiterController.updateInterview);
-router.delete('/interviews/:id', recruiterController.cancelInterview);
+router.delete('/interviews/:id', recruiterController.deleteInterview);
 router.post('/interviews/:id/cancel', recruiterController.cancelInterview);
 
 // Step 7E: Recruiter Placement Results & Offers Routes
@@ -39,6 +39,7 @@ router.get('/results/:id', recruiterController.getResultById);
 router.post('/results', recruiterController.createOrUpdateResult);
 router.post('/results/:appId/package', recruiterController.createOrUpdateResult);
 router.put('/results/:id', recruiterController.updateResult);
+router.delete('/results/:id', recruiterController.deleteResult);
 
 // Step 12A: Recruiter Notifications Routes
 router.get('/notifications', recruiterController.getNotifications);

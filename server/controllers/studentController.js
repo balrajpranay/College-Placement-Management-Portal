@@ -28,7 +28,162 @@ const studentStore = {
     internships: 'Full Stack Development Intern at WebCraft Systems (May - Jul 2025)',
     projects: '1. Campus Connect Placement Portal (React, Node, Express, SQLite/Mongo)\n2. Distributed Task Scheduler with Redis & Go\n3. Automated ATS Resume Parser using Gemini AI',
     resume_filename: 'student_1_Priya_Sharma_Resume.pdf',
-    resume_original_name: 'Priya_Sharma_SDE_Resume.pdf'
+    resume_original_name: 'Priya_Sharma_SDE_Resume.pdf',
+    resumeData: {
+      contact: {
+        fullName: 'First Name Last Name',
+        phone: 'Phone Number',
+        email: 'xyz@gmail.com',
+        location: 'City, State'
+      },
+      sections: [
+        {
+          id: 'prof_profiles',
+          title: 'Professional profiles',
+          content: "Click the 'Edit' button to add content to this section."
+        },
+        {
+          id: 'summary',
+          title: 'Summary',
+          content: "Click the 'Edit' button to add content to this section."
+        },
+        {
+          id: 'skills',
+          title: 'Skills',
+          content: 'List 3-4 special, work-related, talents skills.'
+        },
+        {
+          id: 'experience',
+          title: 'Experience',
+          content: `Company A | Location\nSales Representative | Start and end date\nEnter key responsibilities and accomplishments.\n\nCompany B | Location\nSales Associate | Start and end date\nShow that you create value with your work by listing your responsibilities and quantifiable achievements in the experience.\n\nCompany C | Location\nSales Assistant | Start and end date\nUse AI to assist you in creating a work description using your experience and desired job information.`
+        },
+        {
+          id: 'education',
+          title: 'Education',
+          content: `Graduated school | Location\nField of study | Graduation Date\nEnter any colleges, universities, or training programs that you have attended.`
+        },
+        {
+          id: 'certificates',
+          title: 'Certificates',
+          content: 'Show your certificates, licenses, and training in your field.'
+        },
+        {
+          id: 'achievements',
+          title: 'Achievements',
+          content: 'Mention any prizes, honors, contests etc.'
+        },
+        {
+          id: 'projects',
+          title: 'Projects',
+          content: "Click the 'Edit' button to add content to this section."
+        },
+        {
+          id: 'interests',
+          title: 'Interests',
+          content: "Click the 'Edit' button to add content to this section."
+        }
+      ]
+    },
+    resumeLatex: `\\documentclass[11pt,a4paper]{article}
+
+\\usepackage[margin=0.7in]{geometry}
+\\usepackage{enumitem}
+\\usepackage{titlesec}
+\\usepackage[hidelinks]{hyperref}
+\\usepackage{parskip}
+
+\\pagestyle{empty}
+
+% Section formatting
+\\titleformat{\\section}
+  {\\large\\bfseries}
+  {}
+  {0em}
+  {}
+  [\\titlerule]
+
+\\setlist[itemize]{
+  leftmargin=1.5em,
+  itemsep=2pt,
+  topsep=2pt
+}
+
+\\begin{document}
+
+%===================
+% HEADER
+%===================
+\\begin{center}
+  {\\LARGE\\textbf{Priya Sharma}}\\\\[4pt]
+  \\small priya.sharma@student.edu \\quad | \\quad +91 98765 43210 \\quad | \\quad Bengaluru, India\\\\
+  \\href{https://github.com}{github.com/priyasharma} \\quad | \\quad \\href{https://linkedin.com}{linkedin.com/in/priyasharma}
+\\end{center}
+
+\\vspace{2pt}
+
+%===================
+% SUMMARY
+%===================
+\\section{Summary}
+Motivated Computer Science graduate with strong foundations in Data Structures, Algorithms, and Full-Stack Engineering. Proven experience architecting reactive web platforms, microservices, and distributed task queues with modern cloud deployments.
+
+%===================
+% EDUCATION
+%===================
+\\section{Education}
+\\textbf{Bachelor of Technology in Computer Science \\& Engineering} \\hfill 2022 -- 2026\\\\
+Apex Institute of Technology, Bengaluru \\hfill Current CGPA: 8.9 / 10.0\\\\
+\\textit{Relevant Coursework}: Data Structures \\& Algorithms, Operating Systems, Database Management Systems, Computer Networks.
+
+%===================
+% TECHNICAL SKILLS
+%===================
+\\section{Technical Skills}
+\\begin{itemize}
+  \\item \\textbf{Languages}: Python, Java, C++, JavaScript (ES6+), TypeScript, SQL
+  \\item \\textbf{Frameworks \\& Libraries}: React, Node.js, Express, Next.js, Spring Boot, Tailwind CSS
+  \\item \\textbf{Databases \\& Cloud}: PostgreSQL, MongoDB, Redis, AWS (S3, EC2), Docker, Git
+  \\item \\textbf{Core Competencies}: Distributed Systems, REST APIs, Microservices, System Design
+\\end{itemize}
+
+%===================
+% EXPERIENCE
+%===================
+\\section{Experience}
+\\textbf{Software Engineering Intern} \\hfill 05/2025 -- 07/2025\\\\
+\\textit{WebCraft Systems} \\hfill Bengaluru, India
+\\begin{itemize}
+  \\item Architected high-throughput microservices using Node.js and Redis, reducing API response latency by 35\\%.
+  \\item Collaborated with senior engineers in daily agile sprints, implementing CI/CD pipelines with GitHub Actions.
+  \\item Authored automated unit test suites in Jest achieving 88\\% code coverage across payment gateways.
+\\end{itemize}
+
+%===================
+% PROJECTS
+%===================
+\\section{Projects}
+\\textbf{Campus Connect Placement Portal} \\hfill React, Node.js, Express, MongoDB
+\\begin{itemize}
+  \\item Engineered unified campus recruitment platform managing drives, automated shortlisting, and candidate tracking.
+  \\item Implemented real-time qualification match algorithms and Overleaf-inspired LaTeX live resume compilation engine.
+\\end{itemize}
+
+\\textbf{Distributed Task Scheduler} \\hfill Go, Redis, Docker
+\\begin{itemize}
+  \\item Developed fault-tolerant job queue system capable of executing 5,000+ background tasks/minute with zero data loss.
+  \\item Configured worker pools, heartbeat health checks, and automatic dead-letter queue retries.
+\\end{itemize}
+
+%===================
+% CERTIFICATIONS
+%===================
+\\section{Certifications}
+\\begin{itemize}
+  \\item AWS Certified Solutions Architect -- Associate (2025)
+  \\item Deep Learning Specialization -- DeepLearning.AI (Coursera)
+\\end{itemize}
+
+\\end{document}`
   },
   drives: [
     {
@@ -237,7 +392,11 @@ function formatStudentResponse(s, fallbackEmail) {
     resume_filename: resFilename,
     resume_original_name: resOrigName,
     resumeFilename: resFilename,
-    resumeOriginalName: resOrigName
+    resumeOriginalName: resOrigName,
+    resumeLatex: s.resumeLatex || s.resume_latex || studentStore.profile.resumeLatex || '',
+    resume_latex: s.resumeLatex || s.resume_latex || studentStore.profile.resumeLatex || '',
+    resumeData: s.resumeData || studentStore.profile.resumeData || null,
+    resume_data: s.resumeData || studentStore.profile.resumeData || null
   };
 }
 
@@ -429,6 +588,7 @@ function formatStudentInterview(intDoc) {
     interview_type: typeStr,
     interviewType: typeStr,
     venue: venueStr,
+    instructions: intDoc.instructions || null,
     status: statusStr
   };
 }
@@ -449,6 +609,15 @@ function formatStudentNotification(doc) {
     title: doc.title || '',
     type: doc.type || 'system',
     link: doc.link || '/student/notifications',
+    meet_url: doc.meetUrl || doc.meet_url || null,
+    meetUrl: doc.meetUrl || doc.meet_url || null,
+    round_name: doc.roundName || doc.round_name || null,
+    roundName: doc.roundName || doc.round_name || null,
+    scheduled_date: doc.scheduledDate || doc.scheduled_date || null,
+    scheduledDate: doc.scheduledDate || doc.scheduled_date || null,
+    scheduled_time: doc.scheduledTime || doc.scheduled_time || null,
+    scheduledTime: doc.scheduledTime || doc.scheduled_time || null,
+    instructions: doc.instructions || null,
     is_read: isRead,
     isRead: isRead,
     created_at: createdAt,
@@ -693,6 +862,10 @@ exports.updateProfile = async (req, res) => {
     if (parsedSkills.length > 0 || body.technical_skills !== undefined || body.skills !== undefined) {
       updateData.skills = parsedSkills;
     }
+    if (body.resumeLatex !== undefined) updateData.resumeLatex = body.resumeLatex;
+    if (body.resume_latex !== undefined) updateData.resumeLatex = body.resume_latex;
+    if (body.resumeData !== undefined) updateData.resumeData = body.resumeData;
+    if (body.resume_data !== undefined) updateData.resumeData = body.resume_data;
 
     let updatedStudent = null;
 
@@ -700,20 +873,21 @@ exports.updateProfile = async (req, res) => {
     if (mongoose.connection.readyState === 1 && userId) {
       try {
         const studentNo = body.studentNo || body.student_no || studentStore.profile.studentNo || 'CS2023001';
+        const setFields = { ...updateData, user: userId };
+        const insertFields = {};
+        if (!setFields.studentNo) insertFields.studentNo = studentNo;
+        if (!setFields.name) insertFields.name = studentStore.profile.name;
+        if (!setFields.department) insertFields.department = studentStore.profile.department;
+        if (!setFields.gradYear) insertFields.gradYear = 2026;
+
+        const updateOps = { $set: setFields };
+        if (Object.keys(insertFields).length > 0) {
+          updateOps.$setOnInsert = insertFields;
+        }
+
         const doc = await Student.findOneAndUpdate(
           { user: userId },
-          {
-            $set: {
-              ...updateData,
-              user: userId
-            },
-            $setOnInsert: {
-              studentNo: studentNo,
-              name: updateData.name || studentStore.profile.name,
-              department: updateData.department || studentStore.profile.department,
-              gradYear: updateData.gradYear || 2026
-            }
-          },
+          updateOps,
           { new: true, upsert: true, runValidators: false }
         ).lean();
 
@@ -740,6 +914,8 @@ exports.updateProfile = async (req, res) => {
     if (updateData.certifications !== undefined) student.certifications = updateData.certifications;
     if (updateData.projects !== undefined) student.projects = updateData.projects;
     if (updateData.internships !== undefined) student.internships = updateData.internships;
+    if (updateData.resumeLatex !== undefined) student.resumeLatex = updateData.resumeLatex;
+    if (updateData.resumeData !== undefined) student.resumeData = updateData.resumeData;
     if (updateData.skills !== undefined) {
       student.technical_skills = updateData.skills;
     }

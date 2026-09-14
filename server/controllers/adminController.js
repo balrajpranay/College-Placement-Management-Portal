@@ -773,14 +773,50 @@ exports.getStudentById = async (req, res) => {
 exports.getCompanies = async (req, res) => {
   try {
     const { q, status } = req.query;
-    let companies = [...institutionalCompanies];
+    let companies = [];
+
+    // 1. Fetch from MongoDB if connected
+    if (mongoose.connection.readyState === 1) {
+      try {
+        const mongoDocs = await Company.find().lean();
+        if (mongoDocs && mongoDocs.length > 0) {
+          companies = mongoDocs.map(c => ({
+            id: String(c._id),
+            _id: String(c._id),
+            name: c.name,
+            industry: c.industry || 'Technology',
+            website: c.website || '',
+            hr_contact: c.hrContact || 'HR Lead',
+            hrContact: c.hrContact || 'HR Lead',
+            email: c.email || '',
+            phone: c.phone || '',
+            location: c.location || 'Bengaluru, India',
+            description: c.description || '',
+            approved: Boolean(c.approved),
+            created_at: c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString()
+          }));
+        }
+      } catch (dbErr) {
+        console.warn('[Admin Mongo getCompanies Warning]:', dbErr.message);
+      }
+    }
+
+    // Merge with in-memory institutionalCompanies (avoid duplicates by email or name)
+    const existingEmails = new Set(companies.map(c => c.email?.toLowerCase()).filter(Boolean));
+    const existingNames = new Set(companies.map(c => c.name?.toLowerCase()).filter(Boolean));
+
+    for (const inst of institutionalCompanies) {
+      if (!existingEmails.has(inst.email?.toLowerCase()) && !existingNames.has(inst.name?.toLowerCase())) {
+        companies.push(inst);
+      }
+    }
 
     if (q) {
       const queryStr = q.toLowerCase();
       companies = companies.filter(c =>
-        c.name.toLowerCase().includes(queryStr) ||
-        c.email.toLowerCase().includes(queryStr) ||
-        c.industry.toLowerCase().includes(queryStr)
+        (c.name && c.name.toLowerCase().includes(queryStr)) ||
+        (c.email && c.email.toLowerCase().includes(queryStr)) ||
+        (c.industry && c.industry.toLowerCase().includes(queryStr))
       );
     }
 
@@ -803,7 +839,17 @@ exports.getCompanies = async (req, res) => {
 // GET /api/admin/recruiters/:id
 exports.getCompanyById = async (req, res) => {
   try {
-    const company = institutionalCompanies.find(c => String(c.id) === String(req.params.id));
+    const compId = req.params.id;
+    let company = null;
+
+    if (mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(compId)) {
+      try {
+        company = await Company.findById(compId).lean();
+      } catch (e) {}
+    }
+    if (!company) {
+      company = institutionalCompanies.find(c => String(c.id) === String(compId) || c.email === compId);
+    }
     if (!company) {
       return res.status(404).json({ success: false, message: 'Recruiter company record not found.' });
     }
@@ -820,15 +866,55 @@ exports.getCompanyById = async (req, res) => {
 // PUT /api/admin/recruiters/:id/approve
 exports.approveCompany = async (req, res) => {
   try {
-    const company = institutionalCompanies.find(c => String(c.id) === String(req.params.id));
-    if (!company) {
+    const compId = req.params.id;
+    let found = null;
+
+    // 1. Update in MongoDB if connected
+    if (mongoose.connection.readyState === 1) {
+      try {
+        if (mongoose.Types.ObjectId.isValid(compId)) {
+          found = await Company.findByIdAndUpdate(compId, { approved: true }, { new: true }).lean();
+        }
+        if (!found) {
+          found = await Company.findOneAndUpdate({ email: compId }, { approved: true }, { new: true }).lean();
+        }
+      } catch (err) {
+        console.warn('[Admin Mongo Approve Company Warning]:', err.message);
+      }
+    }
+
+    // 2. Also update in-memory
+    const memComp = institutionalCompanies.find(c => String(c.id) === String(compId) || c.email === compId);
+    if (memComp) {
+      memComp.approved = true;
+      if (!found) found = memComp;
+    }
+
+    // 3. Recruiter Notification
+    try {
+      if (found?.email && Notification && mongoose.connection.readyState === 1) {
+        await Notification.create({
+          company: found._id,
+          recipientRole: 'recruiter',
+          title: 'Company Verified by Admin',
+          message: `Congratulations! ${found.name || 'Your organization'} has been verified by the Placement Administrator. You can now post placements, jobs, internships, and skill opportunities, and select candidates.`,
+          link: '/recruiter/drives/create',
+          isRead: false
+        });
+      }
+    } catch (notifErr) {
+      console.warn('[Admin Approve Notification Warning]:', notifErr.message);
+    }
+
+    if (!found && !memComp) {
       return res.status(404).json({ success: false, message: 'Company not found.' });
     }
-    company.approved = true;
+
+    const companyName = found?.name || memComp?.name || 'Company';
     return res.status(200).json({
       success: true,
-      message: `${company.name} has been approved successfully for campus recruitment.`,
-      data: company
+      message: `${companyName} has been verified and approved successfully for campus recruitment.`,
+      data: found || memComp
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -838,15 +924,37 @@ exports.approveCompany = async (req, res) => {
 // PUT /api/admin/recruiters/:id/reject
 exports.rejectCompany = async (req, res) => {
   try {
-    const company = institutionalCompanies.find(c => String(c.id) === String(req.params.id));
-    if (!company) {
+    const compId = req.params.id;
+    let found = null;
+
+    if (mongoose.connection.readyState === 1) {
+      try {
+        if (mongoose.Types.ObjectId.isValid(compId)) {
+          found = await Company.findByIdAndUpdate(compId, { approved: false }, { new: true }).lean();
+        }
+        if (!found) {
+          found = await Company.findOneAndUpdate({ email: compId }, { approved: false }, { new: true }).lean();
+        }
+      } catch (err) {
+        console.warn('[Admin Mongo Reject Company Warning]:', err.message);
+      }
+    }
+
+    const memComp = institutionalCompanies.find(c => String(c.id) === String(compId) || c.email === compId);
+    if (memComp) {
+      memComp.approved = false;
+      if (!found) found = memComp;
+    }
+
+    if (!found && !memComp) {
       return res.status(404).json({ success: false, message: 'Company not found.' });
     }
-    company.approved = false;
+
+    const companyName = found?.name || memComp?.name || 'Company';
     return res.status(200).json({
       success: true,
-      message: `${company.name} registration was rejected.`,
-      data: company
+      message: `${companyName} verification has been revoked / set to pending review.`,
+      data: found || memComp
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });

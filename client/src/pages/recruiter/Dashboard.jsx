@@ -85,7 +85,7 @@ export default function RecruiterDashboard() {
           </p>
         </div>
         <Link to="/recruiter/drives/create" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <Icon name="plus" size={16} /> Post New Placement Drive
+          <Icon name="plus" size={16} /> Post Opportunity
         </Link>
       </div>
 
@@ -143,9 +143,9 @@ export default function RecruiterDashboard() {
       {/* Recent Placement Drives Section */}
       <div className="card card-flush mb-6">
         <div className="card-header flex-between" style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 className="h4" style={{ margin: 0 }}>Active &amp; Recent Placement Drives</h3>
+          <h3 className="h4" style={{ margin: 0 }}>Active &amp; Recent Opportunities</h3>
           <Link to="/recruiter/drives" className="text-sm font-semibold text-brand" style={{ color: 'var(--brand-500)', textDecoration: 'none' }}>
-            View All Drives &rarr;
+            View All Opportunities &rarr;
           </Link>
         </div>
 
@@ -154,7 +154,7 @@ export default function RecruiterDashboard() {
             <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border-subtle)' }}>
-                  <th style={{ padding: '12px 16px' }}>Drive Title</th>
+                  <th style={{ padding: '12px 16px' }}>Opportunity Title</th>
                   <th style={{ padding: '12px 16px' }}>Role Type</th>
                   <th style={{ padding: '12px 16px' }}>Package (CTC)</th>
                   <th style={{ padding: '12px 16px' }}>Application Deadline</th>
@@ -206,12 +206,12 @@ export default function RecruiterDashboard() {
             <div className="empty-icon mb-3" style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(0, 150, 255, 0.12)', color: 'var(--brand-500)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
               <Icon name="briefcase" size={24} />
             </div>
-            <h4 style={{ margin: '0 0 6px' }}>No recruitment drives posted yet</h4>
+            <h4 style={{ margin: '0 0 6px' }}>No opportunities posted yet</h4>
             <p className="text-muted mb-4" style={{ margin: '0 0 16px', fontSize: '0.9rem' }}>
-              Post your first job opening to begin accepting applications from qualified campus students.
+              Post your first placement, job opening, internship, or skill track to begin accepting applications from qualified campus students.
             </p>
             <Link to="/recruiter/drives/create" className="btn btn-primary btn-sm">
-              Post a Placement Drive
+              Post Opportunity
             </Link>
           </div>
         )}

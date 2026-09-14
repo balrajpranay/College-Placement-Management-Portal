@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import Icon from '../components/Icon';
+import { BrandLockup } from '../components/Logo';
 import { useAuth } from '../context/AuthContext';
 
 export default function AdminLayout() {
@@ -40,23 +41,7 @@ export default function AdminLayout() {
       {/* Sidebar Navigation Shell matching Flask admin/_sidebar.html */}
       <aside className={`sidebar app-sidebar ${mobileOpen ? 'open' : ''}`}>
         <div className="sidebar-brand">
-          <NavLink to="/" className="brand-lockup">
-            <div className="brand-logo-wrap">
-              <img
-                src="/static/images/logo.png"
-                alt="Campus Connect"
-                className="brand-logo-img"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = '/static/images/companies/infosys.svg';
-                }}
-              />
-            </div>
-            <div className="brand-text-block">
-              <span className="brand-name">Campus Connect</span>
-              <span className="brand-sub">Admin Portal</span>
-            </div>
-          </NavLink>
+          <BrandLockup to="/admin/dashboard" textLight={true} size={34} />
         </div>
 
         <nav className="sidebar-nav">

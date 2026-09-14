@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Icon from './Icon';
+import { BrandLockup } from './Logo';
 
 export default function Footer() {
   return (
@@ -8,15 +9,7 @@ export default function Footer() {
       <div className="container footer-grid">
         {/* Col 1: Brand & Institutional Identity */}
         <div className="footer-col-main">
-          <Link to="/" className="brand-lockup mb-3">
-            <div className="brand-logo-wrap">
-              <img src="/static/images/logo.png" alt="Campus Connect" className="brand-logo-img" />
-            </div>
-            <div className="brand-text-block">
-              <span className="brand-name" style={{ color: '#FFFFFF' }}>Campus Connect</span>
-              <span className="brand-sub">Placement Portal</span>
-            </div>
-          </Link>
+          <BrandLockup textLight={true} size={36} className="mb-3" />
           <p className="footer-desc">
             Empowering university students, top corporate recruiters, and the college placement cell in a unified, verified career ecosystem.
           </p>

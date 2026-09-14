@@ -12,7 +12,7 @@ export default function PublicLayout() {
         <Outlet />
       </main>
       <Footer />
-      {/* Floating AI Career Advisor Chatbot */}
+      {/* Floating AI Technical Tutor & Career Advisor Widget */}
       <AIAdvisor />
     </div>
   );

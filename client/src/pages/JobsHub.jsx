@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import Icon from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
@@ -46,7 +46,7 @@ export default function JobsHub({ isStudentPortal }) {
 
   const [jobs, setJobs] = useState([]);
   const [featuredCompanies, setFeaturedCompanies] = useState([]);
-  const [stats, setStats] = useState({ total_jobs: 520, total_all_count: 520, total_placements_count: 260, total_internships_count: 260, total_pages: 44 });
+  const [stats, setStats] = useState({ total_jobs: 520, total_all_count: 520, total_placements_count: 260, total_internships_count: 260, total_skills_count: 50, total_pages: 44 });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState(urlQ);
   const [applyStatus, setApplyStatus] = useState(null);
@@ -54,6 +54,17 @@ export default function JobsHub({ isStudentPortal }) {
   const [selectedJob, setSelectedJob] = useState(null);
   const [showMatchDetails, setShowMatchDetails] = useState(false);
   const [feedbackGiven, setFeedbackGiven] = useState(null);
+  const detailPaneRef = useRef(null);
+
+  const handleSelectJob = (job) => {
+    setSelectedJob(job);
+    if (detailPaneRef.current) {
+      detailPaneRef.current.scrollTop = 0;
+      if (typeof window !== 'undefined' && window.innerWidth <= 1024) {
+        detailPaneRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  };
   const [savedJobs, setSavedJobs] = useState(() => {
     try {
       const parsed = JSON.parse(localStorage.getItem('saved_jobs') || '[]');
@@ -86,6 +97,7 @@ export default function JobsHub({ isStudentPortal }) {
           total_all_count: res.total_all_count !== undefined ? res.total_all_count : 600,
           total_placements_count: res.total_placements_count !== undefined ? res.total_placements_count : 300,
           total_internships_count: res.total_internships_count !== undefined ? res.total_internships_count : 300,
+          total_skills_count: res.total_skills_count !== undefined ? res.total_skills_count : 50,
           total_pages: res.total_pages || 1
         });
         if (res.featured_companies) {
@@ -261,7 +273,24 @@ export default function JobsHub({ isStudentPortal }) {
 
   const setSourceFilter = (sourceText) => {
     const params = new URLSearchParams(searchParams);
-    params.set('q', sourceText);
+    if (urlQ.toLowerCase() === sourceText.toLowerCase()) {
+      params.delete('q');
+    } else {
+      params.set('q', sourceText);
+    }
+    params.set('page', '1');
+    setSearchParams(params);
+  };
+
+  const handlePmiFilter = () => {
+    const params = new URLSearchParams(searchParams);
+    if (urlQ.toLowerCase().includes('pm') || (urlJobType === 'Internship' && !urlQ)) {
+      params.delete('q');
+      params.delete('job_type');
+    } else {
+      params.set('q', 'PM Scheme');
+      params.set('job_type', 'Internship');
+    }
     params.set('page', '1');
     setSearchParams(params);
   };
@@ -278,9 +307,10 @@ export default function JobsHub({ isStudentPortal }) {
     window.scrollTo({ top: 300, behavior: 'smooth' });
   };
 
-  const isInternshipView = urlJobType === 'Internship' || urlJobType === 'PM Internship Scheme';
-  const isPlacementView = urlJobType === 'Full-time';
-  const isAllView = !urlJobType;
+  const isSkillsView = urlJobType === 'Skill' || urlJobType === 'Skills' || urlCategory === 'Skills' || urlCategory === 'Skill Up';
+  const isInternshipView = !isSkillsView && (urlJobType === 'Internship' || urlJobType === 'PM Internship Scheme');
+  const isPlacementView = !isSkillsView && (urlJobType === 'Full-time' || urlJobType === 'Placement' || urlJobType === 'Job');
+  const isAllView = !urlJobType && !isSkillsView;
 
   const matchData = selectedJob ? calculateQualificationMatch(selectedJob) : null;
   const isSaved = Boolean(selectedJob && Array.isArray(savedJobs) && savedJobs.includes(selectedJob.id));
@@ -294,11 +324,11 @@ export default function JobsHub({ isStudentPortal }) {
             <div className="flex-align-center mb-1" style={{ gap: 8 }}>
               <span className="live-pulse-dot"></span>
               <span className="badge badge-accent" style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                {isInternshipView ? 'National Internship Tracks' : isPlacementView ? 'Graduate Placement Drives' : 'LinkedIn Jobs Experience'}
+                {isSkillsView ? 'Certified Industry Skill Programs' : isInternshipView ? 'National Internship Tracks' : isPlacementView ? 'Graduate Placement Drives' : 'All Verified Opportunities'}
               </span>
             </div>
             <h1 className="h2" style={{ margin: '0 0 4px', fontWeight: 800, fontSize: '1.45rem' }}>
-              {isInternshipView ? 'Internships & PM Scheme Portal' : isPlacementView ? 'Placements & Engineering Jobs' : 'Placements, Internships & Career Opportunities'}
+              {isSkillsView ? 'Skill Programs & Training Tracks' : isInternshipView ? 'Internships & PM Scheme Portal' : isPlacementView ? 'Placements & Engineering Jobs' : 'All Opportunities, Placements, Internships & Skills'}
             </h1>
             <p className="text-muted" style={{ margin: 0, fontSize: '0.9rem' }}>
               {urlQ ? (
@@ -309,28 +339,35 @@ export default function JobsHub({ isStudentPortal }) {
             </p>
           </div>
 
-          {/* Segmented Category Control */}
-          <div className="category-segmented-control" style={{ display: 'flex', gap: 4, background: 'var(--bg-surface-alt)', padding: 4, borderRadius: 8, border: '1px solid var(--border-color)' }}>
+          {/* Segmented Category Control (All Opportunities, Placements, Internships, Skills) */}
+          <div className="category-segmented-control" style={{ display: 'flex', gap: 4, background: 'var(--bg-surface-alt)', padding: 4, borderRadius: 8, border: '1px solid var(--border-color)', flexWrap: 'wrap' }}>
             <button
               className={`seg-btn ${isAllView ? 'active' : ''}`}
               onClick={() => setJobTypeFilter('')}
               style={{ padding: '7px 14px', fontSize: '0.85rem', fontWeight: 600, border: 'none', borderRadius: 6, cursor: 'pointer', background: isAllView ? '#0A66C2' : 'transparent', color: isAllView ? '#FFFFFF' : 'var(--text-muted)' }}
             >
-              🌟 All ({stats.total_all_count})
+              🌟 All Opportunities ({stats.total_all_count || 0})
             </button>
             <button
               className={`seg-btn ${isPlacementView ? 'active' : ''}`}
               onClick={() => setJobTypeFilter('Full-time')}
               style={{ padding: '7px 14px', fontSize: '0.85rem', fontWeight: 600, border: 'none', borderRadius: 6, cursor: 'pointer', background: isPlacementView ? '#0A66C2' : 'transparent', color: isPlacementView ? '#FFFFFF' : 'var(--text-muted)' }}
             >
-              🎓 Placements &amp; Jobs ({stats.total_placements_count})
+              🎓 Placements ({stats.total_placements_count || 0})
             </button>
             <button
               className={`seg-btn ${isInternshipView ? 'active' : ''}`}
               onClick={() => setJobTypeFilter('Internship')}
               style={{ padding: '7px 14px', fontSize: '0.85rem', fontWeight: 600, border: 'none', borderRadius: 6, cursor: 'pointer', background: isInternshipView ? '#0A66C2' : 'transparent', color: isInternshipView ? '#FFFFFF' : 'var(--text-muted)' }}
             >
-              💼 Internships &amp; PM Scheme ({stats.total_internships_count})
+              💼 Internships ({stats.total_internships_count || 0})
+            </button>
+            <button
+              className={`seg-btn ${isSkillsView ? 'active' : ''}`}
+              onClick={() => setJobTypeFilter('Skill')}
+              style={{ padding: '7px 14px', fontSize: '0.85rem', fontWeight: 600, border: 'none', borderRadius: 6, cursor: 'pointer', background: isSkillsView ? '#0A66C2' : 'transparent', color: isSkillsView ? '#FFFFFF' : 'var(--text-muted)' }}
+            >
+              ⚡ Skills ({stats.total_skills_count || 0})
             </button>
           </div>
         </div>
@@ -382,25 +419,53 @@ export default function JobsHub({ isStudentPortal }) {
         {/* Quick Filter Tags */}
         <div className="source-chips-row flex-align-center mt-3 pt-2" style={{ borderTop: '1px solid var(--border-subtle)', gap: 8, flexWrap: 'wrap' }}>
           <span className="text-xs text-muted font-bold uppercase tracking-wider">Direct Portals:</span>
-          <button className={`source-chip ${urlJobType === 'Internship' ? 'active' : ''}`} onClick={() => setJobTypeFilter('Internship')}>
+          <button
+            type="button"
+            className={`source-chip ${urlQ.toLowerCase().includes('pm') || (urlJobType === 'Internship' && !urlQ) ? 'active' : ''}`}
+            onClick={handlePmiFilter}
+          >
             🏛️ PM Internship Scheme
           </button>
-          <button className="source-chip" onClick={() => setSourceFilter('Google')}>
+          <button
+            type="button"
+            className={`source-chip ${urlQ.toLowerCase() === 'google' ? 'active' : ''}`}
+            onClick={() => setSourceFilter('Google')}
+          >
             Google Careers
           </button>
-          <button className="source-chip" onClick={() => setSourceFilter('Microsoft')}>
+          <button
+            type="button"
+            className={`source-chip ${urlQ.toLowerCase() === 'microsoft' ? 'active' : ''}`}
+            onClick={() => setSourceFilter('Microsoft')}
+          >
             Microsoft
           </button>
-          <button className="source-chip" onClick={() => setSourceFilter('Amazon')}>
+          <button
+            type="button"
+            className={`source-chip ${urlQ.toLowerCase() === 'amazon' ? 'active' : ''}`}
+            onClick={() => setSourceFilter('Amazon')}
+          >
             Amazon
           </button>
-          <button className="source-chip" onClick={() => setSourceFilter('TCS')}>
+          <button
+            type="button"
+            className={`source-chip ${urlQ.toLowerCase() === 'tcs' ? 'active' : ''}`}
+            onClick={() => setSourceFilter('TCS')}
+          >
             TCS
           </button>
-          <button className="source-chip" onClick={() => setSourceFilter('Infosys')}>
+          <button
+            type="button"
+            className={`source-chip ${urlQ.toLowerCase() === 'infosys' ? 'active' : ''}`}
+            onClick={() => setSourceFilter('Infosys')}
+          >
             Infosys
           </button>
-          <button className="source-chip" onClick={() => setSourceFilter('AICTE')}>
+          <button
+            type="button"
+            className={`source-chip ${urlQ.toLowerCase() === 'aicte' ? 'active' : ''}`}
+            onClick={() => setSourceFilter('AICTE')}
+          >
             AICTE National Portal
           </button>
         </div>
@@ -426,7 +491,7 @@ export default function JobsHub({ isStudentPortal }) {
           <div className="linkedin-list-header flex-between" style={{ alignItems: 'center' }}>
             <div>
               <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>
-                {urlQ ? `Opportunities matching "${urlQ}"` : 'Jobs based on your preferences'}
+                {urlQ ? `Opportunities matching "${urlQ}"` : 'Jobs for our preference'}
               </h3>
               <p className="text-xs text-muted" style={{ margin: '2px 0 0' }}>
                 {stats.total_jobs} verified {stats.total_jobs === 1 ? 'opening' : 'openings'}{urlQ ? ` matching "${urlQ}"` : ''} · Direct career portal redirection
@@ -460,7 +525,7 @@ export default function JobsHub({ isStudentPortal }) {
                 return (
                   <div
                     key={job.id}
-                    onClick={() => setSelectedJob(job)}
+                    onClick={() => handleSelectJob(job)}
                     className={`linkedin-job-card ${isCurrent ? 'active' : ''}`}
                   >
                     <CompanyLogo logo={job.logo} companyName={job.company} size={48} />
@@ -468,6 +533,11 @@ export default function JobsHub({ isStudentPortal }) {
                       <div className="linkedin-card-title">
                         <span className="truncate">{job.title}</span>
                         <span className="linkedin-verified-badge" title="Verified Opportunity">✓</span>
+                        {isCurrent && (
+                          <span className="badge badge-brand" style={{ fontSize: '0.68rem', padding: '1px 6px', marginLeft: 4, fontWeight: 700 }}>
+                            Active
+                          </span>
+                        )}
                       </div>
                       <div className="linkedin-card-company truncate">{job.company}</div>
                       <div className="linkedin-card-loc truncate">
@@ -509,7 +579,7 @@ export default function JobsHub({ isStudentPortal }) {
 
           {/* Left Column Pagination */}
           {stats.total_pages > 1 && (
-            <div className="p-3 flex-between" style={{ borderTop: '1px solid var(--border-subtle)', background: 'var(--bg-surface)' }}>
+            <div className="p-3 flex-between linkedin-list-pagination" style={{ borderTop: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', flexShrink: 0 }}>
               <button
                 disabled={urlPage <= 1}
                 onClick={() => handlePageChange(urlPage - 1)}
@@ -536,7 +606,7 @@ export default function JobsHub({ isStudentPortal }) {
         </div>
 
         {/* RIGHT COLUMN: Opportunity Detail View */}
-        <div className="linkedin-job-detail-pane">
+        <div ref={detailPaneRef} className="linkedin-job-detail-pane">
           {selectedJob ? (
             <div>
               {/* Detail Header */}
@@ -794,11 +864,19 @@ export default function JobsHub({ isStudentPortal }) {
                   <div className="mt-4">
                     <div className="text-xs font-bold text-muted uppercase tracking-wider mb-2">Key Skills &amp; Competencies:</div>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      {selectedJob.tags.map((tag, idx) => (
-                        <span key={idx} className="badge badge-neutral" style={{ fontSize: '0.8rem', padding: '4px 10px' }}>
-                          {tag}
-                        </span>
-                      ))}
+                      {selectedJob.tags
+                        .filter(tag => {
+                          if (!tag) return false;
+                          const t = tag.toLowerCase().trim();
+                          const c = (selectedJob.company || '').toLowerCase();
+                          const s = (selectedJob.source || '').toLowerCase();
+                          return !c.includes(t) && !s.includes(t) && t !== 'wipro' && t !== 'tcs' && t !== 'infosys' && t !== 'persistent' && t !== 'pm scheme';
+                        })
+                        .map((tag, idx) => (
+                          <span key={idx} className="badge badge-neutral" style={{ fontSize: '0.8rem', padding: '4px 10px' }}>
+                            {tag}
+                          </span>
+                        ))}
                     </div>
                   </div>
                 )}

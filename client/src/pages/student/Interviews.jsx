@@ -57,9 +57,28 @@ export default function StudentInterviews() {
                 <span className="drive-meta-chip" style={{ fontSize: '0.75rem', background: 'var(--bg-surface-alt)', padding: '2px 8px', borderRadius: 4, border: '1px solid var(--border-subtle)' }}><Icon name="video" size={13} /> {i.interview_type}</span>
               </div>
 
+              {i.instructions && (
+                <div className="text-xs text-muted mb-3" style={{ padding: '8px 12px', background: 'rgba(0, 150, 255, 0.07)', borderRadius: 6, border: '1px solid rgba(0, 150, 255, 0.15)', marginBottom: 12 }}>
+                  <strong>📋 Instructions:</strong> {i.instructions}
+                </div>
+              )}
+
               {i.venue && (
-                <div className="text-sm text-muted pt-3" style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 12 }}>
-                  <strong>Venue / Link:</strong> <a href={i.venue.startsWith('http') ? i.venue : '#'} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-cyan-600)' }}>{i.venue}</a>
+                <div className="pt-3" style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                  <div className="text-xs text-muted" style={{ maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <strong>Venue:</strong> <span title={i.venue}>{i.venue}</span>
+                  </div>
+                  {i.venue.startsWith('http') && (
+                    <a 
+                      href={i.venue} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="btn btn-sm btn-primary"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 700, padding: '6px 14px' }}
+                    >
+                      <Icon name="video" size={14} /> Join Google Meet &rarr;
+                    </a>
+                  )}
                 </div>
               )}
             </div>

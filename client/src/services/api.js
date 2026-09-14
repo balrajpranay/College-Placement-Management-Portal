@@ -300,14 +300,15 @@ export async function getRecruiterApplicantDetailApi(id) {
   return handleResponse(res);
 }
 
-export async function updateApplicantStatusApi(id, status) {
+export async function updateApplicantStatusApi(id, statusOrData) {
+  const payload = typeof statusOrData === 'object' ? statusOrData : { status: statusOrData };
   const res = await fetch(`${API_BASE_URL}/recruiters/applicants/${id}/status`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
       ...getAuthHeader()
     },
-    body: JSON.stringify({ status })
+    body: JSON.stringify(payload)
   });
   return handleResponse(res);
 }
@@ -364,6 +365,17 @@ export async function cancelRecruiterInterviewApi(id) {
   return handleResponse(res);
 }
 
+export async function deleteRecruiterInterviewApi(id) {
+  const res = await fetch(`${API_BASE_URL}/recruiters/interviews/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeader()
+    }
+  });
+  return handleResponse(res);
+}
+
 // Recruiter Placement Results & Offers APIs (Step 7E)
 export async function getRecruiterResultsApi(params = {}) {
   const query = new URLSearchParams(params).toString();
@@ -401,6 +413,17 @@ export async function updateRecruiterResultApi(id, data) {
       ...getAuthHeader()
     },
     body: JSON.stringify(data)
+  });
+  return handleResponse(res);
+}
+
+export async function deleteRecruiterResultApi(id) {
+  const res = await fetch(`${API_BASE_URL}/recruiters/results/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeader()
+    }
   });
   return handleResponse(res);
 }

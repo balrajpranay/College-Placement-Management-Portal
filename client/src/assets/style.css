@@ -4,6 +4,11 @@
    ========================================================================== */
 
 :root {
+  color-scheme: light;
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgba(100, 116, 139, 0.3);
+  --scrollbar-thumb-hover: rgba(71, 85, 105, 0.6);
+  --scrollbar-thumb-active: #0096FF;
   /* Brand Colors (derived from Campus Connect logo) */
   --brand-navy-950: #061325;
   --brand-navy-900: #0B2545;
@@ -143,6 +148,11 @@
 
 /* Dark Mode Tokens */
 [data-theme="dark"] {
+  color-scheme: dark;
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgba(148, 163, 184, 0.28);
+  --scrollbar-thumb-hover: rgba(148, 163, 184, 0.52);
+  --scrollbar-thumb-active: #0096FF;
   --bg-app:        #060B14;
   --bg-surface:    #0B1528;
   --bg-surface-alt:#0E1B33;
@@ -2043,33 +2053,38 @@ table.data-table {
    FLOATING AI CAREER CHATBOT WIDGET
    ========================================================================= */
 .chatbot-widget {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  z-index: 1000;
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  z-index: 99999 !important;
   font-family: var(--font-body);
+  display: block !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
 }
 
 .chatbot-trigger-btn {
-  display: flex;
+  display: inline-flex !important;
   align-items: center;
-  gap: 8px;
-  background: linear-gradient(135deg, #0B2545 0%, #133E87 100%);
-  color: #FFFFFF;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: var(--radius-full);
-  padding: 12px 20px;
+  gap: 10px;
+  background: linear-gradient(135deg, #0A2540 0%, #1D4ED8 50%, #0284C7 100%) !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  border-radius: 9999px !important;
+  padding: 12px 20px !important;
   font-weight: 700;
   font-size: 0.9375rem;
-  box-shadow: 0 8px 24px rgba(11, 37, 69, 0.35);
-  cursor: pointer;
+  box-shadow: 0 10px 25px -3px rgba(14, 165, 233, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3) !important;
+  cursor: pointer !important;
   transition: transform var(--transition-bounce), box-shadow var(--transition-fast), background var(--transition-fast);
   position: relative;
+  visibility: visible !important;
+  pointer-events: auto !important;
 }
 
 .chatbot-trigger-btn:hover {
   transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 12px 30px rgba(0, 150, 255, 0.35);
+  box-shadow: 0 14px 32px rgba(14, 165, 233, 0.5) !important;
 }
 
 .chatbot-trigger-icon {
@@ -2683,42 +2698,6 @@ html, body {
   background: rgba(6, 19, 37, 0.6);
   backdrop-filter: blur(2px);
   z-index: 55;
-}
-
-/* Chatbot Floating Dialog Fixes */
-.chatbot-widget {
-  position: fixed !important;
-  bottom: 24px !important;
-  right: 24px !important;
-  z-index: 1000 !important;
-}
-
-.chatbot-modal {
-  position: fixed !important;
-  bottom: 84px !important;
-  right: 24px !important;
-  width: 390px !important;
-  max-width: calc(100vw - 32px) !important;
-  height: 530px !important;
-  max-height: calc(100vh - 120px) !important;
-  background: var(--bg-surface) !important;
-  border: 1px solid var(--border-color) !important;
-  border-radius: var(--radius-xl) !important;
-  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.35) !important;
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-  transform: translateY(20px) scale(0.95) !important;
-  transition: opacity var(--transition-fast), transform var(--transition-fast) !important;
-  z-index: 1001 !important;
-}
-
-.chatbot-modal.active {
-  opacity: 1 !important;
-  pointer-events: auto !important;
-  transform: translateY(0) scale(1) !important;
 }
 
 @media (max-width: 768px) {
@@ -4973,10 +4952,10 @@ textarea:focus {
    DEFINITIVE SINGLE-LINE NAVBAR & SPACIOUS DASHBOARD STYLES
    ========================================================================= */
 
-/* 1. Navbar Single Horizontal Line Enforcement */
+/* 1. Navbar Single Horizontal Line Enforcement - Unlocked */
 .navbar {
-  position: sticky !important;
-  top: 0 !important;
+  position: relative !important;
+  top: auto !important;
   z-index: 100 !important;
   width: 100% !important;
   height: 72px !important;
@@ -5735,19 +5714,22 @@ textarea:focus {
 
 .linkedin-jobs-layout {
   display: grid;
-  grid-template-columns: 420px minmax(0, 1fr);
+  grid-template-columns: minmax(360px, 420px) minmax(0, 1fr);
   gap: 20px;
   align-items: start;
   margin-top: 16px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 1024px) {
   .linkedin-jobs-layout {
     grid-template-columns: 1fr;
   }
 }
 
-/* Left Column: Job Cards List */
+/* Left Column: Job Cards List ("Jobs for our preference") */
 .linkedin-jobs-list-pane {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
@@ -5756,18 +5738,32 @@ textarea:focus {
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-sm);
+  height: calc(100vh - 96px);
+  max-height: calc(100vh - 96px);
+  position: sticky;
+  top: 76px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1024px) {
+  .linkedin-jobs-list-pane {
+    height: auto;
+    max-height: 540px;
+    position: static;
+  }
 }
 
 .linkedin-list-header {
   padding: 16px 20px;
   border-bottom: 1px solid var(--border-subtle);
   background: var(--bg-surface);
+  flex-shrink: 0;
 }
 
 .linkedin-cards-scroll {
   overflow-y: auto;
-  max-height: calc(100vh - 230px);
-  min-height: 480px;
+  flex: 1 1 auto;
+  min-height: 0;
   scrollbar-width: thin;
 }
 
@@ -5873,18 +5869,29 @@ textarea:focus {
   font-size: 0.75rem;
 }
 
-/* Right Column: Sticky Detail Pane */
+/* Right Column: Detail Pane (Fitted side-by-side with middle box) */
 .linkedin-job-detail-pane {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 26px;
-  position: sticky;
-  top: 16px;
-  max-height: calc(100vh - 120px);
-  overflow-y: auto;
   box-shadow: var(--shadow-sm);
   scrollbar-width: thin;
+  height: calc(100vh - 96px);
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
+  position: sticky;
+  top: 76px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1024px) {
+  .linkedin-job-detail-pane {
+    height: auto;
+    max-height: none;
+    overflow-y: visible;
+    position: static;
+  }
 }
 
 .linkedin-detail-title {
@@ -6070,9 +6077,16 @@ textarea:focus {
 
 .linkedin-eligibility-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   margin-top: 12px;
+  width: 100%;
+}
+
+@media (min-width: 1400px) {
+  .linkedin-eligibility-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 .linkedin-eligibility-card {
@@ -6080,6 +6094,8 @@ textarea:focus {
   border-radius: 8px;
   background: var(--bg-surface-alt);
   border: 1px solid var(--border-subtle);
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .linkedin-eligibility-label {
@@ -6088,13 +6104,15 @@ textarea:focus {
   font-weight: 700;
   color: var(--text-muted);
   letter-spacing: 0.05em;
-  margin-bottom: 2px;
+  margin-bottom: 3px;
 }
 
 .linkedin-eligibility-val {
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 700;
   color: var(--text-main);
+  word-break: break-word;
+  line-height: 1.35;
 }
 
 .linkedin-hiring-steps {
@@ -6532,29 +6550,120 @@ textarea:focus {
   color: inherit;
 }
 
-/* Custom Scrollbar for all modern browsers */
+/* ==========================================================================
+   ELEGANT ADAPTIVE CUSTOM SCROLLBAR (Modern Standard & WebKit)
+   Seamlessly aligns with background, eliminating default OS stark bars & arrows
+   ========================================================================== */
+
+/* Modern Standard CSS Scrollbars (Firefox, Chrome 121+, Edge 121+, Safari 18+) */
+html {
+  color-scheme: light;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+html[data-theme="dark"],
+[data-theme="dark"] {
+  color-scheme: dark;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+/* WebKit & Chromium Custom Scrollbar Architecture */
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar,
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
 }
 
+/* Permanently eliminate Windows legacy stepper arrow buttons */
+html::-webkit-scrollbar-button,
+body::-webkit-scrollbar-button,
+*::-webkit-scrollbar-button,
+::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Completely transparent track so it seamlessly takes on whatever background is underneath */
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track,
 ::-webkit-scrollbar-track {
-  background: var(--bg-app);
+  background: transparent !important;
 }
 
+html::-webkit-scrollbar-corner,
+body::-webkit-scrollbar-corner,
+*::-webkit-scrollbar-corner,
+::-webkit-scrollbar-corner {
+  background: transparent !important;
+}
+
+/* Floating pill thumb with transparent padding border for breathing room */
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb,
 ::-webkit-scrollbar-thumb {
-  background: var(--slate-300);
+  background-color: var(--scrollbar-thumb);
   border-radius: 9999px;
-  border: 2px solid var(--bg-app);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
 }
 
-[data-theme="dark"] ::-webkit-scrollbar-thumb {
-  background: var(--slate-700);
-  border: 2px solid var(--bg-app);
-}
-
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:hover,
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-cyan-500);
+  background-color: var(--scrollbar-thumb-hover);
+}
+
+html::-webkit-scrollbar-thumb:active,
+body::-webkit-scrollbar-thumb:active,
+*::-webkit-scrollbar-thumb:active,
+::-webkit-scrollbar-thumb:active {
+  background-color: var(--scrollbar-thumb-active);
+  box-shadow: 0 0 10px rgba(0, 150, 255, 0.35);
+}
+
+/* Specific Dark Mode overrides to ensure 100% selector precedence across all elements */
+html[data-theme="dark"]::-webkit-scrollbar-thumb,
+html[data-theme="dark"] body::-webkit-scrollbar-thumb,
+html[data-theme="dark"] *::-webkit-scrollbar-thumb,
+[data-theme="dark"]::-webkit-scrollbar-thumb,
+[data-theme="dark"] body::-webkit-scrollbar-thumb,
+[data-theme="dark"] *::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+html[data-theme="dark"]::-webkit-scrollbar-thumb:hover,
+html[data-theme="dark"] body::-webkit-scrollbar-thumb:hover,
+html[data-theme="dark"] *::-webkit-scrollbar-thumb:hover,
+[data-theme="dark"]::-webkit-scrollbar-thumb:hover,
+[data-theme="dark"] body::-webkit-scrollbar-thumb:hover,
+[data-theme="dark"] *::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+}
+
+html[data-theme="dark"]::-webkit-scrollbar-thumb:active,
+html[data-theme="dark"] body::-webkit-scrollbar-thumb:active,
+html[data-theme="dark"] *::-webkit-scrollbar-thumb:active,
+[data-theme="dark"]::-webkit-scrollbar-thumb:active,
+[data-theme="dark"] body::-webkit-scrollbar-thumb:active,
+[data-theme="dark"] *::-webkit-scrollbar-thumb:active {
+  background-color: var(--scrollbar-thumb-active);
+  box-shadow: 0 0 12px rgba(0, 150, 255, 0.5);
 }
 
 /* Focus Visible Rings (Craft Floor) */
@@ -7347,3 +7456,2229 @@ textarea:focus-visible {
   gap: 16px;
 }
 
+
+/* ==========================================================================
+   OVERLEAF LATEX RESUME STUDIO STYLES
+   ========================================================================== */
+
+.overleaf-studio-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 840px;
+  background: #0f172a;
+  border: 1px solid var(--border-subtle, #334155);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  margin-top: 10px;
+}
+
+.overleaf-main-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 44px;
+  min-height: 44px;
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+  padding: 0 14px;
+  gap: 12px;
+  user-select: none;
+}
+
+.overleaf-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.overleaf-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 0 12px;
+  height: 28px;
+  border-radius: 5px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid #334155;
+  white-space: nowrap;
+}
+
+.overleaf-file-icon {
+  font-size: 0.85rem;
+}
+
+.overleaf-tab-name {
+  font-family: 'Fira Code', 'Consolas', monospace;
+  letter-spacing: -0.01em;
+}
+
+.overleaf-tab-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+}
+
+.overleaf-header-meta {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.overleaf-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.overleaf-template-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+
+.overleaf-template-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.overleaf-template-select {
+  background: #0f172a;
+  color: #f8fafc;
+  border: 1px solid #475569;
+  border-radius: 5px;
+  padding: 0 10px;
+  height: 28px;
+  font-size: 0.76rem;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  white-space: nowrap;
+}
+
+.overleaf-template-select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.overleaf-mode-switch {
+  display: inline-flex;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 2px;
+  height: 28px;
+  align-items: center;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.mode-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.73rem;
+  font-weight: 600;
+  padding: 0 10px;
+  height: 22px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.mode-btn.active {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.mode-btn:hover:not(.active) {
+  color: #f8fafc;
+}
+
+/* Studio Workspace & Symmetrical Split */
+.overleaf-workspace {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: #0f172a;
+}
+
+.overleaf-workspace.dual-view .overleaf-editor-pane {
+  flex: 1;
+  min-width: 320px;
+}
+
+.overleaf-workspace.dual-view .overleaf-preview-pane {
+  flex: 1.15;
+  min-width: 380px;
+}
+
+.overleaf-workspace.visual-only .overleaf-preview-pane {
+  flex: 1;
+  width: 100%;
+}
+
+/* Left Pane: Editor & Toolbar */
+.overleaf-editor-pane {
+  display: flex;
+  flex-direction: column;
+  background: #090d16;
+  border-right: 1px solid #1e293b;
+  position: relative;
+  overflow: hidden;
+}
+
+.overleaf-editor-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 40px;
+  min-height: 40px;
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+  padding: 0 12px;
+  gap: 10px;
+  user-select: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.overleaf-editor-toolbar::-webkit-scrollbar {
+  display: none;
+}
+
+.editor-toolbar-left,
+.editor-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.editor-toolbar-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  white-space: nowrap;
+  user-select: none;
+  margin-right: 2px;
+}
+
+.overleaf-macro-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.macro-btn {
+  background: #0f172a;
+  border: 1px solid #334155;
+  color: #cbd5e1;
+  border-radius: 4px;
+  padding: 0 8px;
+  height: 26px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap !important;
+  flex-shrink: 0;
+}
+
+.macro-btn:hover {
+  background: #334155;
+  border-color: #64748b;
+  color: #fff;
+}
+
+.macro-btn:active {
+  transform: translateY(1px);
+}
+
+.editor-line-indicator {
+  font-size: 0.72rem;
+  font-family: 'Fira Code', 'Consolas', monospace;
+  color: #64748b;
+  white-space: nowrap;
+  user-select: none;
+  margin-right: 4px;
+}
+
+.overleaf-editor-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.overleaf-editor-gutter {
+  width: 44px;
+  background: #06090f;
+  border-right: 1px solid #1e293b;
+  padding: 12px 0;
+  user-select: none;
+  text-align: right;
+  overflow: hidden;
+}
+
+.gutter-line-num {
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 11.5px;
+  line-height: 20px;
+  color: #475569;
+  padding-right: 10px;
+}
+
+.overleaf-textarea {
+  flex: 1;
+  background: transparent;
+  color: #f1f5f9;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: 'Fira Code', 'Consolas', 'Courier New', monospace;
+  font-size: 12.5px;
+  line-height: 20px;
+  padding: 12px 14px;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+  overflow-y: auto;
+  tab-size: 2;
+  caret-color: #10b981;
+}
+
+.overleaf-textarea::selection {
+  background: rgba(37, 99, 235, 0.45);
+}
+
+/* Right Pane: PDF Preview & Toolbar */
+.overleaf-preview-pane {
+  display: flex;
+  flex-direction: column;
+  background: #334155;
+  overflow: hidden;
+}
+
+.overleaf-preview-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 40px;
+  min-height: 40px;
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+  padding: 0 12px;
+  gap: 10px;
+  user-select: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.overleaf-preview-toolbar::-webkit-scrollbar {
+  display: none;
+}
+
+.preview-toolbar-left,
+.preview-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.overleaf-recompile-btn {
+  background: #15803d;
+  color: #ffffff;
+  border: 1px solid #166534;
+  border-radius: 5px;
+  padding: 0 12px;
+  height: 28px;
+  font-weight: 700;
+  font-size: 0.78rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  white-space: nowrap !important;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: background 0.15s, transform 0.1s;
+}
+
+.overleaf-recompile-btn:hover {
+  background: #16a34a;
+}
+
+.overleaf-recompile-btn:active {
+  transform: scale(0.98);
+}
+
+.overleaf-recompile-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.btn-toolbar-icon {
+  background: #0f172a;
+  border: 1px solid #334155;
+  color: #cbd5e1;
+  padding: 0 10px;
+  height: 28px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap !important;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.btn-toolbar-icon:hover {
+  background: #334155;
+  color: #fff;
+  border-color: #475569;
+}
+
+.compile-status-tag {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap !important;
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+
+.status-compiled {
+  color: #10b981;
+  font-size: 0.74rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap !important;
+}
+
+.status-ready {
+  color: #94a3b8;
+  font-size: 0.74rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap !important;
+}
+
+.overleaf-zoom-group {
+  display: inline-flex;
+  align-items: center;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 5px;
+  height: 28px;
+  padding: 1px;
+  white-space: nowrap !important;
+  flex-shrink: 0;
+}
+
+.zoom-btn {
+  background: transparent;
+  border: none;
+  color: #cbd5e1;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: bold;
+  border-radius: 3px;
+  padding: 0;
+  line-height: 1;
+}
+
+.zoom-btn:hover {
+  background: #334155;
+  color: #fff;
+}
+
+.zoom-value {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #94a3b8;
+  min-width: 36px;
+  text-align: center;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.zoom-btn-fit {
+  background: #334155;
+  border: none;
+  color: #f8fafc;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0 8px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  cursor: pointer;
+  margin-left: 2px;
+  margin-right: 1px;
+  white-space: nowrap;
+}
+
+.zoom-btn-fit:hover {
+  background: #475569;
+}
+
+.overleaf-page-indicator {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+  background: #0f172a;
+  border: 1px solid #334155;
+  padding: 0 8px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  border-radius: 5px;
+  user-select: none;
+  white-space: nowrap !important;
+  flex-shrink: 0;
+}
+
+.overleaf-download-btn {
+  background: #2563eb;
+  color: #ffffff;
+  border: 1px solid #1d4ed8;
+  border-radius: 5px;
+  padding: 0 12px;
+  height: 28px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  white-space: nowrap !important;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: background 0.15s, transform 0.1s;
+}
+
+.overleaf-download-btn:hover {
+  background: #1d4ed8;
+}
+
+.overleaf-download-btn:active {
+  transform: scale(0.98);
+}
+
+.overleaf-logs-drawer {
+  background: #090d16;
+  color: #94a3b8;
+  border-bottom: 1px solid #1e293b;
+  padding: 10px 14px;
+  font-family: monospace;
+  font-size: 0.75rem;
+}
+
+.overleaf-logs-content {
+  margin: 0;
+  color: #cbd5e1;
+  line-height: 1.5;
+  font-family: 'Fira Code', 'Consolas', monospace;
+}
+
+.overleaf-paper-viewport {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: auto;
+  padding: 24px 16px 48px;
+  background: #334155;
+  display: block;
+  text-align: center;
+  user-select: none;
+}
+
+.overleaf-zoom-outer {
+  display: inline-block;
+  margin: 0 auto;
+  text-align: left;
+  vertical-align: top;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+  transition: width 0.15s ease-out, height 0.15s ease-out;
+}
+
+.overleaf-zoom-inner {
+  transition: transform 0.15s ease-out;
+}
+
+.latex-a4-paper {
+  width: 760px;
+  min-height: 1075px;
+  background: #ffffff;
+  color: #111827;
+  padding: 44px 50px;
+  box-sizing: border-box;
+  font-family: 'Latin Modern Roman', 'Computer Modern', Georgia, 'Times New Roman', serif;
+  font-size: 13.5px;
+  line-height: 1.45;
+  user-select: text;
+}
+
+.latex-center-block {
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+.latex-doc-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 5px;
+  color: #000000;
+  letter-spacing: -0.015em;
+  font-family: inherit;
+}
+
+.latex-contact-line {
+  font-size: 12px;
+  color: #27272a;
+  margin-bottom: 3px;
+  line-height: 1.4;
+}
+
+.latex-links-line {
+  font-size: 12px;
+  color: #1d4ed8;
+}
+
+.latex-section-block {
+  margin-top: 14px;
+  margin-bottom: 6px;
+}
+
+.latex-section-heading {
+  font-size: 13.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #000000;
+  margin: 0 0 2px;
+}
+
+.latex-section-rule {
+  height: 1px;
+  background: #000000;
+  margin-bottom: 8px;
+}
+
+.latex-line-row {
+  font-size: 13px;
+  line-height: 1.45;
+  margin-bottom: 4px;
+  position: relative;
+  clear: both;
+}
+
+.latex-flex-row {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: baseline !important;
+  width: 100% !important;
+}
+
+.latex-left {
+  flex: 1 1 auto;
+  text-align: left;
+}
+
+.latex-right {
+  flex-shrink: 0;
+  text-align: right;
+  font-weight: 600;
+  color: #1f2937;
+  margin-left: 16px;
+}
+
+.latex-item-list {
+  margin: 4px 0 8px 24px !important;
+  padding-left: 0 !important;
+  list-style-type: disc !important;
+}
+
+.latex-item {
+  font-size: 12.5px;
+  line-height: 1.45;
+  margin-bottom: 3px;
+  color: #1f2937;
+  display: list-item !important;
+  list-style-type: disc !important;
+}
+
+.latex-link {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.latex-a4-paper strong {
+  font-weight: 700;
+  color: #000000;
+}
+
+.latex-a4-paper em {
+  font-style: italic;
+}
+
+.latex-a4-paper code {
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 12px;
+  background: #f1f5f9;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.overleaf-studio-footer {
+  height: 34px;
+  background: #0b0f19;
+  border-top: 1px solid #1e293b;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 14px;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  user-select: none;
+}
+
+.spin-icon {
+  display: inline-block;
+  animation: spin 1s infinite linear;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 900px) {
+  .overleaf-workspace.dual-view {
+    flex-direction: column;
+  }
+  .overleaf-studio-wrapper {
+    height: 1100px;
+  }
+}
+
+/* Direct Portals Quick Filter Chips */
+.source-chips-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.source-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--bg-surface-alt, #F1F5F9);
+  color: var(--text-muted, #475569);
+  border: 1px solid var(--border-subtle, #E2E8F0);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+
+.source-chip:hover {
+  background: var(--bg-hover, #E2E8F0);
+  color: var(--text-main, #0F172A);
+  border-color: var(--border-strong, #CBD5E1);
+  transform: translateY(-1px);
+}
+
+.source-chip.active {
+  background: #0A66C2 !important;
+  color: #FFFFFF !important;
+  border-color: #0A66C2 !important;
+  box-shadow: 0 2px 8px rgba(10, 102, 194, 0.35);
+}
+
+[data-theme="dark"] .source-chip {
+  background: rgba(255, 255, 255, 0.05);
+  color: #94A3B8;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .source-chip:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #F8FAFC;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="dark"] .source-chip.active {
+  background: #0096FF !important;
+  color: #FFFFFF !important;
+  border-color: #0096FF !important;
+  box-shadow: 0 0 12px rgba(0, 150, 255, 0.4);
+}
+
+
+
+/* ==========================================================================
+   RESUME.COM INTERACTIVE VISUAL BUILDER STYLES (MATCHES USER SPEC EXACTLY)
+   ========================================================================== */
+
+.resume-com-studio-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background: var(--bg-surface-alt, #0f172a);
+  border: 1px solid var(--border-subtle, #334155);
+  border-radius: 12px;
+  overflow: visible;
+  margin-top: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* Resume.com Visual Studio Topbar & Layout Alignment */
+.resume-com-studio-container {
+  background: var(--bg-surface, #1e293b);
+  border: 1px solid var(--border-subtle, #334155);
+  border-radius: 12px;
+  overflow: visible;
+  margin-top: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.resume-com-topbar {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-surface, #1e293b);
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  border-bottom: 1px solid var(--border-subtle, #334155);
+  padding: 0;
+}
+
+.resume-com-topbar-row-1 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 18px;
+  gap: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-wrap: wrap;
+}
+
+.resume-com-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.resume-com-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.resume-com-header-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--border-subtle, #334155);
+  display: inline-block;
+}
+
+.resume-com-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  background: rgba(0, 150, 255, 0.12);
+  color: #0096ff;
+  border: 1px solid rgba(0, 150, 255, 0.25);
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.resume-com-sublabel {
+  font-size: 0.8125rem;
+  color: var(--text-muted, #94a3b8);
+  white-space: nowrap;
+}
+
+.resume-com-topbar-row-2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 18px;
+  background: var(--bg-surface-alt, #0f172a);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.resume-com-actions-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.resume-com-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Unified Button System for Resume Studio */
+.resume-com-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 13px;
+  border-radius: 7px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  box-sizing: border-box;
+  text-decoration: none;
+  line-height: 1;
+}
+
+.resume-com-btn-secondary {
+  background: var(--bg-surface, #1e293b);
+  border: 1px solid var(--border-subtle, #334155);
+  color: var(--text-main, #f8fafc);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.resume-com-btn-secondary:hover {
+  background: var(--bg-surface-elevated, #2a374a);
+  border-color: var(--brand-500, #0096ff);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.resume-com-btn-subtle {
+  background: transparent;
+  border: 1px solid var(--border-subtle, #334155);
+  color: var(--text-muted, #94a3b8);
+}
+
+.resume-com-btn-subtle:hover {
+  background: var(--bg-surface, #1e293b);
+  border-color: var(--border-strong, #64748b);
+  color: var(--text-main, #f8fafc);
+  transform: translateY(-1px);
+}
+
+.resume-com-btn-primary {
+  background: #2563eb;
+  border: 1px solid #2563eb;
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+}
+
+.resume-com-btn-primary:hover:not(:disabled) {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.45);
+}
+
+.resume-com-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.resume-com-dropdown-wrap {
+  position: relative;
+}
+
+.resume-com-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 100;
+  min-width: 220px;
+  background: var(--bg-surface, #1e293b);
+  border: 1px solid var(--border-subtle, #334155);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  padding: 6px 0;
+}
+
+.resume-com-dropdown-header {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted, #94a3b8);
+  padding: 6px 14px;
+  letter-spacing: 0.06em;
+}
+
+.resume-com-dropdown-item {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--text-main, #f8fafc);
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.15s ease;
+}
+
+.resume-com-dropdown-item:hover {
+  background: var(--bg-surface-alt, #334155);
+  color: var(--brand-500, #0096ff);
+}
+
+.resume-com-toast {
+  background: #059669;
+  color: #ffffff;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px 18px 0;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+}
+
+.resume-com-undo-btn {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  border: none;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.resume-com-undo-btn:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+
+
+/* Canvas Area holding the A4 paper */
+.resume-com-canvas-stage {
+  display: flex;
+  justify-content: center;
+  padding: 36px 20px 48px;
+  background: var(--bg-surface-alt, #0b1324);
+  overflow-x: auto;
+  min-height: 850px;
+}
+
+/* Authentic A4 Paper Sheet */
+.resume-com-paper-sheet {
+  --resume-padding: 42px 48px;
+  --resume-section-margin: 10px;
+  --resume-name-size: 25px;
+  --resume-contact-size: 13.5px;
+  --resume-section-title-size: 15px;
+  --resume-body-size: 13.5px;
+  --resume-line-height: 1.45;
+  --resume-header-margin-bottom: 14px;
+  --resume-entry-margin-bottom: 2px;
+  --resume-bullet-margin-bottom: 2px;
+  --resume-primary-color: #111827;
+  --resume-accent-color: #2563eb;
+  --resume-rule-color: #111827;
+  --resume-rule-height: 1.5px;
+  --resume-section-rule-height: 1px;
+  --resume-section-rule-color: #1f2937;
+  --resume-header-align: left;
+
+  background: #ffffff !important;
+  color: var(--resume-primary-color) !important;
+  width: 100%;
+  max-width: 780px;
+  min-height: 1060px;
+  padding: var(--resume-padding);
+  border-radius: 3px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15), 0 1px 4px rgba(0, 0, 0, 0.08);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  line-height: var(--resume-line-height);
+  box-sizing: border-box;
+  position: relative;
+  transition: padding 0.15s ease;
+}
+
+/* ==========================================================================
+   RESUME DENSITY / SCALE OVERRIDES (Compact / Standard / Spacious)
+   ========================================================================== */
+.resume-com-paper-sheet.scale-compact {
+  --resume-padding: 24px 34px !important;
+  --resume-section-margin: 5px !important;
+  --resume-name-size: 20px !important;
+  --resume-contact-size: 11.5px !important;
+  --resume-section-title-size: 13px !important;
+  --resume-body-size: 11.5px !important;
+  --resume-line-height: 1.25 !important;
+  --resume-header-margin-bottom: 8px !important;
+  --resume-entry-margin-bottom: 1px !important;
+  --resume-bullet-margin-bottom: 1px !important;
+}
+
+.resume-com-paper-sheet.scale-standard {
+  --resume-padding: 42px 48px !important;
+  --resume-section-margin: 10px !important;
+  --resume-name-size: 25px !important;
+  --resume-contact-size: 13.5px !important;
+  --resume-section-title-size: 15px !important;
+  --resume-body-size: 13.5px !important;
+  --resume-line-height: 1.45 !important;
+  --resume-header-margin-bottom: 14px !important;
+  --resume-entry-margin-bottom: 2px !important;
+  --resume-bullet-margin-bottom: 2px !important;
+}
+
+.resume-com-paper-sheet.scale-spacious {
+  --resume-padding: 56px 58px !important;
+  --resume-section-margin: 18px !important;
+  --resume-name-size: 29px !important;
+  --resume-contact-size: 15px !important;
+  --resume-section-title-size: 17.5px !important;
+  --resume-body-size: 15px !important;
+  --resume-line-height: 1.65 !important;
+  --resume-header-margin-bottom: 22px !important;
+  --resume-entry-margin-bottom: 4px !important;
+  --resume-bullet-margin-bottom: 4px !important;
+}
+
+/* ==========================================================================
+   RESUME CUSTOM TEMPLATES
+   ========================================================================== */
+/* Template 1: Modern Clean (Default) */
+.resume-com-paper-sheet.template-modern {
+  --resume-primary-color: #0f172a;
+  --resume-accent-color: #2563eb;
+  --resume-rule-color: #2563eb;
+  --resume-rule-height: 2px;
+  --resume-section-rule-color: #e2e8f0;
+  --resume-section-rule-height: 1px;
+}
+.resume-com-paper-sheet.template-modern .resume-com-name {
+  color: #0f172a !important;
+}
+.resume-com-paper-sheet.template-modern .resume-com-section-title {
+  color: #1d4ed8 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: calc(var(--resume-section-title-size) * 0.95);
+}
+.resume-com-paper-sheet.template-modern .resume-com-header-rule {
+  background: linear-gradient(90deg, #2563eb 0%, #38bdf8 100%) !important;
+}
+.resume-com-paper-sheet.template-modern .resume-com-bullet-dot {
+  color: #2563eb !important;
+}
+
+/* Template 2: Classic Ivy League (Formal centered academic/corporate) */
+.resume-com-paper-sheet.template-classic {
+  --resume-primary-color: #111827;
+  --resume-accent-color: #1f2937;
+  --resume-rule-color: #111827;
+  --resume-rule-height: 1.5px;
+  --resume-section-rule-color: #374151;
+  --resume-header-align: center;
+}
+.resume-com-paper-sheet.template-classic .resume-com-header-display {
+  text-align: center;
+}
+.resume-com-paper-sheet.template-classic .resume-com-contact-line {
+  justify-content: center;
+}
+.resume-com-paper-sheet.template-classic .resume-com-name {
+  font-family: Georgia, 'Times New Roman', serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.resume-com-paper-sheet.template-classic .resume-com-section-title {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: Georgia, 'Times New Roman', serif;
+  border-bottom: 1.5px solid #111827;
+  padding-bottom: 2px;
+}
+.resume-com-paper-sheet.template-classic .resume-com-section-rule {
+  display: none;
+}
+
+/* Template 3: Executive Navy (Refined prestige corporate hierarchy) */
+.resume-com-paper-sheet.template-executive {
+  --resume-primary-color: #0f172a;
+  --resume-accent-color: #1e3a8a;
+  --resume-rule-color: #1e3a8a;
+  --resume-rule-height: 3px;
+  --resume-section-rule-color: #cbd5e1;
+}
+.resume-com-paper-sheet.template-executive .resume-com-name {
+  color: #1e3a8a !important;
+  font-weight: 800;
+}
+.resume-com-paper-sheet.template-executive .resume-com-section-title {
+  color: #1e3a8a !important;
+  background: #f1f5f9;
+  padding: 3px 8px;
+  border-left: 3px solid #1e3a8a;
+  border-radius: 2px;
+  display: inline-block;
+}
+.resume-com-paper-sheet.template-executive .resume-com-section-rule {
+  margin-top: 1px;
+  background: #cbd5e1 !important;
+}
+
+/* Template 4: Minimalist Tech (Monospace accents, ultra clean ATS parsing) */
+.resume-com-paper-sheet.template-minimalist {
+  --resume-primary-color: #18181b;
+  --resume-accent-color: #059669;
+  --resume-rule-color: #e4e4e7;
+  --resume-rule-height: 1px;
+  --resume-section-rule-color: #f4f4f5;
+}
+.resume-com-paper-sheet.template-minimalist .resume-com-name {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.resume-com-paper-sheet.template-minimalist .resume-com-section-title {
+  color: #27272a !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: calc(var(--resume-section-title-size) * 0.9);
+  letter-spacing: 0.05em;
+}
+.resume-com-paper-sheet.template-minimalist .resume-com-section-title::before {
+  content: '// ';
+  color: #059669;
+  font-weight: 600;
+}
+.resume-com-paper-sheet.template-minimalist .resume-com-bullet-dot {
+  color: #71717a !important;
+}
+
+/* Template 5: Nordic Emerald (Creative dark forest aesthetic) */
+.resume-com-paper-sheet.template-emerald {
+  --resume-primary-color: #064e3b;
+  --resume-accent-color: #047857;
+  --resume-rule-color: #059669;
+  --resume-rule-height: 2px;
+  --resume-section-rule-color: #d1fae5;
+}
+.resume-com-paper-sheet.template-emerald .resume-com-name {
+  color: #064e3b !important;
+}
+.resume-com-paper-sheet.template-emerald .resume-com-section-title {
+  color: #065f46 !important;
+  font-weight: 700;
+}
+.resume-com-paper-sheet.template-emerald .resume-com-header-rule {
+  background: #059669 !important;
+}
+.resume-com-paper-sheet.template-emerald .resume-com-bullet-dot {
+  color: #059669 !important;
+}
+
+/* Header Area */
+.resume-com-header-display {
+  text-align: var(--resume-header-align, left);
+  position: relative;
+}
+
+.resume-com-name {
+  font-size: var(--resume-name-size);
+  font-weight: 700;
+  color: var(--resume-primary-color, #111827) !important;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+
+.resume-com-contact-line {
+  font-size: var(--resume-contact-size);
+  color: #374151 !important;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.contact-separator {
+  color: #9ca3af;
+  font-weight: 400;
+  padding: 0 2px;
+}
+
+.resume-com-header-rule {
+  width: 100%;
+  height: var(--resume-rule-height, 1.5px);
+  background: var(--resume-rule-color, #111827) !important;
+  margin: 6px 0 var(--resume-header-margin-bottom, 14px) 0;
+}
+
+/* ==========================================================================
+   RESUME HEADER LAYOUTS & ALIGNMENT STYLES
+   ========================================================================== */
+.resume-com-headline {
+  font-size: calc(var(--resume-contact-size) * 1.02);
+  font-weight: 600;
+  color: #4b5563 !important;
+  margin: -2px 0 6px 0;
+  letter-spacing: -0.01em;
+}
+
+/* 1. Classic Left */
+.resume-header-layout-left {
+  text-align: left;
+}
+
+/* 2. Executive Center */
+.resume-header-layout-center {
+  text-align: center;
+}
+.resume-header-layout-center .resume-com-name {
+  text-align: center;
+}
+.resume-header-layout-center .resume-com-headline {
+  text-align: center;
+}
+.resume-header-layout-center .resume-com-contact-line {
+  justify-content: center;
+}
+
+/* 3. Modern Split Justified */
+.resume-header-layout-split .resume-header-split-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 6px;
+}
+.resume-header-layout-split .resume-header-split-left {
+  flex: 1;
+}
+.resume-header-layout-split .resume-header-split-left .resume-com-name {
+  margin: 0;
+}
+.resume-header-layout-split .resume-header-split-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  font-size: calc(var(--resume-contact-size) * 0.95);
+  color: #4b5563 !important;
+  flex-shrink: 0;
+}
+.resume-header-split-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+/* 4. Modern Right */
+.resume-header-layout-right {
+  text-align: right;
+}
+.resume-header-layout-right .resume-com-name {
+  text-align: right;
+}
+.resume-header-layout-right .resume-com-headline {
+  text-align: right;
+}
+.resume-header-layout-right .resume-com-contact-line {
+  justify-content: flex-end;
+}
+
+/* 5. Icon Badges */
+.resume-header-layout-badge .resume-header-badges-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 8px 0;
+}
+.resume-com-contact-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #f1f5f9;
+  color: #1e293b !important;
+  border: 1px solid #cbd5e1;
+  padding: 3px 9px;
+  border-radius: 9999px;
+  font-size: calc(var(--resume-contact-size) * 0.92);
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+/* 6. Compact Bar */
+.resume-header-layout-compact .resume-header-compact-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.resume-header-compact-loc {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--resume-contact-size);
+  font-weight: 600;
+  color: #4b5563 !important;
+}
+.resume-header-compact-bottom {
+  margin-top: 3px;
+  margin-bottom: 6px;
+}
+
+/* Header Layout & Separator Selector Pills in Inline Form */
+.resume-header-layout-pills {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.resume-header-pill-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-surface, #1e293b);
+  border: 1px solid var(--border-color, #334155);
+  color: var(--text-secondary, #94a3b8);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  justify-content: center;
+}
+.resume-header-pill-btn:hover {
+  background: var(--bg-surface-hover, #334155);
+  color: var(--text-primary, #f8fafc);
+  border-color: #64748b;
+}
+.resume-header-pill-btn.is-active {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  border-color: #3b82f6 !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+}
+
+.resume-separator-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.resume-sep-pill-btn {
+  background: var(--bg-surface, #1e293b);
+  border: 1px solid var(--border-color, #334155);
+  color: var(--text-secondary, #94a3b8);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.resume-sep-pill-btn:hover {
+  background: var(--bg-surface-hover, #334155);
+  color: var(--text-primary, #f8fafc);
+}
+.resume-sep-pill-btn.is-active {
+  background: #0ea5e9 !important;
+  color: #ffffff !important;
+  border-color: #38bdf8 !important;
+}
+
+@media print {
+  .resume-com-contact-chip {
+    background: transparent !important;
+    border: 1px solid #94a3b8 !important;
+    color: #111827 !important;
+  }
+}
+
+/* Sections */
+.resume-com-sections-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.resume-com-section-wrapper {
+  position: relative;
+  margin-bottom: var(--resume-section-margin, 10px);
+  padding: 4px 10px;
+  margin-left: -10px;
+  margin-right: -10px;
+  border-radius: 4px;
+  transition: border-color 0.15s ease, background-color 0.15s ease, margin 0.15s ease;
+  border: 1px dashed transparent;
+  cursor: pointer;
+}
+
+/* The dotted/dashed box shown in screenshot on hover/active */
+.resume-com-section-wrapper:hover,
+.resume-com-section-wrapper.is-hovered,
+.resume-com-section-wrapper.is-selected,
+.resume-com-header-wrapper:hover,
+.resume-com-header-wrapper.is-hovered,
+.resume-com-header-wrapper.is-selected {
+  border: 1px dashed #3b82f6 !important;
+  background: rgba(59, 130, 246, 0.02) !important;
+}
+
+.resume-com-section-wrapper.is-editing {
+  border: 1px solid #3b82f6 !important;
+  background: #f8fafc !important;
+  padding: 10px 12px;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
+  cursor: default;
+}
+
+.resume-com-section-title {
+  font-size: var(--resume-section-title-size);
+  font-weight: 700;
+  color: var(--resume-primary-color, #111827) !important;
+  margin: 0 0 2px 0;
+  letter-spacing: -0.01em;
+}
+
+.resume-com-section-rule {
+  width: 100%;
+  height: var(--resume-section-rule-height, 1px);
+  background: var(--resume-section-rule-color, #1f2937) !important;
+  margin: 3px 0 7px 0;
+}
+
+.resume-com-placeholder {
+  font-size: var(--resume-body-size);
+  color: #4b5563 !important;
+  font-style: normal;
+  padding: 1px 0;
+}
+
+.resume-com-content-body {
+  font-size: var(--resume-body-size);
+  color: #1f2937 !important;
+  line-height: var(--resume-line-height, 1.45);
+}
+
+.resume-com-entry-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-weight: 600;
+  color: #111827 !important;
+  margin-bottom: var(--resume-entry-margin-bottom, 2px);
+}
+
+.resume-com-entry-left {
+  font-weight: 700;
+  color: #111827 !important;
+}
+
+.resume-com-entry-right {
+  font-weight: 500;
+  color: #4b5563 !important;
+}
+
+.resume-com-bullet-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: var(--resume-bullet-margin-bottom, 2px);
+  color: #374151 !important;
+}
+
+.resume-com-bullet-dot {
+  color: #111827;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.resume-com-bullet-text {
+  flex: 1;
+}
+
+.resume-com-text-line {
+  margin-bottom: var(--resume-bullet-margin-bottom, 2px);
+  color: #374151 !important;
+}
+
+/* Floating Action Controls (matches media_1789392104420.png) */
+.resume-com-floating-actions {
+  position: absolute;
+  right: -6px;
+  top: 4px;
+  transform: translateX(100%);
+  display: none;
+  align-items: flex-start;
+  gap: 6px;
+  z-index: 100;
+  padding-left: 8px;
+  padding-right: 8px;
+  padding-top: 2px;
+  padding-bottom: 8px;
+  pointer-events: auto;
+}
+
+/* Invisible Hit-Bridge: covers the border transition area so cursor never drops hover */
+.resume-com-floating-actions::before {
+  content: '';
+  position: absolute;
+  top: -12px;
+  bottom: -12px;
+  left: -40px;
+  right: -20px;
+  background: transparent;
+  z-index: -1;
+  pointer-events: auto;
+}
+
+.resume-com-section-wrapper:hover .resume-com-floating-actions,
+.resume-com-section-wrapper:focus-within .resume-com-floating-actions,
+.resume-com-section-wrapper.is-hovered .resume-com-floating-actions,
+.resume-com-section-wrapper.is-selected .resume-com-floating-actions,
+.resume-com-header-wrapper:hover .resume-com-floating-actions,
+.resume-com-header-wrapper:focus-within .resume-com-floating-actions,
+.resume-com-header-wrapper.is-hovered .resume-com-floating-actions,
+.resume-com-header-wrapper.is-selected .resume-com-floating-actions,
+.resume-com-floating-actions:hover {
+  display: flex !important;
+  pointer-events: auto !important;
+}
+
+.resume-com-edit-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #1e293b !important;
+  color: #ffffff !important;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  transition: background 0.15s ease, transform 0.1s ease;
+  white-space: nowrap;
+}
+
+.resume-com-edit-pill-btn:hover {
+  background: #0f172a !important;
+  transform: translateY(-1px);
+}
+
+.resume-com-vertical-actions-strip {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.resume-com-action-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #e2e8f0;
+  color: #334155 !important;
+  width: 28px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.resume-com-action-btn:last-child {
+  border-bottom: none;
+}
+
+.resume-com-action-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a !important;
+}
+
+.resume-com-action-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.resume-com-action-btn.resume-com-btn-delete:hover:not(:disabled) {
+  background: #fee2e2;
+  color: #dc2626 !important;
+}
+
+/* In-place Rich Editor */
+.resume-com-inline-editor {
+  padding: 4px 0;
+}
+
+.resume-com-editor-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.resume-com-title-input {
+  font-size: 14px;
+  font-weight: 700;
+  padding: 5px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  color: #0f172a;
+  background: #ffffff;
+  width: 240px;
+}
+
+.resume-com-editor-helpers {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.resume-com-chip-helper {
+  font-size: 11px;
+  background: #e2e8f0;
+  color: #334155;
+  border: none;
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.resume-com-chip-helper:hover {
+  background: #cbd5e1;
+  color: #0f172a;
+}
+
+.resume-com-textarea {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 13.5px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.45;
+  border: 1px solid #94a3b8;
+  border-radius: 5px;
+  color: #0f172a;
+  background: #ffffff;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.resume-com-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.resume-com-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+/* Clean A4 Print Styles (Zero Clutter on window.print()) */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #111827 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  #resume-printable-sheet,
+  #resume-printable-sheet * {
+    visibility: visible;
+  }
+
+  #resume-printable-sheet {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .resume-com-section-wrapper {
+    border: none !important;
+    background: transparent !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding: 0 !important;
+  }
+
+  .resume-com-floating-actions {
+    display: none !important;
+  }
+}
+
+
+/* ==========================================================================
+   IMPECCABLE AESTHETIC RESUME TYPOGRAPHY & CONTROLS
+   ========================================================================== */
+
+/* Font Switcher Button */
+.resume-com-font-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  background: var(--bg-surface-alt, #0f172a);
+  border: 1px solid var(--border-subtle, #334155);
+  color: var(--text-main, #f8fafc);
+  border-radius: 7px;
+  padding: 0 12px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.resume-com-font-btn:hover {
+  border-color: var(--brand-500, #0096ff);
+  background: var(--bg-surface-elevated, #1e293b);
+  box-shadow: 0 0 0 2px rgba(0, 150, 255, 0.15);
+}
+
+/* Font Dropdown Menu */
+.resume-com-font-dropdown {
+  width: 320px;
+  max-width: 90vw;
+  padding: 6px 0;
+  border-radius: 10px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--border-subtle, #334155);
+  background: var(--bg-surface, #1e293b);
+}
+
+.resume-com-font-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background 0.15s ease;
+}
+
+.resume-com-font-item:last-child {
+  border-bottom: none;
+}
+
+.resume-com-font-item:hover {
+  background: var(--bg-surface-alt, #334155);
+}
+
+.resume-com-font-item.is-active {
+  background: rgba(0, 150, 255, 0.08);
+  border-left: 3px solid #0096ff;
+}
+
+.resume-com-font-item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.resume-com-font-item-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-main, #f8fafc);
+}
+
+.resume-com-font-item-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(0, 150, 255, 0.12);
+  color: #0096ff;
+  letter-spacing: 0.02em;
+}
+
+.resume-com-font-item-desc {
+  font-size: 0.76rem;
+  color: var(--text-muted, #94a3b8);
+  line-height: 1.35;
+}
+
+/* Density / Scale Pill Selector */
+.resume-com-density-group {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  background: var(--bg-surface-alt, #0f172a);
+  border: 1px solid var(--border-subtle, #334155);
+  border-radius: 7px;
+  padding: 2px;
+  gap: 2px;
+  box-sizing: border-box;
+}
+
+.resume-com-density-btn {
+  background: transparent;
+  border: none;
+  height: 100%;
+  padding: 0 9px;
+  border-radius: 5px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.resume-com-density-btn:hover:not(.is-active) {
+  color: var(--text-main, #f8fafc);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.resume-com-density-btn.is-active {
+  background: var(--brand-500, #0096ff);
+  color: #ffffff !important;
+  box-shadow: 0 1px 4px rgba(0, 150, 255, 0.4);
+}
+
+/* Specific Font Classes */
+.font-plus-jakarta {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+.font-inter {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+.font-outfit {
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+.font-dm-sans {
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+.font-lora {
+  font-family: 'Lora', Georgia, 'Times New Roman', serif !important;
+}
+
+.font-times-new-roman {
+  font-family: 'Times New Roman', Times, 'Tinos', Georgia, serif !important;
+}
+
+/* Typography Enhancements on Paper Sheet */
+.resume-com-paper-sheet {
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.resume-com-paper-sheet .resume-com-name {
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: #090d16 !important;
+}
+
+.resume-com-paper-sheet.font-lora .resume-com-name {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.resume-com-paper-sheet.font-times-new-roman .resume-com-name {
+  font-weight: 700;
+  letter-spacing: 0.005em;
+}
+
+.resume-com-paper-sheet.font-outfit .resume-com-name {
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+.resume-com-paper-sheet.font-dm-sans .resume-com-name {
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+.resume-com-paper-sheet .resume-com-section-title {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #090d16 !important;
+}
+
+.resume-com-paper-sheet.font-lora .resume-com-section-title {
+  letter-spacing: 0.01em;
+}
+
+.resume-com-paper-sheet.font-times-new-roman .resume-com-section-title {
+  letter-spacing: 0.015em;
+  font-weight: 700;
+}
+
+.resume-com-paper-sheet .resume-com-entry-left {
+  font-weight: 700;
+  color: #090d16 !important;
+  letter-spacing: -0.01em;
+}
+
+.resume-com-paper-sheet .resume-com-entry-right {
+  font-weight: 500;
+  color: #4b5563 !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.resume-com-paper-sheet .resume-com-bullet-line {
+  line-height: 1.5;
+  color: #1f2937 !important;
+}
+
+.resume-com-paper-sheet .resume-com-bullet-dot {
+  color: #0096ff;
+  font-size: 14px;
+}
+
+/* Floating AI Tutor & Advisor Mode Switcher */
+.chatbot-mode-tabs {
+  display: flex;
+  background: var(--bg-surface-alt, #0f172a);
+  border-bottom: 1px solid var(--border-subtle, #334155);
+  padding: 8px 12px;
+  gap: 6px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.chat-mode-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid var(--border-subtle, #334155);
+  background: var(--bg-surface, #1e293b);
+  color: var(--text-muted, #94a3b8);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.chatbot-chips-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: var(--bg-surface-alt);
+  border-bottom: 1px solid var(--border-subtle);
+  overflow: hidden;
+}
+
+.chatbot-chips-bar {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px 10px;
+  background: transparent;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 150, 255, 0.4) transparent;
+  width: 100%;
+}
+
+.chatbot-chips-bar::-webkit-scrollbar {
+  height: 4px;
+  display: block;
+}
+
+.chatbot-chips-bar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 4px;
+}
+
+.chatbot-chips-bar::-webkit-scrollbar-thumb {
+  background: rgba(0, 150, 255, 0.5);
+  border-radius: 4px;
+}
+
+.chatbot-chips-bar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 150, 255, 0.85);
+}
+
+.chips-scroll-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--bg-surface, #1e293b);
+  border: 1px solid var(--border-subtle, rgba(255,255,255,0.15));
+  color: var(--text-main, #ffffff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.chips-scroll-btn:hover {
+  background: var(--brand-500, #0096FF);
+  color: #FFFFFF;
+  border-color: var(--brand-500, #0096FF);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.chips-scroll-btn.left {
+  left: 4px;
+}
+
+.chips-scroll-btn.right {
+  right: 4px;
+}
+
+.chat-chip {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  flex-shrink: 0;
+  user-select: none;
+  transition: border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast), transform 0.1s ease;
+}
+
+.chat-chip:hover {
+  border-color: var(--brand-500);
+  background: var(--brand-50);
+  color: var(--brand-700);
+  transform: translateY(-1px);
+}
+
+.chat-mode-pill:hover {
+  border-color: var(--brand-500, #0096ff);
+  color: var(--text-main, #f8fafc);
+}
+
+.chat-mode-pill.active {
+  background: var(--brand-500, #0096ff);
+  border-color: var(--brand-500, #0096ff);
+  color: #ffffff !important;
+  box-shadow: 0 1px 6px rgba(0, 150, 255, 0.35);
+}

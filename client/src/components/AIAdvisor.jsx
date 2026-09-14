@@ -17,25 +17,69 @@ export default function AIAdvisor() {
   });
 
   const messagesEndRef = useRef(null);
+  const chipsRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  const checkChipsScroll = () => {
+    if (!chipsRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = chipsRef.current;
+    setCanScrollLeft(scrollLeft > 5);
+    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 5);
+  };
+
+  useEffect(() => {
+    checkChipsScroll();
+  }, [isOpen, mode]);
+
+  const scrollChips = (direction) => {
+    if (!chipsRef.current) return;
+    const scrollAmount = direction === 'left' ? -180 : 180;
+    chipsRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    setTimeout(checkChipsScroll, 250);
+  };
+
+  const handleChipsWheel = (e) => {
+    if (chipsRef.current && e.deltaY !== 0) {
+      e.stopPropagation();
+      chipsRef.current.scrollLeft += e.deltaY;
+      checkChipsScroll();
+    }
+  };
 
   const modeGreetings = {
-    advisor: '👋 <strong>Campus Connect AI Advisor Active.</strong> Ask me about placement drives, eligibility criteria, or the PM Internship Scheme!',
     tutor: '💻 <strong>Technical Tutor Active.</strong> Ready to practice DSA problems, mock interviews, or explain CS concepts!',
+    advisor: '👋 <strong>Campus Connect AI Career Advisor Active.</strong> Ask me about placement drives, eligibility criteria, DSA, mock coding questions, or resume tips!',
     chat: '💬 <strong>AI Assistant Active.</strong> Ask me anything regarding programming, career paths, or general inquiries!'
   };
 
   const headerTitles = {
-    advisor: 'AI Career Advisor',
     tutor: 'AI Technical Tutor',
+    advisor: 'AI Career Advisor',
     chat: 'AI Chat Assistant'
   };
 
-  const starterChips = [
-    { label: 'Check Drive Eligibility', prompt: 'How do I check my placement drive eligibility?' },
-    { label: 'PM Internship Scheme', prompt: 'Explain the PM Internship Scheme stipend and eligibility.' },
-    { label: 'Mock Coding Question', prompt: 'Give me a mock interview coding question with constraints.' },
-    { label: 'Resume Polish Tips', prompt: 'Give me 3 actionable tips to improve my resume.' }
-  ];
+  const modeStarterChips = {
+    advisor: [
+      { label: 'Check Drive Eligibility', prompt: 'How do I check my placement drive eligibility?' },
+      { label: 'PM Internship Scheme', prompt: 'Explain the PM Internship Scheme stipend, eligibility, and top participating companies.' },
+      { label: 'Resume Polish Tips', prompt: 'Give me 3 high-impact action-oriented tips to improve my placement resume.' },
+      { label: 'DSA: Two Sum Pattern', prompt: 'Explain the optimal Two Sum hash map pattern with time and space complexity.' },
+      { label: 'Mock Coding Question', prompt: 'Give me a mock technical interview coding question with constraints.' },
+      { label: 'Top Hiring Companies', prompt: 'Which companies are currently actively hiring on Campus Connect?' }
+    ],
+    tutor: [
+      { label: 'DSA: Two Sum Pattern', prompt: 'Explain the optimal Two Sum hash map pattern with time and space complexity.' },
+      { label: 'Mock Coding Question', prompt: 'Give me a mock technical interview coding question with constraints.' },
+      { label: 'Explain Big-O Complexity', prompt: 'Explain Big-O notation, time complexity, and space complexity with simple examples.' },
+      { label: 'System Design Basics', prompt: 'Explain the fundamentals of system design: caching, load balancing, and database sharding.' }
+    ],
+    chat: [
+      { label: 'Tech Stack Advice', prompt: 'Which full-stack tech stack is currently most in demand for campus placements?' },
+      { label: 'Interview Roadmap', prompt: 'Create a 30-day technical interview preparation roadmap for me.' },
+      { label: 'Portal Guidance', prompt: 'What features does the Campus Connect portal offer for students?' }
+    ]
+  };
 
   // Load persistent conversation history from Express backend
   useEffect(() => {
@@ -181,7 +225,7 @@ export default function AIAdvisor() {
               <circle cx="15" cy="10" r="1" fill="currentColor"></circle>
             </svg>
           </div>
-          <span className="chatbot-trigger-label">AI Advisor</span>
+          <span className="chatbot-trigger-label">AI Tutor & Advisor</span>
           <span className="chatbot-status-pulse" title="Gemini AI Online"></span>
           <span
             className="chatbot-pill-dismiss"
@@ -249,13 +293,50 @@ export default function AIAdvisor() {
           </div>
         </div>
 
-        {/* Quick Starter Chips */}
-        <div id="chatbot-starter-chips" className="chatbot-chips-bar">
-          {starterChips.map((chip, idx) => (
-            <button key={idx} className="chat-chip" onClick={() => handleSendMessage(chip.prompt)}>
-              {chip.label}
+        {/* Quick Starter Chips with Smooth Scroll & Arrows */}
+        <div className="chatbot-chips-container">
+          {canScrollLeft && (
+            <button
+              type="button"
+              className="chips-scroll-btn left"
+              onClick={() => scrollChips('left')}
+              title="Scroll left"
+              aria-label="Scroll starter chips left"
+            >
+              ‹
             </button>
-          ))}
+          )}
+
+          <div
+            id="chatbot-starter-chips"
+            ref={chipsRef}
+            className="chatbot-chips-bar"
+            onWheel={handleChipsWheel}
+            onScroll={checkChipsScroll}
+          >
+            {(modeStarterChips[mode] || modeStarterChips.advisor).map((chip, idx) => (
+              <button
+                key={idx}
+                type="button"
+                className="chat-chip"
+                onClick={() => handleSendMessage(chip.prompt)}
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
+
+          {canScrollRight && (
+            <button
+              type="button"
+              className="chips-scroll-btn right"
+              onClick={() => scrollChips('right')}
+              title="Scroll right"
+              aria-label="Scroll starter chips right"
+            >
+              ›
+            </button>
+          )}
         </div>
 
         {/* Chat Messages Log */}
@@ -296,7 +377,7 @@ export default function AIAdvisor() {
             type="text"
             id="chatbot-input"
             className="chatbot-input"
-            placeholder="Ask your AI Career Advisor..."
+            placeholder="Ask your AI Career Advisor (eligibility, coding, interview prep)..."
             value={inputVal}
             onChange={(e) => setInputVal(e.target.value)}
             autoComplete="off"

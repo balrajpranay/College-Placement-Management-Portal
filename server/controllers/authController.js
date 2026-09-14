@@ -255,16 +255,11 @@ exports.registerStudent = async (req, res) => {
       confirmPassword
     } = req.body;
 
-    const studentNum = (student_no || studentNo || '').trim();
-    const studentName = (name || '').trim();
     const studentEmail = (email || '').trim().toLowerCase();
-    const studentDept = department || 'Computer Science';
-    const studentGradYear = parseInt(grad_year || gradYear || 2026, 10);
-    const studentCgpa = parseFloat(cgpa || 0);
     const pass = password || '';
     const confirmPass = confirm_password || confirmPassword || '';
 
-    // Validation matching Flask
+    // Validation
     if (!studentEmail || !studentEmail.includes('@')) {
       return res.status(400).json({ success: false, message: 'A valid email is required.' });
     }
@@ -274,12 +269,15 @@ exports.registerStudent = async (req, res) => {
     if (pass !== confirmPass) {
       return res.status(400).json({ success: false, message: 'Passwords do not match.' });
     }
-    if (!studentName) {
-      return res.status(400).json({ success: false, message: 'Full name is required.' });
-    }
-    if (!studentNum) {
-      return res.status(400).json({ success: false, message: 'Student ID is required.' });
-    }
+
+    // Auto-generate sensible defaults for student attributes if not provided
+    const defaultName = studentEmail.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || 'Student';
+    const studentName = (name || defaultName).trim();
+    const generatedNum = 'STU' + Math.floor(100000 + Math.random() * 900000);
+    const studentNum = (student_no || studentNo || generatedNum).trim();
+    const studentDept = department || 'Computer Science';
+    const studentGradYear = parseInt(grad_year || gradYear || 2026, 10);
+    const studentCgpa = parseFloat(cgpa || 0);
 
     // Duplicate checks
     if (memoryUsers.has(studentEmail)) {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '../../components/Icon';
-import { getRecruiterApplicantsApi, updateApplicantStatusApi } from '../../services/api';
+import { getRecruiterApplicantsApi, updateApplicantStatusApi, getRecruiterProfileApi } from '../../services/api';
 
 const STATUS_STAGES = [
   'Applied',
@@ -15,6 +15,7 @@ const STATUS_STAGES = [
 export default function RecruiterApplicants() {
   const [applicants, setApplicants] = useState([]);
   const [drives, setDrives] = useState([]);
+  const [company, setCompany] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notification, setNotification] = useState(null);
@@ -26,6 +27,101 @@ export default function RecruiterApplicants() {
 
   // Track status update loading per candidate
   const [actionLoadingId, setActionLoadingId] = useState(null);
+
+  // Candidate Selection & Google Meet Modal State
+  const [showSelectModal, setShowSelectModal] = useState(false);
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
+  const [selectRoundName, setSelectRoundName] = useState('Final Technical & Selection Round');
+  const [selectDate, setSelectDate] = useState('');
+  const [selectTime, setSelectTime] = useState('10:00 AM');
+  const [selectMeetUrl, setSelectMeetUrl] = useState('');
+  const [selectInstructions, setSelectInstructions] = useState('Please join 5 minutes prior to the scheduled time with your official college ID, updated resume, and video camera enabled for the selection evaluation.');
+  const [selectSubmitting, setSelectSubmitting] = useState(false);
+
+  // Helper: Auto-generate Google Meet URL
+  const generateMeetUrl = () => {
+    const chars = 'abcdefghijklmnopqrstuvwxyz';
+    const gen = (len) => Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    return `https://meet.google.com/${gen(3)}-${gen(4)}-${gen(3)}`;
+  };
+
+  const openSelectionModal = (app) => {
+    if (!isApproved) {
+      setNotification({
+        type: 'danger',
+        message: 'Candidate Selection Restricted: Your organization profile is pending administrator verification. Only verified partner companies can select or update candidate stages.'
+      });
+      return;
+    }
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    setSelectedCandidate(app);
+    setSelectRoundName('Final Technical & Selection Round');
+    setSelectDate(tomorrow.toISOString().split('T')[0]);
+    setSelectTime('10:00 AM');
+    setSelectMeetUrl(generateMeetUrl());
+    setSelectInstructions('Please join 5 minutes prior to the scheduled time with your official college ID, updated resume, and video camera enabled for the selection evaluation.');
+    setShowSelectModal(true);
+  };
+
+  const handleConfirmSelection = async (e) => {
+    e.preventDefault();
+    if (!selectedCandidate) return;
+
+    try {
+      setSelectSubmitting(true);
+      setActionLoadingId(selectedCandidate.id);
+      const res = await updateApplicantStatusApi(selectedCandidate.id, {
+        status: 'Selected',
+        round_name: selectRoundName,
+        scheduled_date: selectDate,
+        scheduled_time: selectTime,
+        venue: selectMeetUrl,
+        instructions: selectInstructions
+      });
+
+      if (res.success) {
+        setNotification({
+          type: 'success',
+          message: `Candidate ${selectedCandidate.student_name || 'Candidate'} successfully Selected! Google Meet link (${selectMeetUrl}) and selection round details were sent to candidate notifications.`
+        });
+        setApplicants(prev =>
+          prev.map(a =>
+            a.id === selectedCandidate.id ? { ...a, status: 'Selected', venue: selectMeetUrl, updated_at: new Date().toISOString() } : a
+          )
+        );
+        setShowSelectModal(false);
+      } else {
+        setNotification({
+          type: 'danger',
+          message: res.message || 'Failed to select candidate.'
+        });
+      }
+    } catch (err) {
+      console.error('Error selecting candidate:', err);
+      setNotification({
+        type: 'danger',
+        message: err.message || 'Error selecting candidate.'
+      });
+    } finally {
+      setSelectSubmitting(false);
+      setActionLoadingId(null);
+    }
+  };
+
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const res = await getRecruiterProfileApi();
+        if (res?.company) setCompany(res.company);
+      } catch (e) {
+        console.warn('Could not load company profile:', e.message);
+      }
+    }
+    loadProfile();
+  }, []);
+
+  const isApproved = company?.approved === true || company?.approved === 'true';
 
   const fetchApplicants = useCallback(async () => {
     try {
@@ -64,6 +160,14 @@ export default function RecruiterApplicants() {
   };
 
   const handleStatusUpdate = async (appId, newStatus, studentName) => {
+    if (!isApproved) {
+      setNotification({
+        type: 'danger',
+        message: 'Candidate Selection Restricted: Your organization profile is pending administrator verification. Only verified partner companies can select or update candidate stages.'
+      });
+      return;
+    }
+
     if (newStatus === 'Rejected') {
       const confirmReject = window.confirm(`Reject application for ${studentName || 'this candidate'}?`);
       if (!confirmReject) return;
@@ -100,6 +204,7 @@ export default function RecruiterApplicants() {
       setActionLoadingId(null);
     }
   };
+
 
   // Helper for stage badge styling
   const getBadgeClass = (status) => {
@@ -150,6 +255,21 @@ export default function RecruiterApplicants() {
           />
         </div>
       </div>
+
+      {/* Verification Status Warning Banner */}
+      {!isApproved && company && (
+        <div className="card mb-6" style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: 12, padding: '14px 18px', marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Icon name="alert-circle" size={22} style={{ color: 'var(--danger-500)', flexShrink: 0 }} />
+            <div>
+              <strong style={{ color: 'var(--danger-500)', fontSize: '0.95rem' }}>Candidate Selection Restricted (Pending Administrator Verification)</strong>
+              <p style={{ margin: '2px 0 0', fontSize: '0.825rem', color: 'var(--text-muted)' }}>
+                Your organization account is awaiting verification by the Placement Administrator. Only verified corporate partners can advance, shortlist, interview, or select candidates.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Notification Toast/Banner */}
       {notification && (
@@ -346,18 +466,19 @@ export default function RecruiterApplicants() {
                                 </Link>
                               )}
 
-                              {/* 4. Select button for 'Shortlisted' or 'Interview Scheduled' */}
-                              {['Shortlisted', 'Interview Scheduled'].includes(app.status) && (
+                              {/* 4. Select button for candidates not yet Selected or Rejected */}
+                              {!['Selected', 'Rejected'].includes(app.status) && (
                                 <button
                                   type="button"
-                                  onClick={() => handleStatusUpdate(app.id, 'Selected', candName)}
+                                  onClick={() => openSelectionModal(app)}
                                   className="btn btn-sm btn-accent"
                                   style={{ 
                                     background: 'var(--success-600, #16a34a)', 
                                     borderColor: 'var(--success-600, #16a34a)',
-                                    color: '#ffffff'
+                                    color: '#ffffff',
+                                    fontWeight: 600
                                   }}
-                                  title="Mark candidate as Selected (Hired)"
+                                  title="Select candidate and schedule round with Google Meet"
                                 >
                                   Select
                                 </button>
@@ -377,9 +498,22 @@ export default function RecruiterApplicants() {
 
                               {/* 6. Completed stages indicator */}
                               {app.status === 'Selected' && (
-                                <span className="text-xs text-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
-                                  <Icon name="check" size={14} /> Selected
-                                </span>
+                                <div style={{ display: 'inline-flex', flexDirection: 'column', gap: 2 }}>
+                                  <span className="text-xs text-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 700 }}>
+                                    <Icon name="check" size={14} /> Selected
+                                  </span>
+                                  {app.venue && (
+                                    <a
+                                      href={app.venue}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      style={{ fontSize: '0.725rem', color: 'var(--accent-cyan-600)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 3 }}
+                                      title="Open Google Meet link"
+                                    >
+                                      <Icon name="video" size={11} /> Meet Link
+                                    </a>
+                                  )}
+                                </div>
                               )}
                               {app.status === 'Rejected' && (
                                 <span className="text-xs text-danger" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
@@ -431,6 +565,201 @@ export default function RecruiterApplicants() {
           </div>
         )}
       </div>
+
+      {/* Candidate Selection & Google Meet Scheduling Modal */}
+      {showSelectModal && selectedCandidate && (
+        <div 
+          className="modal-overlay" 
+          style={{ 
+            position: 'fixed', 
+            inset: 0, 
+            background: 'rgba(0, 0, 0, 0.7)', 
+            backdropFilter: 'blur(4px)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            zIndex: 9999,
+            padding: 16
+          }}
+        >
+          <div 
+            className="modal-card card" 
+            style={{ 
+              maxWidth: 560, 
+              width: '100%', 
+              maxHeight: '90vh', 
+              overflowY: 'auto', 
+              padding: '24px',
+              borderRadius: 16,
+              boxShadow: '0 20px 50px rgba(0,0,0,0.4)',
+              background: 'var(--bg-surface)'
+            }}
+          >
+            <div className="flex-between mb-4" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(22, 163, 74, 0.15)', color: 'var(--success-600, #16a34a)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon name="award" size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)' }}>Select Candidate &amp; Schedule Round</h3>
+                  <p className="text-xs text-muted" style={{ margin: '2px 0 0' }}>Generate Google Meet link &amp; notify candidate immediately</p>
+                </div>
+              </div>
+              <button 
+                type="button" 
+                className="btn btn-ghost btn-sm" 
+                onClick={() => setShowSelectModal(false)}
+                style={{ padding: '4px 8px' }}
+                aria-label="Close modal"
+              >
+                <Icon name="x" size={16} />
+              </button>
+            </div>
+
+            {/* Candidate Summary Box */}
+            <div style={{ padding: '12px 16px', background: 'var(--bg-surface-alt)', borderRadius: 10, border: '1px solid var(--border-subtle)', marginBottom: 18 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                <div>
+                  <strong style={{ fontSize: '1.05rem', color: 'var(--text-main)' }}>{selectedCandidate.student_name || 'Candidate'}</strong>
+                  <span className="text-xs text-muted" style={{ display: 'block', marginTop: 3 }}>
+                    Roll: {selectedCandidate.student_no || 'STU'} · {selectedCandidate.department || 'Computer Science'} · CGPA {selectedCandidate.cgpa || '8.0'}
+                  </span>
+                </div>
+                <span className="badge badge-accent" style={{ fontSize: '0.75rem' }}>
+                  {selectedCandidate.drive_title || 'Role'}
+                </span>
+              </div>
+            </div>
+
+            <form onSubmit={handleConfirmSelection}>
+              <div className="form-group mb-3" style={{ marginBottom: 14 }}>
+                <label className="form-label" style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: 4 }}>
+                  Selection / Interview Round Name <span style={{ color: '#EF4444' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={selectRoundName}
+                  onChange={(e) => setSelectRoundName(e.target.value)}
+                  placeholder="e.g. Final Technical & Selection Round"
+                  required
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+                <div className="form-group">
+                  <label className="form-label" style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: 4 }}>
+                    Scheduled Date <span style={{ color: '#EF4444' }}>*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={selectDate}
+                    onChange={(e) => setSelectDate(e.target.value)}
+                    required
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label" style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: 4 }}>
+                    Scheduled Time <span style={{ color: '#EF4444' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={selectTime}
+                    onChange={(e) => setSelectTime(e.target.value)}
+                    placeholder="10:00 AM"
+                    required
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              {/* Google Meet Link Generator */}
+              <div className="form-group mb-3" style={{ marginBottom: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <label className="form-label" style={{ fontSize: '0.8125rem', fontWeight: 600, margin: 0 }}>
+                    Google Meet Meeting Link <span style={{ color: '#EF4444' }}>*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setSelectMeetUrl(generateMeetUrl())}
+                    className="btn btn-ghost btn-xs"
+                    style={{ fontSize: '0.75rem', color: 'var(--accent-cyan-600)', padding: '2px 6px' }}
+                  >
+                    🔄 Generate New Link
+                  </button>
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input
+                    type="url"
+                    value={selectMeetUrl}
+                    onChange={(e) => setSelectMeetUrl(e.target.value)}
+                    placeholder="https://meet.google.com/abc-wxyz-def"
+                    required
+                    style={{ flex: 1, padding: '9px 12px', borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', boxSizing: 'border-box' }}
+                  />
+                  {selectMeetUrl && (
+                    <a
+                      href={selectMeetUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-outline btn-sm"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '8px 12px' }}
+                      title="Test open meeting link in new tab"
+                    >
+                      <Icon name="video" size={14} /> Test
+                    </a>
+                  )}
+                </div>
+                <span className="text-xs text-muted" style={{ display: 'block', marginTop: 4 }}>
+                  This Google Meet link will be immediately shared with the candidate in their notifications.
+                </span>
+              </div>
+
+              {/* Candidate Instructions */}
+              <div className="form-group mb-4" style={{ marginBottom: 18 }}>
+                <label className="form-label" style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: 4 }}>
+                  Instructions for Candidate
+                </label>
+                <textarea
+                  rows={3}
+                  value={selectInstructions}
+                  onChange={(e) => setSelectInstructions(e.target.value)}
+                  placeholder="Instructions for the round (ID required, dress code, portfolio, camera on)..."
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', boxSizing: 'border-box', resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, borderTop: '1px solid var(--border-subtle)', paddingTop: 16 }}>
+                <button
+                  type="button"
+                  onClick={() => setShowSelectModal(false)}
+                  className="btn btn-outline"
+                  disabled={selectSubmitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={selectSubmitting}
+                  style={{ 
+                    background: 'var(--success-600, #16a34a)', 
+                    borderColor: 'var(--success-600, #16a34a)',
+                    color: '#ffffff',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    fontWeight: 700
+                  }}
+                >
+                  {selectSubmitting ? 'Selecting & Notifying...' : '✓ Confirm Selection & Notify Candidate'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

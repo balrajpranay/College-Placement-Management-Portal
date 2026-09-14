@@ -65,6 +65,12 @@ const StudentSchema = new mongoose.Schema({
   },
   resumeOriginalName: {
     type: String
+  },
+  resumeLatex: {
+    type: String
+  },
+  resumeData: {
+    type: mongoose.Schema.Types.Mixed
   }
 }, {
   timestamps: true

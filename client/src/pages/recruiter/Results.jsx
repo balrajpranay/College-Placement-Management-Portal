@@ -5,7 +5,8 @@ import {
   getRecruiterResultsApi, 
   getRecruiterApplicantsApi,
   createRecruiterResultApi, 
-  updateRecruiterResultApi 
+  updateRecruiterResultApi,
+  deleteRecruiterResultApi 
 } from '../../services/api';
 
 const STATUS_FILTERS = ['Selected', 'Rejected', 'Waiting'];
@@ -169,6 +170,35 @@ export default function RecruiterResults() {
       setModalError(err.message || 'An error occurred while saving.');
     } finally {
       setModalLoading(false);
+    }
+  };
+
+  const handleDeleteResult = async (resultId) => {
+    const confirmDelete = window.confirm(
+      'Are you sure you want to permanently delete this placement result? This action cannot be undone.'
+    );
+    if (!confirmDelete) return;
+
+    try {
+      const res = await deleteRecruiterResultApi(resultId);
+      if (res.success) {
+        setResults(prev => prev.filter(r => String(r.id) !== String(resultId) && String(r._id || '') !== String(resultId)));
+        setNotification({
+          type: 'success',
+          message: 'Placement result deleted successfully.'
+        });
+      } else {
+        setNotification({
+          type: 'danger',
+          message: res.message || 'Failed to delete placement result.'
+        });
+      }
+    } catch (err) {
+      console.error('Error deleting result:', err);
+      setNotification({
+        type: 'danger',
+        message: err.message || 'Failed to delete placement result.'
+      });
     }
   };
 
@@ -347,15 +377,38 @@ export default function RecruiterResults() {
 
                       {/* Actions Column */}
                       <td>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEditModal(r)}
-                          className="btn btn-sm btn-ghost"
-                          style={{ padding: '3px 8px', fontSize: '0.78rem' }}
-                          title="Edit Package or Decision Date"
-                        >
-                          Edit Details
-                        </button>
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditModal(r)}
+                            className="btn btn-sm btn-ghost"
+                            style={{ padding: '3px 8px', fontSize: '0.78rem' }}
+                            title="Edit Package or Decision Date"
+                          >
+                            Edit Details
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteResult(r.id)}
+                            className="btn btn-sm"
+                            style={{
+                              padding: '3px 10px',
+                              fontSize: '0.78rem',
+                              borderRadius: '6px',
+                              border: '1px solid rgba(239, 68, 68, 0.4)',
+                              background: 'rgba(239, 68, 68, 0.1)',
+                              color: '#ef4444',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontWeight: 600,
+                              cursor: 'pointer'
+                            }}
+                            title="Permanently delete this placement outcome"
+                          >
+                            <Icon name="trash" size={13} /> Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -523,23 +576,52 @@ export default function RecruiterResults() {
               </div>
 
               {/* Actions */}
-              <div className="flex-between mt-6" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="btn btn-outline"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={modalLoading}
-                  className="btn btn-primary"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <Icon name="check" size={16} />
-                  {modalLoading ? 'Saving...' : 'Save & Confirm Offer'}
-                </button>
+              <div className="flex-between mt-6" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                <div>
+                  {modalMode === 'edit' && editingResult && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowModal(false);
+                        handleDeleteResult(editingResult.id);
+                      }}
+                      className="btn btn-sm"
+                      style={{
+                        padding: '6px 12px',
+                        fontSize: '0.8rem',
+                        borderRadius: '6px',
+                        border: '1px solid rgba(239, 68, 68, 0.4)',
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        color: '#ef4444',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontWeight: 600
+                      }}
+                      title="Permanently delete this placement outcome"
+                    >
+                      <Icon name="trash" size={13} /> Delete Outcome
+                    </button>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="btn btn-outline"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={modalLoading}
+                    className="btn btn-primary"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <Icon name="check" size={16} />
+                    {modalLoading ? 'Saving...' : 'Save & Confirm Offer'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

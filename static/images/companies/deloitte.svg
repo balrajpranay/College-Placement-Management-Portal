@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 40">
-  <rect width="100" height="40" rx="8" fill="#000000"/>
-  <text x="44" y="26" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-weight="800" font-size="17" fill="#FFFFFF" text-anchor="middle">Deloitte</text>
-  <circle cx="82" cy="24" r="3.5" fill="#86BC25"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <rect width="48" height="48" rx="10" fill="#000000"/>
+  <path fill="#FFFFFF" d="M12 14h8.5c6.2 0 10.5 4.1 10.5 10s-4.3 10-10.5 10H12V14zm5.6 15.5h2.8c3.3 0 5.4-2.2 5.4-5.5s-2.1-5.5-5.4-5.5h-2.8v11z"/>
+  <circle cx="36" cy="31" r="3.6" fill="#86BC25"/>
 </svg>

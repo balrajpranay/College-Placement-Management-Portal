@@ -347,7 +347,7 @@ function getCompanyByEmail(email) {
   if (recruiterStore.companies.has(email)) {
     return recruiterStore.companies.get(email);
   }
-  // Default fallback for any newly registered or unknown recruiter
+  const isDemoApproved = email === 'hr@technova.com';
   const defaultCompany = {
     id: Date.now(),
     name: email.split('@')[0].toUpperCase() + ' Corp',
@@ -361,11 +361,32 @@ function getCompanyByEmail(email) {
     description: 'Corporate recruitment partner with Campus Connect.',
     logo_filename: null,
     logoFilename: null,
-    approved: true,
+    approved: isDemoApproved,
     created_at: new Date().toISOString()
   };
   recruiterStore.companies.set(email, defaultCompany);
   return defaultCompany;
+}
+
+// Helper: Resolve company from MongoDB or fallback store with accurate approval status
+async function resolveCompanyForUser(userId, email) {
+  let company = null;
+  if (mongoose.connection.readyState === 1) {
+    try {
+      if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+        company = await Company.findOne({ user: userId }).lean();
+      }
+      if (!company && email) {
+        company = await Company.findOne({ email }).lean();
+      }
+    } catch (err) {
+      console.warn('[Recruiter resolveCompanyForUser Warning]:', err.message);
+    }
+  }
+  if (!company) {
+    company = getCompanyByEmail(email);
+  }
+  return company;
 }
 
 // Helper: Get or create Mongoose Company document for authenticated recruiter
@@ -381,6 +402,7 @@ async function getOrCreateMongoCompany(userId, email) {
     }
     if (!comp) {
       const fallback = getCompanyByEmail(email);
+      const isDemoApproved = email === 'hr@technova.com';
       const userObjId = userId && mongoose.Types.ObjectId.isValid(userId)
         ? new mongoose.Types.ObjectId(userId)
         : new mongoose.Types.ObjectId('65e000000000000000000003');
@@ -394,7 +416,7 @@ async function getOrCreateMongoCompany(userId, email) {
         phone: fallback.phone || '9363328006',
         location: fallback.location || 'Bengaluru',
         description: fallback.description || 'TechNova Solutions is a premier technology consulting firm.',
-        approved: true
+        approved: isDemoApproved
       });
     }
     return comp;
@@ -704,6 +726,8 @@ function formatRecruiterDrive(d, company) {
     applicant_count: applicantCount,
     applicantCount: applicantCount,
     status: d.status || 'active',
+    category: d.category || (jobType.toLowerCase().includes('intern') ? 'Internships' : (jobType.toLowerCase().includes('skill') ? 'Skill Up' : 'Placements')),
+    opportunityType: d.opportunityType || (jobType.toLowerCase().includes('intern') ? 'Internship' : (jobType.toLowerCase().includes('skill') ? 'Skill' : 'Placement')),
     description: d.description || '',
     branches: Array.isArray(d.branches) ? d.branches : [],
     skills: Array.isArray(d.skills) ? d.skills : []
@@ -944,19 +968,8 @@ exports.getDashboard = async (req, res) => {
 exports.getProfile = async (req, res) => {
   try {
     const email = req.user?.email || 'hr@technova.com';
-    let company = null;
-
-    if (mongoose.connection.readyState === 1) {
-      try {
-        company = await Company.findOne({ email }).lean();
-      } catch (err) {
-        console.warn('[Recruiter Mongo]: Fallback to memory store', err.message);
-      }
-    }
-
-    if (!company) {
-      company = getCompanyByEmail(email);
-    }
+    const userId = req.user?._id || req.user?.id;
+    let company = await resolveCompanyForUser(userId, email);
 
     return res.status(200).json({
       success: true,
@@ -976,7 +989,7 @@ exports.getProfile = async (req, res) => {
         govId: company.govId || company.gov_id || '',
         phone: company.phone || company.mobile || '',
         mobile: company.phone || company.mobile || '',
-        approved: company.approved
+        approved: Boolean(company?.approved)
       }
     });
   } catch (err) {
@@ -1204,17 +1217,17 @@ exports.getDriveById = async (req, res) => {
   }
 };
 
-// POST /api/recruiters/drives (Create Drive)
+// POST /api/recruiters/drives (Create Drive / Opportunity)
 exports.createDrive = async (req, res) => {
   try {
     const email = req.user?.email || 'hr@technova.com';
     const userId = req.user?._id || req.user?.id;
-    const company = getCompanyByEmail(email);
+    const company = await resolveCompanyForUser(userId, email);
 
-    if (!company.approved) {
+    if (!company || !company.approved) {
       return res.status(403).json({
         success: false,
-        message: 'Access Restricted: Corporate Account is under review. You cannot publish placement drives until verified by the Placement Cell.'
+        message: 'Access Restricted: Your organization profile is pending verification by the Placement Administrator. You can only post opportunities (placements, jobs, internships, skills) once verified.'
       });
     }
 
@@ -1222,6 +1235,9 @@ exports.createDrive = async (req, res) => {
       title,
       job_type,
       jobType,
+      category,
+      opportunityType,
+      opportunity_type,
       ctc,
       location,
       openings,
@@ -1276,6 +1292,8 @@ exports.createDrive = async (req, res) => {
     }
 
     const resolvedJobType = job_type || jobType || 'Full-Time';
+    const resolvedOppType = opportunityType || opportunity_type || (resolvedJobType === 'Internship' ? 'Internship' : (resolvedJobType === 'Skill' ? 'Skill' : 'Placement'));
+    const resolvedCategory = category || (resolvedJobType === 'Internship' ? 'Internships' : (resolvedJobType === 'Skill' || resolvedOppType === 'Skill' ? 'Skill Up' : 'Placements'));
     const resolvedDriveDate = drive_date || driveDate || null;
     const resolvedLocation = location ? location.trim() : (company.location || 'Bengaluru');
     const resolvedDesc = description ? description.trim() : `Exciting career opportunity with ${company.name}.`;
@@ -1291,6 +1309,8 @@ exports.createDrive = async (req, res) => {
             company: mongoComp._id,
             title: title.trim(),
             jobType: resolvedJobType,
+            category: resolvedCategory,
+            opportunityType: resolvedOppType,
             ctc: parsedCtc,
             location: resolvedLocation,
             minCgpa: parsedMinCgpa,
@@ -1326,6 +1346,8 @@ exports.createDrive = async (req, res) => {
       title: title.trim(),
       job_type: resolvedJobType,
       jobType: resolvedJobType,
+      category: resolvedCategory,
+      opportunityType: resolvedOppType,
       ctc: parsedCtc,
       location: resolvedLocation,
       min_cgpa: parsedMinCgpa,
@@ -1388,6 +1410,15 @@ exports.updateDrive = async (req, res) => {
   try {
     const email = req.user?.email || 'hr@technova.com';
     const userId = req.user?._id || req.user?.id;
+    const company = await resolveCompanyForUser(userId, email);
+
+    if (!company || !company.approved) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access Restricted: Your organization profile is pending verification. Only verified companies can manage opportunities.'
+      });
+    }
+
     const driveId = req.params.id;
 
     const {
@@ -1781,15 +1812,25 @@ exports.getApplicantById = async (req, res) => {
   }
 };
 
+// Helper: Auto-generate unique Google Meet URL
+function generateGoogleMeetUrl() {
+  const chars = 'abcdefghijklmnopqrstuvwxyz';
+  const genSeg = (len) => Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  return `https://meet.google.com/${genSeg(3)}-${genSeg(4)}-${genSeg(3)}`;
+}
+
 // PUT or POST /api/recruiters/applicants/:id/status
 exports.updateApplicantStatus = async (req, res) => {
   try {
     const email = req.user?.email || 'hr@technova.com';
     const userId = req.user?._id || req.user?.id;
-    let company = getCompanyByEmail(email);
-    if (mongoose.connection.readyState === 1) {
-      const mongoComp = await getOrCreateMongoCompany(userId, email);
-      if (mongoComp) company = mongoComp;
+    const company = await resolveCompanyForUser(userId, email);
+
+    if (!company || !company.approved) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access Restricted: Your organization profile is pending verification by the Placement Administrator. Candidate selection (shortlisting, scheduling interviews, selecting) will unlock once verified.'
+      });
     }
 
     const appId = req.params.id;
@@ -1862,7 +1903,221 @@ exports.updateApplicantStatus = async (req, res) => {
       });
     }
 
-    // 3. Synchronize with Student Portal store & notifications for live reflection
+    // 3. Selection-Specific Google Meet Generation & Rich Synchronous Dispatch
+    let selectionDetails = null;
+    if (newStatus === 'Selected') {
+      const roundName = (req.body.round_name || req.body.roundName || 'Final Technical & Selection Round').trim();
+      let meetUrl = (req.body.venue || req.body.meet_url || req.body.meetUrl || '').trim();
+      if (!meetUrl || !meetUrl.startsWith('http')) {
+        meetUrl = generateGoogleMeetUrl();
+      }
+
+      let schedDate = req.body.scheduled_date || req.body.scheduledDate;
+      if (!schedDate) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        schedDate = tomorrow.toISOString().split('T')[0];
+      }
+
+      const schedTime = (req.body.scheduled_time || req.body.scheduledTime || '10:00 AM').trim();
+      const instructions = (req.body.instructions || 'Please join 5 minutes prior to the scheduled time with your official college ID, updated resume, and video camera enabled for the selection evaluation round.').trim();
+
+      selectionDetails = {
+        meetUrl,
+        roundName,
+        scheduledDate: schedDate,
+        scheduledTime: schedTime,
+        instructions
+      };
+
+      // A. Create/Update Interview in MongoDB if connected
+      if (mongoose.connection.readyState === 1) {
+        try {
+          const studentRef = updatedMongoApp?.student?._id || updatedMongoApp?.student || applicant.student_id;
+          const driveRef = updatedMongoApp?.drive?._id || updatedMongoApp?.drive || applicant.drive_id;
+          const compRef = updatedMongoApp?.drive?.company?._id || updatedMongoApp?.drive?.company || company._id;
+          const schedDateObj = new Date(schedDate);
+
+          const intFilter = updatedMongoApp?._id
+            ? { application: updatedMongoApp._id }
+            : (mongoose.Types.ObjectId.isValid(appId) ? { application: appId } : { student: studentRef, drive: driveRef });
+
+          await Interview.findOneAndUpdate(
+            intFilter,
+            {
+              $set: {
+                application: updatedMongoApp?._id || (mongoose.Types.ObjectId.isValid(appId) ? appId : null),
+                student: mongoose.Types.ObjectId.isValid(studentRef) ? studentRef : null,
+                drive: mongoose.Types.ObjectId.isValid(driveRef) ? driveRef : null,
+                company: compRef,
+                roundName: roundName,
+                scheduledDate: isNaN(schedDateObj.getTime()) ? new Date() : schedDateObj,
+                scheduledTime: schedTime,
+                interviewType: 'Online',
+                venue: meetUrl,
+                status: 'Scheduled'
+              }
+            },
+            { upsert: true, new: true }
+          );
+        } catch (intErr) {
+          console.warn('[Recruiter Auto Create Selection Interview Mongo Error]:', intErr.message);
+        }
+      }
+
+      // B. Add to recruiter interviews store
+      const candName = applicant.student_name || applicant.name || 'Candidate';
+      const driveTitle = applicant.drive_title || applicant.driveTitle || 'Campus Placement Drive';
+      const interviewItem = {
+        id: `int-${Date.now()}`,
+        _id: `int-${Date.now()}`,
+        application_id: String(appId),
+        applicationId: String(appId),
+        company_id: company.id,
+        companyId: company.id,
+        company_email: email,
+        companyEmail: email,
+        company_name: company.name,
+        companyName: company.name,
+        student_id: applicant.student_id || 1,
+        studentId: applicant.student_id || 1,
+        student_name: candName,
+        studentName: candName,
+        student_no: applicant.student_no || 'STU',
+        studentNo: applicant.student_no || 'STU',
+        drive_title: driveTitle,
+        driveTitle: driveTitle,
+        round_name: roundName,
+        roundName: roundName,
+        scheduled_date: schedDate,
+        scheduledDate: schedDate,
+        scheduled_time: schedTime,
+        scheduledTime: schedTime,
+        interview_type: 'Online',
+        interviewType: 'Online',
+        venue: meetUrl,
+        instructions: instructions,
+        status: 'Scheduled',
+        created_at: new Date().toISOString()
+      };
+
+      if (!recruiterStore.interviews) recruiterStore.interviews = [];
+      const exRecIntIdx = recruiterStore.interviews.findIndex(i => String(i.application_id) === String(appId));
+      if (exRecIntIdx >= 0) {
+        recruiterStore.interviews[exRecIntIdx] = { ...recruiterStore.interviews[exRecIntIdx], ...interviewItem };
+      } else {
+        recruiterStore.interviews.unshift(interviewItem);
+      }
+
+      // C. Synchronize with Student Portal store & Interviews calendar
+      if (studentStore) {
+        if (!studentStore.interviews) studentStore.interviews = [];
+        const exStuIntIdx = studentStore.interviews.findIndex(
+          si => String(si.application_id) === String(appId) || si.drive_title === driveTitle
+        );
+        const stuIntItem = {
+          id: `int-${Date.now()}`,
+          _id: `int-${Date.now()}`,
+          application_id: String(appId),
+          applicationId: String(appId),
+          company_name: company.name,
+          companyName: company.name,
+          drive_title: driveTitle,
+          driveTitle: driveTitle,
+          round_name: roundName,
+          roundName: roundName,
+          scheduled_date: schedDate,
+          scheduledDate: schedDate,
+          scheduled_time: schedTime,
+          scheduledTime: schedTime,
+          interview_type: 'Online',
+          interviewType: 'Online',
+          venue: meetUrl,
+          instructions: instructions,
+          status: 'Scheduled'
+        };
+
+        if (exStuIntIdx >= 0) {
+          studentStore.interviews[exStuIntIdx] = stuIntItem;
+        } else {
+          studentStore.interviews.unshift(stuIntItem);
+        }
+
+        // D. Create the immediate Student Notification / Announcement with Google Meet Link
+        const announcementMsg = `🎉 Candidate Selection Confirmed: You have been Selected for '${driveTitle}' at ${company.name}! Selection Round: ${roundName}. Date: ${schedDate} at ${schedTime}. Google Meet Link: ${meetUrl}. Instructions: ${instructions}`;
+        
+        if (!studentStore.notifications) studentStore.notifications = [];
+        studentStore.notifications.unshift({
+          id: `notif-${Date.now()}`,
+          title: `🎉 Selected: ${roundName}`,
+          message: announcementMsg,
+          type: 'interview',
+          link: meetUrl,
+          meet_url: meetUrl,
+          meetUrl: meetUrl,
+          round_name: roundName,
+          roundName: roundName,
+          scheduled_date: schedDate,
+          scheduledDate: schedDate,
+          scheduled_time: schedTime,
+          scheduledTime: schedTime,
+          instructions: instructions,
+          created_at: new Date().toISOString().replace('T', ' ').substring(0, 16),
+          is_read: false
+        });
+
+        // Also persist rich notification to MongoDB
+        if (mongoose.connection.readyState === 1) {
+          try {
+            const studentRef = updatedMongoApp?.student?._id || updatedMongoApp?.student || applicant.student_id;
+            await Notification.create({
+              student: mongoose.Types.ObjectId.isValid(studentRef) ? studentRef : null,
+              recipientRole: 'student',
+              title: `🎉 Selected: ${roundName}`,
+              message: announcementMsg,
+              type: 'interview',
+              link: meetUrl,
+              meetUrl: meetUrl,
+              roundName: roundName,
+              scheduledDate: schedDate,
+              scheduledTime: schedTime,
+              instructions: instructions,
+              isRead: false
+            });
+          } catch (notifErr) {
+            console.warn('[Recruiter Selection Rich Notif Mongo Warning]:', notifErr.message);
+          }
+        }
+      }
+
+      // E. Record Placement Result for candidate if not already present
+      if (!recruiterStore.results) recruiterStore.results = [];
+      const exResIdx = recruiterStore.results.findIndex(r => String(r.application_id) === String(appId));
+      const resItem = {
+        id: `res-${Date.now()}`,
+        _id: `res-${Date.now()}`,
+        application_id: String(appId),
+        applicationId: String(appId),
+        company_id: company.id,
+        company_name: company.name,
+        student_id: applicant.student_id || 1,
+        student_name: candName,
+        student_no: applicant.student_no || 'STU',
+        drive_id: applicant.drive_id || 1,
+        drive_title: driveTitle,
+        package: req.body.package ? parseFloat(req.body.package) : 12.0,
+        placement_date: schedDate,
+        status: 'Selected',
+        updated_at: new Date().toISOString()
+      };
+      if (exResIdx >= 0) {
+        recruiterStore.results[exResIdx] = { ...recruiterStore.results[exResIdx], ...resItem };
+      } else {
+        recruiterStore.results.unshift(resItem);
+      }
+    }
+
+    // 4. Synchronize general application status with Student Portal store & standard notifications
     if (studentStore) {
       if (studentStore.applications && Array.isArray(studentStore.applications)) {
         const studentApp = studentStore.applications.find(
@@ -1870,32 +2125,39 @@ exports.updateApplicantStatus = async (req, res) => {
         );
         if (studentApp) {
           studentApp.status = newStatus;
+          if (selectionDetails) {
+            studentApp.interview_date = selectionDetails.scheduledDate;
+            studentApp.venue = selectionDetails.meetUrl;
+          }
         }
       }
 
-      if (studentStore.notifications && Array.isArray(studentStore.notifications)) {
-        studentStore.notifications.unshift({
-          id: `notif-${Date.now()}`,
-          message: `Your application for '${applicant.drive_title || applicant.driveTitle || 'Campus Drive'}' at ${company.name} is now: ${newStatus}.`,
-          created_at: new Date().toISOString().replace('T', ' ').substring(0, 16),
-          is_read: false
-        });
-      }
-
-      // Persist notification to MongoDB if connected
-      if (mongoose.connection.readyState === 1) {
-        try {
-          const studentRef = updatedMongoApp?.student?._id || updatedMongoApp?.student || applicant.student_id;
-          await Notification.create({
-            student: mongoose.Types.ObjectId.isValid(studentRef) ? studentRef : null,
-            recipientRole: 'student',
-            title: 'Application Status Update',
+      // If NOT Selected, trigger standard status update notification
+      if (newStatus !== 'Selected') {
+        if (studentStore.notifications && Array.isArray(studentStore.notifications)) {
+          studentStore.notifications.unshift({
+            id: `notif-${Date.now()}`,
             message: `Your application for '${applicant.drive_title || applicant.driveTitle || 'Campus Drive'}' at ${company.name} is now: ${newStatus}.`,
-            link: '/student/applications',
-            isRead: false
+            created_at: new Date().toISOString().replace('T', ' ').substring(0, 16),
+            is_read: false
           });
-        } catch (notifErr) {
-          console.warn('[Recruiter Status Update Notif Warning]:', notifErr.message);
+        }
+
+        // Persist standard notification to MongoDB if connected
+        if (mongoose.connection.readyState === 1) {
+          try {
+            const studentRef = updatedMongoApp?.student?._id || updatedMongoApp?.student || applicant.student_id;
+            await Notification.create({
+              student: mongoose.Types.ObjectId.isValid(studentRef) ? studentRef : null,
+              recipientRole: 'student',
+              title: 'Application Status Update',
+              message: `Your application for '${applicant.drive_title || applicant.driveTitle || 'Campus Drive'}' at ${company.name} is now: ${newStatus}.`,
+              link: '/student/applications',
+              isRead: false
+            });
+          } catch (notifErr) {
+            console.warn('[Recruiter Status Update Notif Warning]:', notifErr.message);
+          }
         }
       }
     }
@@ -1903,8 +2165,9 @@ exports.updateApplicantStatus = async (req, res) => {
     const formatted = formatRecruiterApplicant(updatedMongoApp || applicant, company);
     return res.status(200).json({
       success: true,
-      message: `${formatted.student_name || formatted.name}'s status updated to ${newStatus}.`,
-      applicant: formatted
+      message: `${formatted.student_name || formatted.name}'s status updated to ${newStatus}.` + (selectionDetails ? ` Google Meet link (${selectionDetails.meetUrl}) and round details have been dispatched to the candidate.` : ''),
+      applicant: formatted,
+      selectionDetails: selectionDetails
     });
   } catch (err) {
     console.error('[Recruiter Update Applicant Status Error]:', err);
@@ -2128,10 +2391,13 @@ exports.scheduleInterview = async (req, res) => {
   try {
     const email = req.user?.email || 'hr@technova.com';
     const userId = req.user?._id || req.user?.id;
-    let company = getCompanyByEmail(email);
-    if (mongoose.connection.readyState === 1) {
-      const mongoComp = await getOrCreateMongoCompany(userId, email);
-      if (mongoComp) company = mongoComp;
+    const company = await resolveCompanyForUser(userId, email);
+
+    if (!company || !company.approved) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access Restricted: Your organization profile is pending verification by the Placement Administrator. Interview scheduling will unlock once verified.'
+      });
     }
 
     const {
@@ -2808,6 +3074,59 @@ exports.cancelInterview = async (req, res) => {
   }
 };
 
+// DELETE /api/recruiters/interviews/:id (Permanently Delete Interview)
+exports.deleteInterview = async (req, res) => {
+  try {
+    const email = req.user?.email || 'hr@technova.com';
+    const userId = req.user?._id || req.user?.id;
+    let company = getCompanyByEmail(email);
+    if (mongoose.connection.readyState === 1) {
+      const mongoComp = await getOrCreateMongoCompany(userId, email);
+      if (mongoComp) company = mongoComp;
+    }
+    const intId = req.params.id;
+
+    // 1. Delete in MongoDB if connected
+    if (mongoose.connection.readyState === 1 && Interview && mongoose.Types.ObjectId.isValid(intId)) {
+      try {
+        await Interview.findByIdAndDelete(intId);
+      } catch (err) {
+        console.warn('[Recruiter Delete Interview Warning]:', err.message);
+      }
+    }
+
+    // 2. Delete from in-memory recruiter store
+    const idx = recruiterStore.interviews.findIndex(
+      i => String(i.id) === String(intId) || String(i._id) === String(intId)
+    );
+    if (idx !== -1) {
+      recruiterStore.interviews.splice(idx, 1);
+    }
+
+    // 3. Delete from student store
+    if (studentStore && Array.isArray(studentStore.interviews)) {
+      const sIdx = studentStore.interviews.findIndex(
+        si => String(si.id) === String(intId) || String(si._id) === String(intId)
+      );
+      if (sIdx !== -1) {
+        studentStore.interviews.splice(sIdx, 1);
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Interview record permanently deleted.'
+    });
+  } catch (err) {
+    console.error('[Recruiter Delete Interview Error]:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to delete interview record',
+      error: err.message
+    });
+  }
+};
+
 // ==========================================
 // Step 7E: Recruiter Placement Results & Offers
 // ==========================================
@@ -3126,7 +3445,15 @@ exports.getResultById = async (req, res) => {
 exports.createOrUpdateResult = async (req, res) => {
   try {
     const email = req.user?.email || 'hr@technova.com';
-    const company = getCompanyByEmail(email);
+    const userId = req.user?._id || req.user?.id;
+    const company = await resolveCompanyForUser(userId, email);
+
+    if (!company || !company.approved) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access Restricted: Your organization profile is pending verification by the Placement Administrator. Final candidate offer selection will unlock once verified.'
+      });
+    }
 
     const appId = req.params.appId || req.params.app_id || req.body.application_id || req.body.applicationId || req.body.app_id;
     const { package: pkg, placement_date, placementDate, status } = req.body;
@@ -3485,6 +3812,53 @@ exports.updateResult = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Failed to update placement result',
+      error: err.message
+    });
+  }
+};
+
+// DELETE /api/recruiters/results/:id (Permanently Delete Placement Result)
+exports.deleteResult = async (req, res) => {
+  try {
+    const email = req.user?.email || 'hr@technova.com';
+    const resId = req.params.id;
+
+    // 1. Delete in MongoDB if connected
+    if (mongoose.connection?.readyState === 1 && PlacementResult && mongoose.Types.ObjectId.isValid(resId)) {
+      try {
+        await PlacementResult.findByIdAndDelete(resId);
+      } catch (err) {
+        console.warn('[Recruiter Delete Result Warning]:', err.message);
+      }
+    }
+
+    // 2. Delete from in-memory recruiter store
+    const idx = recruiterStore.results.findIndex(
+      r => String(r.id) === String(resId) || String(r._id) === String(resId)
+    );
+    if (idx !== -1) {
+      recruiterStore.results.splice(idx, 1);
+    }
+
+    // 3. Delete from student store
+    if (studentStore && Array.isArray(studentStore.offers)) {
+      const sIdx = studentStore.offers.findIndex(
+        o => String(o.id) === String(resId) || String(o._id) === String(resId)
+      );
+      if (sIdx !== -1) {
+        studentStore.offers.splice(sIdx, 1);
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Placement result deleted successfully.'
+    });
+  } catch (err) {
+    console.error('[Recruiter Delete Result Error]:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to delete placement result',
       error: err.message
     });
   }

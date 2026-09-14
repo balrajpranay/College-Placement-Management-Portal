@@ -6,7 +6,8 @@ import {
   getRecruiterApplicantsApi,
   scheduleRecruiterInterviewApi, 
   updateRecruiterInterviewApi, 
-  cancelRecruiterInterviewApi 
+  cancelRecruiterInterviewApi,
+  deleteRecruiterInterviewApi 
 } from '../../services/api';
 
 const INTERVIEW_FORMATS = [
@@ -32,6 +33,11 @@ export default function RecruiterInterviews() {
   const [filterDrive, setFilterDrive] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Inline Google Meet Link Editing
+  const [editingMeetId, setEditingMeetId] = useState(null);
+  const [meetInputValue, setMeetInputValue] = useState('');
+  const [savingMeetId, setSavingMeetId] = useState(null);
 
   // Modal State for Schedule / Reschedule
   const [showModal, setShowModal] = useState(false);
@@ -269,6 +275,87 @@ export default function RecruiterInterviews() {
     }
   };
 
+  const handleDeleteInterview = async (interview) => {
+    const confirmDelete = window.confirm(
+      `Permanently delete interview round '${interview.round_name}' for ${interview.student_name || 'this candidate'}? This action cannot be undone.`
+    );
+    if (!confirmDelete) return;
+
+    try {
+      const res = await deleteRecruiterInterviewApi(interview.id);
+      if (res.success) {
+        setNotification({
+          type: 'success',
+          message: `Interview round '${interview.round_name}' has been permanently deleted.`
+        });
+        setInterviews(prev => prev.filter(item => item.id !== interview.id));
+      } else {
+        setNotification({
+          type: 'danger',
+          message: res.message || 'Failed to delete interview.'
+        });
+      }
+    } catch (err) {
+      console.error('Error deleting interview:', err);
+      setNotification({
+        type: 'danger',
+        message: err.message || 'Failed to delete interview.'
+      });
+    }
+  };
+
+  const handleGenerateMeetCode = () => {
+    const part1 = Math.random().toString(36).substring(2, 5);
+    const part2 = Math.random().toString(36).substring(2, 6);
+    const part3 = Math.random().toString(36).substring(2, 5);
+    return `https://meet.google.com/${part1}-${part2}-${part3}`;
+  };
+
+  const handleCopyLink = (link) => {
+    if (!link) return;
+    navigator.clipboard?.writeText(link);
+    setNotification({
+      type: 'success',
+      message: 'Google Meet link copied to clipboard!'
+    });
+  };
+
+  const handleStartEditMeet = (interview) => {
+    setEditingMeetId(interview.id);
+    setMeetInputValue(interview.venue || '');
+  };
+
+  const handleSaveMeetLink = async (interviewId) => {
+    try {
+      setSavingMeetId(interviewId);
+      const res = await updateRecruiterInterviewApi(interviewId, {
+        venue: meetInputValue.trim(),
+        interview_type: 'Online'
+      });
+      if (res.success) {
+        setInterviews(prev => prev.map(item => item.id === interviewId ? { ...item, venue: meetInputValue.trim(), interview_type: 'Online' } : item));
+        setNotification({
+          type: 'success',
+          message: 'Meeting link saved successfully.'
+        });
+        setEditingMeetId(null);
+      } else {
+        setNotification({
+          type: 'danger',
+          message: res.message || 'Failed to update meeting link.'
+        });
+      }
+    } catch (err) {
+      console.error('Error updating meeting link:', err);
+      setNotification({
+        type: 'danger',
+        message: err.message || 'Error updating meeting link.'
+      });
+    } finally {
+      setSavingMeetId(null);
+    }
+  };
+
   const hasActiveFilters = Boolean(filterDrive || filterStatus || searchQuery.trim());
 
   return (
@@ -400,7 +487,7 @@ export default function RecruiterInterviews() {
                   <th>Round Name</th>
                   <th>Date & Time</th>
                   <th>Interview Format</th>
-                  <th>Venue / Meeting Link</th>
+                  <th>Google Meet Link (Editable)</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -443,24 +530,115 @@ export default function RecruiterInterviews() {
                         </span>
                       </td>
 
-                      {/* Venue / Link Column */}
-                      <td className="cell-muted" style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {i.venue ? (
-                          i.venue.startsWith('http') ? (
-                            <a 
-                              href={i.venue} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              style={{ color: 'var(--accent-cyan-600, #0284c7)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                              title={i.venue}
-                            >
-                              <Icon name="external-link" size={12} /> Join Call
-                            </a>
-                          ) : (
-                            <span title={i.venue}>{i.venue}</span>
-                          )
+                      {/* Google Meet Link Column (Directly Editable by Recruiter) */}
+                      <td style={{ minWidth: '240px', maxWidth: '340px' }}>
+                        {editingMeetId === i.id ? (
+                          <div style={{ background: 'var(--bg-surface)', padding: '6px 8px', borderRadius: '8px', border: '1px solid var(--brand-500, #3b82f6)', boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
+                              <input
+                                type="text"
+                                className="table-search-input"
+                                style={{ padding: '4px 8px', fontSize: '0.8rem', height: '30px', flex: 1, borderRadius: '6px' }}
+                                placeholder="https://meet.google.com/..."
+                                value={meetInputValue}
+                                onChange={(e) => setMeetInputValue(e.target.value)}
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleSaveMeetLink(i.id);
+                                  if (e.key === 'Escape') setEditingMeetId(null);
+                                }}
+                              />
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-ghost"
+                                style={{ padding: '2px 6px', fontSize: '0.72rem', color: 'var(--accent-cyan-600, #0284c7)', height: '26px' }}
+                                onClick={() => setMeetInputValue(handleGenerateMeetCode())}
+                                title="Generate random Google Meet room"
+                              >
+                                + Generate
+                              </button>
+                              <div style={{ display: 'flex', gap: '4px' }}>
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-primary"
+                                  style={{ padding: '2px 10px', fontSize: '0.75rem', height: '26px', fontWeight: 600 }}
+                                  disabled={savingMeetId === i.id}
+                                  onClick={() => handleSaveMeetLink(i.id)}
+                                  title="Save Google Meet link"
+                                >
+                                  {savingMeetId === i.id ? '...' : 'Save'}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-ghost"
+                                  style={{ padding: '2px 8px', fontSize: '0.75rem', height: '26px' }}
+                                  onClick={() => setEditingMeetId(null)}
+                                  title="Cancel"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            </div>
+                          </div>
                         ) : (
-                          '—'
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {i.venue ? (
+                                i.venue.startsWith('http') ? (
+                                  <a 
+                                    href={i.venue} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    style={{ color: 'var(--accent-cyan-600, #0284c7)', display: 'inline-flex', alignItems: 'center', gap: '5px', fontWeight: 600, fontSize: '0.85rem', textDecoration: 'none' }}
+                                    title={i.venue}
+                                  >
+                                    <Icon name="external-link" size={13} /> Join Call
+                                  </a>
+                                ) : (
+                                  <span title={i.venue}>{i.venue}</span>
+                                )
+                              ) : (
+                                <span className="cell-muted" style={{ fontStyle: 'italic', fontSize: '0.8rem' }}>No link set</span>
+                              )}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              {i.venue && (
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-ghost"
+                                  style={{ padding: '2px 6px', fontSize: '0.72rem', height: '26px' }}
+                                  onClick={() => handleCopyLink(i.venue)}
+                                  title="Copy Google Meet Link"
+                                >
+                                  Copy
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                className="btn btn-sm"
+                                style={{
+                                  padding: '2px 8px',
+                                  fontSize: '0.75rem',
+                                  height: '26px',
+                                  borderRadius: 6,
+                                  border: '1px solid var(--border-subtle)',
+                                  background: 'var(--bg-surface-alt, rgba(59, 130, 246, 0.08))',
+                                  color: 'var(--brand-500, #3b82f6)',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                  fontWeight: 600,
+                                  cursor: 'pointer'
+                                }}
+                                onClick={() => handleStartEditMeet(i)}
+                                title="Change or set Google Meet Link"
+                              >
+                                <Icon name="edit" size={12} /> {i.venue ? 'Change Link' : 'Add Link'}
+                              </button>
+                            </div>
+                          </div>
                         )}
                       </td>
 
@@ -491,16 +669,16 @@ export default function RecruiterInterviews() {
                                 onClick={() => handleOpenEditModal(i)}
                                 className="btn btn-sm btn-ghost"
                                 style={{ padding: '3px 8px', fontSize: '0.78rem' }}
-                                title="Reschedule / Edit details"
+                                title="Reschedule & Change Google Meet link"
                               >
-                                Reschedule
+                                Edit / Meet Link
                               </button>
 
                               <button
                                 type="button"
                                 onClick={() => handleCancelInterview(i)}
-                                className="btn btn-sm btn-danger-outline"
-                                style={{ padding: '3px 8px', fontSize: '0.78rem' }}
+                                className="btn btn-sm btn-outline"
+                                style={{ padding: '3px 8px', fontSize: '0.78rem', color: 'var(--warning-600)' }}
                                 title="Cancel interview session"
                               >
                                 Cancel
@@ -519,6 +697,28 @@ export default function RecruiterInterviews() {
                               Edit
                             </button>
                           )}
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteInterview(i)}
+                            className="btn btn-sm"
+                            style={{
+                              padding: '3px 10px',
+                              fontSize: '0.78rem',
+                              borderRadius: '6px',
+                              border: '1px solid rgba(239, 68, 68, 0.4)',
+                              background: 'rgba(239, 68, 68, 0.1)',
+                              color: '#ef4444',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontWeight: 600,
+                              cursor: 'pointer'
+                            }}
+                            title="Permanently delete interview round"
+                          >
+                            <Icon name="trash" size={13} /> Delete
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -702,15 +902,42 @@ export default function RecruiterInterviews() {
 
               {/* Venue / Meeting Link */}
               <div className="form-group mb-4">
-                <label className="form-label font-semibold">Meeting Link / Physical Venue</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', flexWrap: 'wrap', gap: 4 }}>
+                  <label className="form-label font-semibold" style={{ margin: 0 }}>Google Meet / Meeting Link (Recruiter Editable)</label>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    {formVenue && formVenue.trim() && (
+                      <a
+                        href={formVenue.startsWith('http') ? formVenue : `https://${formVenue}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ fontSize: '0.75rem', color: 'var(--accent-cyan-600, #0284c7)', textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 3 }}
+                      >
+                        <Icon name="external-link" size={12} /> Test Link
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-ghost"
+                      style={{ fontSize: '0.75rem', padding: '1px 6px', color: 'var(--accent-cyan-600, #0284c7)' }}
+                      onClick={() => {
+                        setFormVenue(handleGenerateMeetCode());
+                      }}
+                    >
+                      + Generate New Meet Link
+                    </button>
+                  </div>
+                </div>
                 <input
                   type="text"
                   value={formVenue}
                   onChange={(e) => setFormVenue(e.target.value)}
-                  placeholder="e.g. Google Meet URL or Seminar Hall B"
+                  placeholder="e.g. https://meet.google.com/abc-defg-hij"
                   className="table-search-input"
                   style={{ width: '100%' }}
                 />
+                <small className="text-muted text-xs" style={{ display: 'block', marginTop: '4px' }}>
+                  Recruiters can customize, change, or paste their own Google Meet link. Candidates will see this link in their interview schedule.
+                </small>
               </div>
 
               {/* Status in Edit Mode */}
@@ -731,23 +958,52 @@ export default function RecruiterInterviews() {
               )}
 
               {/* Modal Actions */}
-              <div className="flex-between mt-6" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="btn btn-outline"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={modalLoading}
-                  className="btn btn-primary"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <Icon name="check" size={16} />
-                  {modalLoading ? 'Saving...' : (modalMode === 'create' ? 'Confirm & Notify Candidate' : 'Save Changes')}
-                </button>
+              <div className="flex-between mt-6" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px', flexWrap: 'wrap', gap: 10 }}>
+                <div>
+                  {modalMode === 'edit' && editingInterview && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowModal(false);
+                        handleDeleteInterview(editingInterview);
+                      }}
+                      className="btn btn-sm"
+                      style={{
+                        padding: '6px 12px',
+                        fontSize: '0.8rem',
+                        borderRadius: '6px',
+                        border: '1px solid rgba(239, 68, 68, 0.4)',
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        color: '#ef4444',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontWeight: 600
+                      }}
+                      title="Permanently delete this interview round"
+                    >
+                      <Icon name="trash" size={13} /> Delete Round
+                    </button>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="btn btn-outline"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={modalLoading}
+                    className="btn btn-primary"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <Icon name="check" size={16} />
+                    {modalLoading ? 'Saving...' : (modalMode === 'create' ? 'Confirm & Notify Candidate' : 'Save Changes')}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

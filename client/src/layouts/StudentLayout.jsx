@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import Icon from '../components/Icon';
-import AIAdvisor from '../components/AIAdvisor';
+import { BrandLockup } from '../components/Logo';
 import ErrorBoundary from '../components/ErrorBoundary';
+import AIAdvisor from '../components/AIAdvisor';
 import { useAuth } from '../context/AuthContext';
 
 export default function StudentLayout() {
@@ -83,23 +84,7 @@ export default function StudentLayout() {
       {/* Sidebar Navigation Shell matching Flask student/_sidebar.html */}
       <aside className={`sidebar app-sidebar ${mobileOpen ? 'open' : ''}`}>
         <div className="sidebar-brand">
-          <NavLink to="/student/opportunities" className="brand-lockup">
-            <div className="brand-logo-wrap">
-              <img
-                src="/static/images/logo.png"
-                alt="Campus Connect"
-                className="brand-logo-img"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = '/static/images/companies/pmi.svg';
-                }}
-              />
-            </div>
-            <div className="brand-text-block">
-              <span className="brand-name">Campus Connect</span>
-              <span className="brand-sub">Student Portal</span>
-            </div>
-          </NavLink>
+          <BrandLockup to="/student/dashboard" textLight={true} size={34} />
         </div>
 
         <nav className="sidebar-nav">
@@ -317,10 +302,8 @@ export default function StudentLayout() {
         </main>
       </div>
 
-      {/* Floating AI Advisor Widget */}
-      <ErrorBoundary>
-        <AIAdvisor />
-      </ErrorBoundary>
+      {/* Floating AI Technical Tutor & Career Advisor Widget */}
+      <AIAdvisor />
     </div>
   );
 }
