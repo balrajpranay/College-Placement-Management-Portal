@@ -1,5 +1,12 @@
 # 🎓 Campus Connect — Institutional Career & Placement Intelligence Platform
 
+[![Live Production](https://img.shields.io/badge/Live%20Deployment-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://college-placement-management-portal.vercel.app/)
+[![Production Status](https://img.shields.io/badge/Status-Live%20%26%20Operational-2ea44f?style=for-the-badge)](https://college-placement-management-portal.vercel.app/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
+
+> 🌐 **Live Production Portal**: [**https://college-placement-management-portal.vercel.app/**](https://college-placement-management-portal.vercel.app/)  
+> Instant cloud access for Students, Corporate Recruiters, and Placement Officers.
+
 Campus Connect is a comprehensive, production-grade placement and career intelligence portal designed for collegiate ecosystems. It bridges students, corporate recruiters, and institutional placement administrators into a unified, secure platform featuring real-time eligibility screening, automated Google Meet interview scheduling, instant candidate selection notifications, and Google Gemini AI career coaching.
 
 ---
@@ -86,6 +93,18 @@ The project is built entirely on modern web standards and proven open-source tec
 
 ---
 
+## 🌐 Live Production Deployment
+
+The complete application is continuously built and hosted on Vercel:
+
+| Resource | URL | Description |
+| :--- | :--- | :--- |
+| **Production Web Portal** | [**college-placement-management-portal.vercel.app**](https://college-placement-management-portal.vercel.app/) | Primary user interface for Students, Recruiters & Admin |
+| **Backend REST API** | [**college-placement-management-portal.vercel.app/api/health**](https://college-placement-management-portal.vercel.app/api/health) | Live Node.js + Express API health verification |
+| **Opportunities Catalog** | [**college-placement-management-portal.vercel.app/api/jobs**](https://college-placement-management-portal.vercel.app/api/jobs) | Live 600+ placement & internship aggregator pipeline |
+
+---
+
 ## 🚀 Getting Started Locally
 
 ### Prerequisites
@@ -95,8 +114,8 @@ The project is built entirely on modern web standards and proven open-source tec
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/balrajpranay/Campus-Connect.git
-cd Campus-Connect
+git clone https://github.com/balrajpranay/College-Placement-Management-Portal.git
+cd College-Placement-Management-Portal
 ```
 
 ### 2. Install Dependencies
