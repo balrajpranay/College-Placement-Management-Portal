@@ -844,10 +844,23 @@ exports.getGoogleAuthUrl = async (req, res) => {
   try {
     const role = req.query.role || 'student';
     const clientId = process.env.GOOGLE_CLIENT_ID || '582752422278-6vfhbc64qfrr34m6r2nqf285tq545l7k.apps.googleusercontent.com';
-    const callbackUrl = process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5173/auth/google/callback';
+    
+    // Resolve dynamic callback URL from query, env, or request headers
+    let callbackUrl = req.query.redirect_uri || process.env.GOOGLE_CALLBACK_URL;
+    if (!callbackUrl) {
+      const host = req.headers['x-forwarded-host'] || req.headers.host;
+      const proto = req.headers['x-forwarded-proto'] || (host && host.includes('localhost') ? 'http' : 'https');
+      if (host && !host.includes('localhost')) {
+        callbackUrl = `${proto}://${host}/auth/google/callback`;
+      } else if (process.env.FRONTEND_URL) {
+        callbackUrl = `${process.env.FRONTEND_URL.replace(/\/$/, '')}/auth/google/callback`;
+      } else {
+        callbackUrl = 'http://localhost:5173/auth/google/callback';
+      }
+    }
     const isCustom = !!(clientId && process.env.GOOGLE_CLIENT_SECRET && !clientId.includes('mock'));
 
-    const stateObj = { role, isCustom: !!isCustom, ts: Date.now() };
+    const stateObj = { role, isCustom: !!isCustom, callbackUrl, ts: Date.now() };
     const state = Buffer.from(JSON.stringify(stateObj)).toString('base64');
 
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(callbackUrl)}&response_type=code&scope=${encodeURIComponent('openid email profile')}&access_type=offline&prompt=consent&state=${state}`;
@@ -873,15 +886,29 @@ exports.handleGoogleAuth = async (req, res) => {
     const code = req.body.code || req.query.code;
     const stateParam = req.body.state || req.query.state;
     let targetRole = req.body.role || 'student';
+    let callbackUrl = req.body.redirect_uri || req.query.redirect_uri || process.env.GOOGLE_CALLBACK_URL;
 
     if (stateParam) {
       try {
         const decoded = JSON.parse(Buffer.from(stateParam, 'base64').toString('utf8'));
         if (decoded.role) targetRole = decoded.role;
+        if (decoded.callbackUrl && !callbackUrl) callbackUrl = decoded.callbackUrl;
       } catch (e) {
         if (stateParam === 'recruiter' || stateParam === 'student' || stateParam === 'admin') {
           targetRole = stateParam;
         }
+      }
+    }
+
+    if (!callbackUrl) {
+      const host = req.headers['x-forwarded-host'] || req.headers.host;
+      const proto = req.headers['x-forwarded-proto'] || (host && host.includes('localhost') ? 'http' : 'https');
+      if (host && !host.includes('localhost')) {
+        callbackUrl = `${proto}://${host}/auth/google/callback`;
+      } else if (process.env.FRONTEND_URL) {
+        callbackUrl = `${process.env.FRONTEND_URL.replace(/\/$/, '')}/auth/google/callback`;
+      } else {
+        callbackUrl = 'http://localhost:5173/auth/google/callback';
       }
     }
 
@@ -895,7 +922,6 @@ exports.handleGoogleAuth = async (req, res) => {
     let googleUser = null;
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const callbackUrl = process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5173/auth/google/callback';
     const isCustom = clientId && clientSecret;
 
     // 1. Live Google Token exchange if live code provided

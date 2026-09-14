@@ -59,15 +59,20 @@ export async function registerRecruiterApi(data) {
 }
 
 export async function getGoogleAuthUrlApi(role = 'student') {
-  const res = await fetch(`${API_BASE_URL}/auth/google/url?role=${encodeURIComponent(role)}`);
+  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+  const redirectUri = currentOrigin ? `${currentOrigin}/auth/google/callback` : '';
+  const query = new URLSearchParams({ role, ...(redirectUri ? { redirect_uri: redirectUri } : {}) });
+  const res = await fetch(`${API_BASE_URL}/auth/google/url?${query.toString()}`);
   return handleResponse(res);
 }
 
 export async function googleAuthCallbackApi(payload) {
+  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+  const redirectUri = currentOrigin ? `${currentOrigin}/auth/google/callback` : '';
   const res = await fetch(`${API_BASE_URL}/auth/google/callback`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
+    body: JSON.stringify({ redirect_uri: redirectUri, ...payload })
   });
   return handleResponse(res);
 }
