@@ -135,11 +135,13 @@ const generateToken = (userOrId, roleParam) => {
   let id = '';
   let email = '';
   let role = 'student';
+  let name = '';
 
   if (userOrId && typeof userOrId === 'object') {
     id = (userOrId._id || userOrId.id || '').toString();
     email = userOrId.email || '';
     role = userOrId.role || roleParam || 'student';
+    name = userOrId.name || '';
   } else if (userOrId) {
     id = userOrId.toString();
     role = roleParam || 'student';
@@ -149,7 +151,8 @@ const generateToken = (userOrId, roleParam) => {
     {
       id,
       email,
-      role
+      role,
+      name
     },
     JWT_SECRET,
     { expiresIn: '7d' }
@@ -530,13 +533,36 @@ exports.getMe = async (req, res) => {
       }
     }
 
+    // Auto-heal corrupted names if profile.name or req.user.name is 'Verified Google Student' or 'Priya Sharma'
+    let resolvedName = req.user.name || profile?.name;
+    const isActualPriya = req.user.email && req.user.email.toLowerCase() === 'priya.sharma@student.edu';
+    if (!isActualPriya) {
+      if (resolvedName === 'Verified Google Student' || resolvedName === 'Priya Sharma' || !resolvedName) {
+        if (profile?.name && profile.name !== 'Verified Google Student' && profile.name !== 'Priya Sharma') {
+          resolvedName = profile.name;
+        } else if (req.user.email) {
+          const emailPrefix = req.user.email.split('@')[0];
+          resolvedName = emailPrefix.replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        }
+      }
+      // If profile has corrupted name, heal it
+      if (profile && (profile.name === 'Verified Google Student' || profile.name === 'Priya Sharma')) {
+        profile.name = resolvedName;
+        if (mongoose.connection.readyState === 1 && profile._id) {
+          try {
+            await Student.findByIdAndUpdate(profile._id, { name: resolvedName });
+          } catch (_) {}
+        }
+      }
+    }
+
     return res.status(200).json({
       success: true,
       user: {
         id: userId,
         email: req.user.email,
         role: req.user.role,
-        name: profile?.name || req.user.name || req.user.email.split('@')[0],
+        name: resolvedName || (isActualPriya ? 'Priya Sharma' : 'Student'),
         avatar: req.user.avatar,
         githubUsername: req.user.githubUsername,
         profile
@@ -1040,42 +1066,83 @@ exports.handleGoogleAuth = async (req, res) => {
 
         const tokenData = await tokenRes.json();
 
-        if (tokenData.access_token) {
-          const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-            headers: {
-              Authorization: `Bearer ${tokenData.access_token}`
-            }
-          });
-          const userProfile = await userRes.json();
-
-          if (userProfile && (userProfile.email || userProfile.sub)) {
-            googleUser = {
-              id: String(userProfile.sub),
-              name: userProfile.name || userProfile.given_name || 'Google User',
-              email: userProfile.email,
-              avatar_url: userProfile.picture
-            };
+        if (tokenData.error) {
+          console.error('[Google OAuth Token Error]:', tokenData.error, tokenData.error_description);
+          if (isProduction) {
+            return res.status(401).json({
+              success: false,
+              message: `Google authentication failed: ${tokenData.error_description || tokenData.error}`
+            });
           }
         }
+
+        let userProfile = null;
+        if (tokenData.access_token) {
+          try {
+            const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+              headers: {
+                Authorization: `Bearer ${tokenData.access_token}`
+              }
+            });
+            userProfile = await userRes.json();
+          } catch (userInfoErr) {
+            console.warn('[Google UserInfo Fetch Warning]:', userInfoErr.message);
+          }
+        }
+
+        // If userinfo endpoint didn't provide sub/email, decode id_token JWT
+        if ((!userProfile || !userProfile.sub) && tokenData.id_token) {
+          try {
+            const decodedIdToken = jwt.decode(tokenData.id_token);
+            if (decodedIdToken && (decodedIdToken.sub || decodedIdToken.email)) {
+              userProfile = {
+                sub: decodedIdToken.sub,
+                name: decodedIdToken.name || decodedIdToken.given_name,
+                email: decodedIdToken.email,
+                picture: decodedIdToken.picture
+              };
+            }
+          } catch (decodeErr) {
+            console.warn('[Google ID Token Decode Warning]:', decodeErr.message);
+          }
+        }
+
+        if (userProfile && (userProfile.email || userProfile.sub)) {
+          const resolvedName = userProfile.name || userProfile.given_name || (userProfile.email ? userProfile.email.split('@')[0] : 'Google Student');
+          googleUser = {
+            id: String(userProfile.sub || 'goog_' + Date.now()),
+            name: resolvedName,
+            email: userProfile.email,
+            avatar_url: userProfile.picture
+          };
+        }
       } catch (err) {
-        console.warn('[Google Live Auth Notice]: Falling back to verified local profile:', err.message);
+        console.warn('[Google Live Auth Notice]:', err.message);
+        if (isProduction) {
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to communicate with Google authentication services.'
+          });
+        }
       }
     }
 
-    // 2. High-craft fallback / verified simulated Google profile for seamless development
+    // 2. High-craft fallback / verified simulated Google profile for seamless development and testing
     if (!googleUser) {
-      let username = 'google-student';
+      let username = 'google-user';
       if (code.includes('demo_') || code.includes('google_')) {
         username = code.replace(/demo_|google_/g, '') || 'google-user';
       }
       const pseudoId = 'goog_' + Math.abs(code.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0) || 719281);
+      
+      const cleanName = (username === 'google-user' || username === 'student' || username === 'google-student')
+        ? (targetRole === 'recruiter' ? 'Verified Google Recruiter' : 'Google Student')
+        : username.replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
       googleUser = {
         id: String(pseudoId),
-        name: username === 'google-user' || username === 'student' || username === 'google-student' 
-          ? (targetRole === 'recruiter' ? 'Verified Google Recruiter' : 'Verified Google Student') 
-          : (username.charAt(0).toUpperCase() + username.slice(1)),
-        email: username.includes('@') ? username.toLowerCase() : `${username.toLowerCase()}@gmail.com`,
+        name: cleanName,
+        email: username.includes('@') ? username.toLowerCase() : `${username.toLowerCase().replace(/[\s_]+/g, '.')}@gmail.com`,
         avatar_url: 'https://lh3.googleusercontent.com/a/default-user'
       };
     }
@@ -1087,20 +1154,28 @@ exports.handleGoogleAuth = async (req, res) => {
     let profile = null;
 
     if (mongoose.connection.readyState === 1) {
-      existingUser = await User.findOne({
-        $or: [
-          { googleId: googleUser.id },
-          { email: cleanEmail }
-        ]
-      });
+      // First try matching by Google Subject ID (googleId)
+      if (googleUser.id) {
+        existingUser = await User.findOne({ googleId: googleUser.id });
+      }
+      // If not found by googleId, link by verified email
+      if (!existingUser && cleanEmail) {
+        existingUser = await User.findOne({ email: cleanEmail });
+      }
     }
 
     if (!existingUser) {
-      for (const u of memoryUsers.values()) {
-        if (u.googleId === googleUser.id || u.email === cleanEmail) {
-          existingUser = u;
-          break;
+      // Check in-memory store
+      if (googleUser.id) {
+        for (const u of memoryUsers.values()) {
+          if (u.googleId === googleUser.id) {
+            existingUser = u;
+            break;
+          }
         }
+      }
+      if (!existingUser && cleanEmail) {
+        existingUser = memoryUsers.get(cleanEmail);
       }
     }
 
@@ -1118,11 +1193,24 @@ exports.handleGoogleAuth = async (req, res) => {
       finalUser.avatar = googleUser.avatar_url || finalUser.avatar;
       finalUser.authProvider = 'google';
 
+      if (cleanEmail && (!existingUser.authProvider || existingUser.authProvider === 'google')) {
+        finalUser.email = cleanEmail;
+      }
+
+      // Heal name if corrupted or missing, without overwriting legitimate names with generic labels
+      const isCorruptedName = !finalUser.name || finalUser.name === 'Verified Google Student' || finalUser.name === 'Google User';
+      const isRealGoogleName = googleUser.name && googleUser.name !== 'Verified Google Student' && googleUser.name !== 'Google User';
+      if (isRealGoogleName || isCorruptedName) {
+        finalUser.name = isRealGoogleName ? googleUser.name : (finalUser.name || googleUser.name);
+      }
+
       if (mongoose.connection.readyState === 1) {
         await User.findByIdAndUpdate(finalUser._id || finalUser.id, {
           googleId: googleUser.id,
-          avatar: googleUser.avatar_url,
-          authProvider: 'google'
+          avatar: finalUser.avatar,
+          authProvider: 'google',
+          name: finalUser.name,
+          email: finalUser.email
         });
       }
     } else {
@@ -1145,14 +1233,15 @@ exports.handleGoogleAuth = async (req, res) => {
 
       memoryUsers.set(cleanEmail, newUserObj);
 
-      const studentNo = 'GOOG' + String(Date.now()).slice(-6);
+      const studentNo = 'GOOG' + Math.floor(100000 + Math.random() * 900000);
       const newStudentObj = {
         user: newUserId,
         studentNo,
         name: googleUser.name,
+        email: cleanEmail,
         department: 'Computer Science',
         gradYear: 2026,
-        cgpa: 8.8,
+        cgpa: 0,
         backlogs: 0,
         verified: true
       };
@@ -1167,7 +1256,7 @@ exports.handleGoogleAuth = async (req, res) => {
             name: googleUser.name,
             department: 'Computer Science',
             gradYear: 2026,
-            cgpa: 8.8,
+            cgpa: 0,
             backlogs: 0,
             verified: true
           });
@@ -1181,23 +1270,33 @@ exports.handleGoogleAuth = async (req, res) => {
       }
     }
 
+    const finalUserIdStr = (finalUser._id || finalUser.id).toString();
+
     // 4. Retrieve or create linked profile
     if (mongoose.connection.readyState === 1) {
       if (finalUser.role === 'student') {
         profile = await Student.findOne({ user: finalUser._id || finalUser.id });
-        if (!profile) {
+        if (profile) {
+          // Auto-heal student profile name if it was corrupted as 'Verified Google Student' or 'Priya Sharma'
+          if (cleanEmail !== 'priya.sharma@student.edu' && (profile.name === 'Verified Google Student' || profile.name === 'Priya Sharma' || !profile.name)) {
+            profile.name = finalUser.name || googleUser.name;
+            await Student.findByIdAndUpdate(profile._id, { name: profile.name });
+          }
+        } else {
           try {
             profile = await Student.create({
               user: finalUser._id || finalUser.id,
-              studentNo: 'GOOG' + String(Date.now()).slice(-6),
+              studentNo: 'GOOG' + Math.floor(100000 + Math.random() * 900000),
               name: finalUser.name || googleUser.name,
               department: 'Computer Science',
               gradYear: 2026,
-              cgpa: 8.8,
+              cgpa: 0,
               backlogs: 0,
               verified: true
             });
-          } catch (e) {}
+          } catch (e) {
+            console.warn('[Student Create in handleGoogleAuth]:', e.message);
+          }
         }
       } else if (finalUser.role === 'recruiter') {
         profile = await Company.findOne({ user: finalUser._id || finalUser.id });
@@ -1205,34 +1304,41 @@ exports.handleGoogleAuth = async (req, res) => {
     }
 
     if (!profile) {
-      profile = finalUser.role === 'student'
-        ? memoryStudents.get(finalUser._id || finalUser.id)
-        : memoryCompanies.get(finalUser._id || finalUser.id);
-      if (!profile && finalUser.role === 'student') {
-        profile = {
-          user: finalUser._id || finalUser.id,
-          studentNo: 'GOOG' + String(Date.now()).slice(-6),
-          name: finalUser.name || googleUser.name,
-          department: 'Computer Science',
-          gradYear: 2026,
-          cgpa: 8.8,
-          backlogs: 0,
-          verified: true
-        };
-        memoryStudents.set(finalUser._id || finalUser.id, profile);
+      if (finalUser.role === 'student') {
+        profile = memoryStudents.get(finalUserIdStr);
+        if (!profile) {
+          profile = {
+            user: finalUserIdStr,
+            studentNo: 'GOOG' + Math.floor(100000 + Math.random() * 900000),
+            name: finalUser.name || googleUser.name,
+            email: cleanEmail,
+            department: 'Computer Science',
+            gradYear: 2026,
+            cgpa: 0,
+            backlogs: 0,
+            verified: true
+          };
+          memoryStudents.set(finalUserIdStr, profile);
+        } else if (cleanEmail !== 'priya.sharma@student.edu' && (profile.name === 'Verified Google Student' || profile.name === 'Priya Sharma')) {
+          profile.name = finalUser.name || googleUser.name;
+        }
+      } else if (finalUser.role === 'recruiter') {
+        profile = memoryCompanies.get(finalUserIdStr);
       }
     }
 
     // 5. Generate signed JWT token with valid user ID and role
     const token = generateToken(finalUser);
 
+    const resolvedDisplayName = finalUser.name || googleUser.name || profile?.name || cleanEmail.split('@')[0];
+
     return res.status(200).json({
       success: true,
       message: 'Google authentication successful! Initializing placement workspace.',
       token,
       user: {
-        id: (finalUser._id || finalUser.id).toString(),
-        name: finalUser.name || googleUser.name,
+        id: finalUserIdStr,
+        name: resolvedDisplayName,
         email: finalUser.email,
         role: finalUser.role || 'student',
         avatar: finalUser.avatar || googleUser.avatar_url,
@@ -1248,3 +1354,7 @@ exports.handleGoogleAuth = async (req, res) => {
     });
   }
 };
+
+exports.memoryUsers = memoryUsers;
+exports.memoryStudents = memoryStudents;
+exports.memoryCompanies = memoryCompanies;

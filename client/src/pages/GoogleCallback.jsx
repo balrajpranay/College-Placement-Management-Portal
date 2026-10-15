@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AuthLoadingScreen from '../components/AuthLoadingScreen';
@@ -8,8 +8,12 @@ export default function GoogleCallback() {
   const location = useLocation();
   const { loginWithGoogle, setAuthSession } = useAuth();
   const [errorMsg, setErrorMsg] = useState(null);
+  const hasProcessedRef = useRef(false);
 
   useEffect(() => {
+    if (hasProcessedRef.current) return;
+    hasProcessedRef.current = true;
+
     const processCallback = async () => {
       const searchParams = new URLSearchParams(location.search);
       const code = searchParams.get('code');
@@ -17,14 +21,23 @@ export default function GoogleCallback() {
       const directToken = searchParams.get('token');
       const directRole = searchParams.get('role');
 
+      // Check for saved post-auth redirect from protected routes
+      const savedRedirect = sessionStorage.getItem('post_auth_redirect') || sessionStorage.getItem('auth_redirect');
+      if (savedRedirect) {
+        sessionStorage.removeItem('post_auth_redirect');
+        sessionStorage.removeItem('auth_redirect');
+      }
+
       // 1. If backend already passed direct token via GET redirect
       if (directToken) {
         setAuthSession(directToken, {
           role: directRole || 'student',
           email: 'google.user@campusconnect.edu'
         });
+        const defaultDest = directRole === 'recruiter' ? '/recruiter/dashboard' : '/student/dashboard';
+        const destination = savedRedirect || defaultDest;
         setTimeout(() => {
-          navigate(directRole === 'recruiter' ? '/recruiter/dashboard' : '/student/opportunities', { replace: true });
+          navigate(destination, { replace: true });
         }, 1200);
         return;
       }
@@ -43,7 +56,11 @@ export default function GoogleCallback() {
 
       try {
         const res = await loginWithGoogle(authCode, state, targetRole);
-        const destination = res?.user?.role === 'recruiter' ? '/recruiter/dashboard' : '/student/opportunities';
+        const userRole = res?.user?.role || targetRole;
+        const defaultDest = userRole === 'recruiter' 
+          ? '/recruiter/dashboard' 
+          : (userRole === 'admin' ? '/admin/dashboard' : '/student/dashboard');
+        const destination = savedRedirect || defaultDest;
         setTimeout(() => {
           navigate(destination, { replace: true });
         }, 1200);
@@ -76,11 +93,11 @@ export default function GoogleCallback() {
   return (
     <AuthLoadingScreen
       title="Completing Google Verification"
-      subtitle="Securing your placement session and fetching active recruitment drives"
+      subtitle="Securing your placement workspace and initializing dashboard metrics"
       provider="google"
       manualAction={{
-        label: "Take me to opportunities now →",
-        onClick: () => navigate('/student/opportunities')
+        label: "Take me to dashboard now →",
+        onClick: () => navigate('/student/dashboard')
       }}
     />
   );

@@ -35,7 +35,7 @@ export default function Login() {
   useEffect(() => {
     if (isAuthenticated && user) {
       const redirectPath = {
-        student: location.state?.from || '/student/opportunities',
+        student: location.state?.from || '/student/dashboard',
         recruiter: '/recruiter/dashboard',
         admin: '/admin/dashboard'
       }[user.role] || '/';

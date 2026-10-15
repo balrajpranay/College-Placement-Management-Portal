@@ -53,7 +53,7 @@ export default function StudentDashboard() {
               <span className="badge badge-accent" style={{ fontSize: '0.75rem' }}>Placement Season 2025–2026</span>
             </div>
             <h1 className="h2" style={{ margin: '0 0 6px', fontSize: '1.85rem', fontWeight: 800 }}>
-              Welcome back, {student.name.split(' ')[0]}! 👋
+              Welcome back, {student?.name ? student.name.split(' ')[0] : 'Student'}! 👋
             </h1>
             <p className="text-muted" style={{ margin: 0, fontSize: '0.95rem' }}>
               {student.department} · Class of {student.gradYear} · Verified Candidate

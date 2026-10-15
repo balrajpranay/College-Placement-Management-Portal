@@ -202,11 +202,11 @@ export default function StudentLayout() {
                 flexShrink: 0
               }}
             >
-              {(user?.email?.[0] || 'P').toUpperCase()}
+              {(user?.name?.[0] || user?.email?.[0] || 'S').toUpperCase()}
             </div>
             <div style={{ overflow: 'hidden', flex: 1 }}>
               <div className="font-semibold text-sm truncate" style={{ color: '#FFFFFF' }}>
-                {user?.name || user?.email?.split('@')[0] || 'Priya Sharma'}
+                {user?.name || (user?.email ? user.email.split('@')[0] : 'Student')}
               </div>
               <div className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.65)' }}>
                 Student · Verified

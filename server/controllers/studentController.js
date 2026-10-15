@@ -401,18 +401,71 @@ function formatStudentResponse(s, fallbackEmail) {
 }
 
 // Helper: Query student profile from MongoDB with graceful in-memory fallback
-async function getStudentProfileForUser(userId, fallbackEmail) {
+async function getStudentProfileForUser(userId, fallbackEmail, fallbackName = null) {
+  const isActualPriya = fallbackEmail && fallbackEmail.toLowerCase() === 'priya.sharma@student.edu';
+
   if (mongoose.connection.readyState === 1 && userId) {
     try {
       const doc = await Student.findOne({ user: userId }).lean();
       if (doc) {
+        // If not actual Priya, ensure name isn't corrupted to 'Priya Sharma' or 'Verified Google Student'
+        if (!isActualPriya && (doc.name === 'Priya Sharma' || doc.name === 'Verified Google Student') && fallbackName) {
+          doc.name = fallbackName;
+        }
         return formatStudentResponse(doc, fallbackEmail);
       }
     } catch (err) {
       console.warn('[Student Mongo]: Fallback to memory store', err.message);
     }
   }
-  return studentStore.profile;
+
+  // Check in-memory store for user-specific student profile
+  try {
+    const authCtrl = require('./authController');
+    if (authCtrl.memoryStudents) {
+      const mem = authCtrl.memoryStudents.get(userId ? userId.toString() : '');
+      if (mem) {
+        if (!isActualPriya && (mem.name === 'Priya Sharma' || mem.name === 'Verified Google Student') && fallbackName) {
+          mem.name = fallbackName;
+        }
+        return formatStudentResponse(mem, fallbackEmail || mem.email);
+      }
+    }
+  } catch (_) {}
+
+  // Only return demo profile if this is genuinely Priya Sharma
+  if (isActualPriya || (!fallbackEmail && !userId)) {
+    return studentStore.profile;
+  }
+
+  // Otherwise construct a clean isolated profile for this user
+  const cleanName = fallbackName || (fallbackEmail ? fallbackEmail.split('@')[0] : 'Student');
+  return {
+    id: userId ? userId.toString() : 'stu_' + Date.now(),
+    name: cleanName,
+    studentNo: 'STU' + Math.floor(100000 + Math.random() * 900000),
+    email: fallbackEmail,
+    department: 'Computer Science',
+    gradYear: 2026,
+    cgpa: 0,
+    tenthPct: 0,
+    twelfthPct: 0,
+    backlogs: 0,
+    technical_skills: [],
+    skills: [],
+    softSkills: '',
+    certifications: '',
+    internships: '',
+    projects: '',
+    resume_filename: null,
+    resume_original_name: null,
+    resumeFilename: null,
+    resumeOriginalName: null,
+    resumeLatex: '',
+    resume_latex: '',
+    resumeData: null,
+    resume_data: null
+  };
 }
 
 // Helper: Format Drive for student consumption matching React frontend expectations
@@ -466,7 +519,7 @@ function formatDriveForStudent(d) {
 
 
 // Helper: Get or create Mongoose Student document for authenticated user
-async function getOrCreateMongoStudent(userId, fallbackEmail) {
+async function getOrCreateMongoStudent(userId, fallbackEmail, fallbackName = null) {
   if (mongoose.connection.readyState !== 1) return null;
   try {
     let studentDoc = null;
@@ -481,29 +534,52 @@ async function getOrCreateMongoStudent(userId, fallbackEmail) {
       }
     }
     if (!studentDoc) {
-      const fallback = studentStore.profile;
-      const userObjId = userId && mongoose.Types.ObjectId.isValid(userId)
-        ? new mongoose.Types.ObjectId(userId)
-        : new mongoose.Types.ObjectId('65e000000000000000000002');
+      let userDoc = null;
+      if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+        userDoc = await User.findById(userId);
+      }
+      if (!userDoc && fallbackEmail) {
+        userDoc = await User.findOne({ email: fallbackEmail });
+      }
+
+      const isActualPriya = (fallbackEmail && fallbackEmail.toLowerCase() === 'priya.sharma@student.edu') || (userDoc?.email === 'priya.sharma@student.edu');
+      const resolvedName = fallbackName || userDoc?.name || (isActualPriya ? 'Priya Sharma' : (fallbackEmail ? fallbackEmail.split('@')[0] : 'Student'));
+      const studentNo = isActualPriya ? 'CS2023001' : ('STU' + Math.floor(100000 + Math.random() * 900000));
+      const userObjId = userDoc?._id || (userId && mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : new mongoose.Types.ObjectId());
+
       studentDoc = await Student.create({
         user: userObjId,
-        studentNo: fallback.studentNo || fallback.student_no || 'CS2023001',
-        name: fallback.name || 'Priya Sharma',
-        phone: fallback.phone || '+91 98765 43210',
-        department: fallback.department || 'Computer Science',
-        gradYear: Number(fallback.gradYear || fallback.grad_year || 2026),
-        cgpa: Number(fallback.cgpa || 8.9),
-        tenthPct: Number(fallback.tenthPct || 92.5),
-        twelfthPct: Number(fallback.twelfthPct || 89.0),
-        backlogs: Number(fallback.backlogs || 0),
-        skills: Array.isArray(fallback.skills) ? fallback.skills : ['Python', 'SQL', 'React', 'Node.js'],
-        softSkills: fallback.softSkills || '',
-        certifications: fallback.certifications || '',
-        projects: fallback.projects || '',
-        internships: fallback.internships || '',
-        resumeFilename: fallback.resume_filename || null,
-        resumeOriginalName: fallback.resume_original_name || null
+        studentNo,
+        name: resolvedName,
+        phone: isActualPriya ? '+91 98765 43210' : '',
+        department: 'Computer Science',
+        gradYear: 2026,
+        cgpa: isActualPriya ? 8.9 : 0,
+        tenthPct: isActualPriya ? 92.5 : 0,
+        twelfthPct: isActualPriya ? 89.0 : 0,
+        backlogs: 0,
+        skills: isActualPriya ? ['Python', 'SQL', 'React', 'Node.js'] : [],
+        softSkills: isActualPriya ? 'Analytical Problem Solving, Technical Documentation' : '',
+        certifications: '',
+        projects: '',
+        internships: '',
+        resumeFilename: null,
+        resumeOriginalName: null
       });
+    } else {
+      // Auto-heal existing doc if name was corrupted as 'Priya Sharma' or 'Verified Google Student' for non-Priya user
+      const isActualPriya = fallbackEmail && fallbackEmail.toLowerCase() === 'priya.sharma@student.edu';
+      if (!isActualPriya && (studentDoc.name === 'Priya Sharma' || studentDoc.name === 'Verified Google Student')) {
+        let userDoc = null;
+        if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+          userDoc = await User.findById(userId);
+        }
+        const cleanName = fallbackName || userDoc?.name || (fallbackEmail ? fallbackEmail.split('@')[0] : null);
+        if (cleanName && cleanName !== 'Priya Sharma' && cleanName !== 'Verified Google Student') {
+          studentDoc.name = cleanName;
+          await Student.findByIdAndUpdate(studentDoc._id, { name: cleanName });
+        }
+      }
     }
     return studentDoc;
   } catch (err) {
@@ -667,28 +743,29 @@ exports.getDashboard = async (req, res) => {
   try {
     const userId = req.user?._id || req.user?.id;
     const userEmail = req.user?.email || 'priya.sharma@student.edu';
-    const student = await getStudentProfileForUser(userId, userEmail);
+    const userName = req.user?.name;
+    const student = await getStudentProfileForUser(userId, userEmail, userName);
+
+    const isActualPriya = userEmail && userEmail.toLowerCase() === 'priya.sharma@student.edu';
 
     const completion = calculateCompletion(student);
-    let app_count = studentStore.applications.length;
-    let shortlisted = studentStore.applications.filter(a => ['Shortlisted', 'Interview Scheduled', 'Under Review'].includes(a.status)).length;
-    let selected = studentStore.selectedOffers || [];
-    let upcoming_interviews = (studentStore.interviews || []).filter(i => i.status === 'Scheduled').map(formatStudentInterview);
+    let app_count = isActualPriya ? studentStore.applications.length : 0;
+    let shortlisted = isActualPriya ? studentStore.applications.filter(a => ['Shortlisted', 'Interview Scheduled', 'Under Review'].includes(a.status)).length : 0;
+    let selected = isActualPriya ? (studentStore.selectedOffers || []) : [];
+    let upcoming_interviews = isActualPriya ? (studentStore.interviews || []).filter(i => i.status === 'Scheduled').map(formatStudentInterview) : [];
     const recent_notifications = studentStore.notifications.slice(0, 5);
 
     // Read application and interview metrics from MongoDB if connected
     if (mongoose.connection.readyState === 1) {
       try {
-        const studentDoc = await getOrCreateMongoStudent(userId, userEmail);
+        const studentDoc = await getOrCreateMongoStudent(userId, userEmail, userName);
         if (studentDoc) {
           const mongoApps = await Application.find({
             student: studentDoc._id,
             status: { $ne: 'Withdrawn' }
           }).lean();
-          if (mongoApps && mongoApps.length > 0) {
-            app_count = mongoApps.length;
-            shortlisted = mongoApps.filter(a => ['Shortlisted', 'Interview Scheduled', 'Under Review'].includes(a.status)).length;
-          }
+          app_count = (mongoApps || []).length;
+          shortlisted = (mongoApps || []).filter(a => ['Shortlisted', 'Interview Scheduled', 'Under Review'].includes(a.status)).length;
 
           const appIds = (mongoApps || []).map(a => a._id);
           const mongoUpcoming = await Interview.find({
@@ -710,9 +787,7 @@ exports.getDashboard = async (req, res) => {
             .sort({ scheduledDate: 1, createdAt: -1 })
             .lean();
 
-          if (mongoUpcoming && mongoUpcoming.length > 0) {
-            upcoming_interviews = mongoUpcoming.map(formatStudentInterview);
-          }
+          upcoming_interviews = (mongoUpcoming || []).map(formatStudentInterview);
 
           if (PlacementResult) {
             const results = await PlacementResult.find({
@@ -787,7 +862,8 @@ exports.getProfile = async (req, res) => {
   try {
     const userId = req.user?._id || req.user?.id;
     const userEmail = req.user?.email || 'priya.sharma@student.edu';
-    const student = await getStudentProfileForUser(userId, userEmail);
+    const userName = req.user?.name;
+    const student = await getStudentProfileForUser(userId, userEmail, userName);
 
     const completion = calculateCompletion(student);
     const departments = [
@@ -819,6 +895,9 @@ exports.updateProfile = async (req, res) => {
     const body = req.body;
     const userId = req.user?._id || req.user?.id;
     const userEmail = req.user?.email || 'priya.sharma@student.edu';
+    const isActualPriya = userEmail && userEmail.toLowerCase() === 'priya.sharma@student.edu';
+    const defaultName = isActualPriya ? 'Priya Sharma' : (req.user?.name || userEmail.split('@')[0]);
+    const defaultStudentNo = isActualPriya ? 'CS2023001' : ('STU' + Math.floor(100000 + Math.random() * 900000));
 
     // Parse technical skills
     let parsedSkills = [];
@@ -872,12 +951,12 @@ exports.updateProfile = async (req, res) => {
     // 1. Persist to MongoDB if connected
     if (mongoose.connection.readyState === 1 && userId) {
       try {
-        const studentNo = body.studentNo || body.student_no || studentStore.profile.studentNo || 'CS2023001';
+        const studentNo = body.studentNo || body.student_no || defaultStudentNo;
         const setFields = { ...updateData, user: userId };
         const insertFields = {};
         if (!setFields.studentNo) insertFields.studentNo = studentNo;
-        if (!setFields.name) insertFields.name = studentStore.profile.name;
-        if (!setFields.department) insertFields.department = studentStore.profile.department;
+        if (!setFields.name) insertFields.name = defaultName;
+        if (!setFields.department) insertFields.department = 'Computer Science';
         if (!setFields.gradYear) insertFields.gradYear = 2026;
 
         const updateOps = { $set: setFields };
@@ -900,28 +979,55 @@ exports.updateProfile = async (req, res) => {
     }
 
     // 2. Also keep in-memory fallback updated
-    const student = studentStore.profile;
-    if (updateData.studentNo !== undefined) student.studentNo = updateData.studentNo;
-    if (updateData.name !== undefined) student.name = updateData.name;
-    if (updateData.phone !== undefined) student.phone = updateData.phone;
-    if (updateData.department !== undefined) student.department = updateData.department;
-    if (updateData.gradYear !== undefined) student.gradYear = updateData.gradYear;
-    if (updateData.cgpa !== undefined) student.cgpa = updateData.cgpa;
-    if (updateData.tenthPct !== undefined) student.tenthPct = updateData.tenthPct;
-    if (updateData.twelfthPct !== undefined) student.twelfthPct = updateData.twelfthPct;
-    if (updateData.backlogs !== undefined) student.backlogs = updateData.backlogs;
-    if (updateData.softSkills !== undefined) student.softSkills = updateData.softSkills;
-    if (updateData.certifications !== undefined) student.certifications = updateData.certifications;
-    if (updateData.projects !== undefined) student.projects = updateData.projects;
-    if (updateData.internships !== undefined) student.internships = updateData.internships;
-    if (updateData.resumeLatex !== undefined) student.resumeLatex = updateData.resumeLatex;
-    if (updateData.resumeData !== undefined) student.resumeData = updateData.resumeData;
+    let memStudent = null;
+    const userIdStr = (userId || '').toString();
+    let authCtrl = null;
+    try {
+      authCtrl = require('./authController');
+    } catch (_) {}
+
+    if (isActualPriya) {
+      memStudent = studentStore.profile;
+    } else if (authCtrl?.memoryStudents && authCtrl.memoryStudents.has(userIdStr)) {
+      memStudent = authCtrl.memoryStudents.get(userIdStr);
+    } else {
+      memStudent = {
+        user: userIdStr,
+        studentNo: defaultStudentNo,
+        name: defaultName,
+        email: userEmail,
+        department: 'Computer Science',
+        gradYear: 2026,
+        cgpa: 0,
+        backlogs: 0,
+        skills: []
+      };
+      if (authCtrl?.memoryStudents) {
+        authCtrl.memoryStudents.set(userIdStr, memStudent);
+      }
+    }
+
+    if (updateData.studentNo !== undefined) memStudent.studentNo = updateData.studentNo;
+    if (updateData.name !== undefined) memStudent.name = updateData.name;
+    if (updateData.phone !== undefined) memStudent.phone = updateData.phone;
+    if (updateData.department !== undefined) memStudent.department = updateData.department;
+    if (updateData.gradYear !== undefined) memStudent.gradYear = updateData.gradYear;
+    if (updateData.cgpa !== undefined) memStudent.cgpa = updateData.cgpa;
+    if (updateData.tenthPct !== undefined) memStudent.tenthPct = updateData.tenthPct;
+    if (updateData.twelfthPct !== undefined) memStudent.twelfthPct = updateData.twelfthPct;
+    if (updateData.backlogs !== undefined) memStudent.backlogs = updateData.backlogs;
+    if (updateData.softSkills !== undefined) memStudent.softSkills = updateData.softSkills;
+    if (updateData.certifications !== undefined) memStudent.certifications = updateData.certifications;
+    if (updateData.projects !== undefined) memStudent.projects = updateData.projects;
+    if (updateData.internships !== undefined) memStudent.internships = updateData.internships;
+    if (updateData.resumeLatex !== undefined) memStudent.resumeLatex = updateData.resumeLatex;
+    if (updateData.resumeData !== undefined) memStudent.resumeData = updateData.resumeData;
     if (updateData.skills !== undefined) {
-      student.technical_skills = updateData.skills;
+      memStudent.technical_skills = updateData.skills;
     }
 
     if (!updatedStudent) {
-      updatedStudent = student;
+      updatedStudent = formatStudentResponse(memStudent, userEmail);
     }
 
     return res.status(200).json({
@@ -982,7 +1088,8 @@ exports.getDrives = async (req, res) => {
   try {
     const userId = req.user?._id || req.user?.id;
     const userEmail = req.user?.email || 'priya.sharma@student.edu';
-    const student = await getStudentProfileForUser(userId, userEmail);
+    const userName = req.user?.name;
+    const student = await getStudentProfileForUser(userId, userEmail, userName);
     const { q, eligible } = req.query;
 
     let driveList = [];
@@ -1043,7 +1150,8 @@ exports.getDriveDetail = async (req, res) => {
     const { id } = req.params;
     const userId = req.user?._id || req.user?.id;
     const userEmail = req.user?.email || 'priya.sharma@student.edu';
-    const student = await getStudentProfileForUser(userId, userEmail);
+    const userName = req.user?.name;
+    const student = await getStudentProfileForUser(userId, userEmail, userName);
 
     let drive = null;
 

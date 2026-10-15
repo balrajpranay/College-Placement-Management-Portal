@@ -242,10 +242,82 @@ async function runAll() {
       studentToken = googleRes.body.token;
     });
 
-    await runTest('JWT token payload contains non-undefined id and role="student"', async () => {
-      const decoded = jwt.verify(studentToken, JWT_SECRET);
-      assert.ok(decoded.id, 'Token id must exist');
-      assert.strictEqual(decoded.role, 'student', 'Token role must be student');
+    await runTest('Google Sign-In Account 1 creates distinct student with genuine name and email', async () => {
+      const res1 = await request('POST', '/api/auth/google/callback', {
+        code: 'demo_google_balraj_pranay',
+        state: Buffer.from(JSON.stringify({ role: 'student' })).toString('base64')
+      });
+
+      assert.strictEqual(res1.status, 200);
+      assert.strictEqual(res1.body.success, true);
+      assert.ok(res1.body.token);
+      assert.strictEqual(res1.body.user.role, 'student');
+      assert.strictEqual(res1.body.user.name, 'Balraj Pranay');
+      assert.strictEqual(res1.body.user.email, 'balraj.pranay@gmail.com');
+      studentToken = res1.body.token;
+    });
+
+    await runTest('Account 1 Dashboard returns student.name="Balraj Pranay" and isolated 0 applications', async () => {
+      const dashRes = await request('GET', '/api/students/dashboard', null, {
+        Authorization: `Bearer ${studentToken}`
+      });
+
+      assert.strictEqual(dashRes.status, 200);
+      assert.strictEqual(dashRes.body.success, true);
+      assert.strictEqual(dashRes.body.data.student.name, 'Balraj Pranay');
+      assert.notStrictEqual(dashRes.body.data.student.name, 'Priya Sharma', 'Must not show Priya Sharma');
+      assert.strictEqual(dashRes.body.data.app_count, 0, 'New student must start with 0 applications, not Priya demo count');
+    });
+
+    await runTest('Account 1 /api/auth/me session restore returns "Balraj Pranay"', async () => {
+      const meRes = await request('GET', '/api/auth/me', null, {
+        Authorization: `Bearer ${studentToken}`
+      });
+
+      assert.strictEqual(meRes.status, 200);
+      assert.strictEqual(meRes.body.user.name, 'Balraj Pranay');
+      assert.strictEqual(meRes.body.user.email, 'balraj.pranay@gmail.com');
+      assert.strictEqual(meRes.body.user.role, 'student');
+    });
+
+    let studentToken2 = null;
+    await runTest('Google Sign-In Account 2 creates distinct user and student record (different ID and name)', async () => {
+      const res2 = await request('POST', '/api/auth/google/callback', {
+        code: 'demo_google_aarav_mehta',
+        state: Buffer.from(JSON.stringify({ role: 'student' })).toString('base64')
+      });
+
+      assert.strictEqual(res2.status, 200);
+      assert.strictEqual(res2.body.success, true);
+      assert.ok(res2.body.token);
+      assert.strictEqual(res2.body.user.role, 'student');
+      assert.strictEqual(res2.body.user.name, 'Aarav Mehta');
+      assert.strictEqual(res2.body.user.email, 'aarav.mehta@gmail.com');
+      assert.notStrictEqual(res2.body.user.id, jwt.verify(studentToken, JWT_SECRET).id, 'IDs must be distinct');
+      studentToken2 = res2.body.token;
+    });
+
+    await runTest('Account 2 Dashboard returns student.name="Aarav Mehta" without cross-contamination', async () => {
+      const dashRes2 = await request('GET', '/api/students/dashboard', null, {
+        Authorization: `Bearer ${studentToken2}`
+      });
+
+      assert.strictEqual(dashRes2.status, 200);
+      assert.strictEqual(dashRes2.body.success, true);
+      assert.strictEqual(dashRes2.body.data.student.name, 'Aarav Mehta');
+      assert.notStrictEqual(dashRes2.body.data.student.name, 'Balraj Pranay');
+      assert.notStrictEqual(dashRes2.body.data.student.name, 'Priya Sharma');
+      assert.strictEqual(dashRes2.body.data.app_count, 0);
+    });
+
+    await runTest('Account 2 /api/auth/me session restore returns "Aarav Mehta"', async () => {
+      const meRes2 = await request('GET', '/api/auth/me', null, {
+        Authorization: `Bearer ${studentToken2}`
+      });
+
+      assert.strictEqual(meRes2.status, 200);
+      assert.strictEqual(meRes2.body.user.name, 'Aarav Mehta');
+      assert.strictEqual(meRes2.body.user.email, 'aarav.mehta@gmail.com');
     });
 
     await runTest('Google Sign-In rejects browser role manipulation to admin/recruiter', async () => {
@@ -259,24 +331,6 @@ async function runAll() {
       assert.strictEqual(attackerRes.body.user.role, 'student', 'Must remain student');
     });
 
-    await runTest('Student Dashboard (/api/students/dashboard) loads successfully with student token', async () => {
-      const dashRes = await request('GET', '/api/students/dashboard', null, {
-        Authorization: `Bearer ${studentToken}`
-      });
-
-      assert.strictEqual(dashRes.status, 200);
-      assert.strictEqual(dashRes.body.success, true);
-    });
-
-    await runTest('Session restoration (/api/auth/me) restores user role on refresh', async () => {
-      const meRes = await request('GET', '/api/auth/me', null, {
-        Authorization: `Bearer ${studentToken}`
-      });
-
-      assert.strictEqual(meRes.status, 200);
-      assert.strictEqual(meRes.body.user.role, 'student');
-    });
-
     await runTest('Role-based access control blocks student from recruiter dashboard (403)', async () => {
       const forbiddenRes = await request('GET', '/api/recruiters/dashboard', null, {
         Authorization: `Bearer ${studentToken}`
@@ -285,7 +339,7 @@ async function runAll() {
       assert.strictEqual(forbiddenRes.status, 403);
     });
 
-    await runTest('Traditional email/password login is fully preserved', async () => {
+    await runTest('Traditional email/password login and Priya Sharma demo account are fully preserved', async () => {
       const loginRes = await request('POST', '/api/auth/login', {
         email: 'priya.sharma@student.edu',
         password: 'student123',
@@ -295,6 +349,16 @@ async function runAll() {
       assert.strictEqual(loginRes.status, 200);
       assert.strictEqual(loginRes.body.success, true);
       assert.strictEqual(loginRes.body.user.role, 'student');
+      assert.strictEqual(loginRes.body.user.name, 'Priya Sharma');
+
+      const priyaToken = loginRes.body.token;
+      const priyaDashRes = await request('GET', '/api/students/dashboard', null, {
+        Authorization: `Bearer ${priyaToken}`
+      });
+
+      assert.strictEqual(priyaDashRes.status, 200);
+      assert.strictEqual(priyaDashRes.body.data.student.name, 'Priya Sharma');
+      assert.ok(priyaDashRes.body.data.app_count > 0, 'Priya demo applications must remain preserved');
     });
 
   } finally {

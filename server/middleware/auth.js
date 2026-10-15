@@ -40,11 +40,17 @@ const protect = async (req, res, next) => {
         _id: decoded.id,
         id: decoded.id,
         email: decoded.email,
+        name: decoded.name,
         role: decoded.role || 'student',
         isActive: true
       };
-    } else if (!req.user.role) {
-      req.user.role = decoded.role || 'student';
+    } else {
+      if (!req.user.role) {
+        req.user.role = decoded.role || 'student';
+      }
+      if (!req.user.name && decoded.name) {
+        req.user.name = decoded.name;
+      }
     }
 
     if (!req.user || !req.user.isActive) {

@@ -7,10 +7,10 @@ export default function AuthLoadingPage() {
   return (
     <AuthLoadingScreen
       title="Securing Your Placement Workspace"
-      subtitle="Verifying credentials and loading 600+ placement & internship opportunities"
+      subtitle="Verifying credentials and loading your placement dashboard"
       manualAction={{
-        label: "Go to Opportunities Hub →",
-        onClick: () => navigate('/student/opportunities')
+        label: "Go to Dashboard →",
+        onClick: () => navigate('/student/dashboard')
       }}
     />
   );

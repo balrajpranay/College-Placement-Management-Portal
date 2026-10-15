@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getGoogleAuthUrlApi } from '../services/api';
 
 export default function GoogleAuthButton({
@@ -8,12 +8,19 @@ export default function GoogleAuthButton({
   onInitiate
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(false);
 
   const handleGoogleClick = async () => {
     try {
       setLoading(true);
       if (onInitiate) onInitiate();
+
+      // Preserve explicit redirect path if initiated from a protected page flow
+      const fromPath = location.state?.from?.pathname || (typeof location.state?.from === 'string' ? location.state.from : null);
+      if (fromPath && !fromPath.includes('/login') && !fromPath.includes('/auth/')) {
+        sessionStorage.setItem('post_auth_redirect', fromPath);
+      }
 
       // Retrieve Google OAuth endpoint config from backend
       const res = await getGoogleAuthUrlApi(role);

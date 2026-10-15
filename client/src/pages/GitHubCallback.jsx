@@ -24,7 +24,7 @@ export default function GitHubCallback() {
           email: 'github.user@campusconnect.edu'
         });
         setTimeout(() => {
-          navigate(directRole === 'recruiter' ? '/recruiter/dashboard' : '/student/opportunities', { replace: true });
+          navigate(directRole === 'recruiter' ? '/recruiter/dashboard' : '/student/dashboard', { replace: true });
         }, 1200);
         return;
       }
@@ -43,7 +43,7 @@ export default function GitHubCallback() {
 
       try {
         const res = await loginWithGitHub(authCode, state, targetRole);
-        const destination = res?.user?.role === 'recruiter' ? '/recruiter/dashboard' : '/student/opportunities';
+        const destination = res?.user?.role === 'recruiter' ? '/recruiter/dashboard' : '/student/dashboard';
         setTimeout(() => {
           navigate(destination, { replace: true });
         }, 1200);
@@ -78,8 +78,8 @@ export default function GitHubCallback() {
       title="Completing GitHub Verification"
       subtitle="Securing your placement session and fetching active recruitment drives"
       manualAction={{
-        label: "Take me to opportunities now →",
-        onClick: () => navigate('/student/opportunities')
+        label: "Take me to dashboard now →",
+        onClick: () => navigate('/student/dashboard')
       }}
     />
   );
