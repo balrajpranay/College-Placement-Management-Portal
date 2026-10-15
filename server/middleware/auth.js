@@ -29,8 +29,10 @@ const protect = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     
-    if (mongoose.connection.readyState === 1) {
-      req.user = await User.findById(decoded.id).select('-passwordHash');
+    if (mongoose.connection.readyState === 1 && decoded.id) {
+      try {
+        req.user = await User.findById(decoded.id).select('-passwordHash');
+      } catch (e) {}
     }
     
     if (!req.user) {
@@ -38,9 +40,11 @@ const protect = async (req, res, next) => {
         _id: decoded.id,
         id: decoded.id,
         email: decoded.email,
-        role: decoded.role,
+        role: decoded.role || 'student',
         isActive: true
       };
+    } else if (!req.user.role) {
+      req.user.role = decoded.role || 'student';
     }
 
     if (!req.user || !req.user.isActive) {
@@ -67,10 +71,11 @@ const authorize = (...roles) => {
         message: 'User authentication required.'
       });
     }
-    if (!roles.includes(req.user.role)) {
+    const userRole = req.user.role || 'student';
+    if (!roles.includes(userRole)) {
       return res.status(403).json({
         success: false,
-        message: `User role '${req.user.role}' is not authorized to access this endpoint.`
+        message: `User role '${userRole}' is not authorized to access this endpoint.`
       });
     }
     next();

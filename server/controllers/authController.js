@@ -131,12 +131,25 @@ const initDemoAccounts = async () => {
 
 initDemoAccounts();
 
-const generateToken = (user) => {
+const generateToken = (userOrId, roleParam) => {
+  let id = '';
+  let email = '';
+  let role = 'student';
+
+  if (userOrId && typeof userOrId === 'object') {
+    id = (userOrId._id || userOrId.id || '').toString();
+    email = userOrId.email || '';
+    role = userOrId.role || roleParam || 'student';
+  } else if (userOrId) {
+    id = userOrId.toString();
+    role = roleParam || 'student';
+  }
+
   return jwt.sign(
     {
-      id: user._id || user.id,
-      email: user.email,
-      role: user.role
+      id,
+      email,
+      role
     },
     JWT_SECRET,
     { expiresIn: '7d' }
@@ -839,25 +852,117 @@ exports.handleGithubAuth = async (req, res) => {
 };
 
 
+// Secure helper to resolve and validate Google OAuth redirect URI
+function resolveGoogleCallbackUrl(req, candidateUrl = null, stateCallbackUrl = null) {
+  const isProduction = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
+
+  // Gather allowed origins
+  const trustedOrigins = new Set();
+
+  if (process.env.CLIENT_ORIGIN) {
+    process.env.CLIENT_ORIGIN.split(',').forEach(s => {
+      const trimmed = s.trim().replace(/\/$/, '');
+      if (trimmed && trimmed !== '*') {
+        try {
+          trustedOrigins.add(new URL(trimmed).origin.toLowerCase());
+        } catch (_) {}
+      }
+    });
+  }
+
+  if (process.env.FRONTEND_URL) {
+    try {
+      trustedOrigins.add(new URL(process.env.FRONTEND_URL.trim()).origin.toLowerCase());
+    } catch (_) {}
+  }
+
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    trustedOrigins.add(`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.toLowerCase().trim()}`);
+  }
+  if (process.env.VERCEL_URL) {
+    trustedOrigins.add(`https://${process.env.VERCEL_URL.toLowerCase().trim()}`);
+  }
+
+  let requestOrigin = null;
+  if (req && req.headers) {
+    const rawHost = req.headers['x-forwarded-host'] || req.headers.host;
+    if (rawHost) {
+      const host = rawHost.split(',')[0].trim();
+      const proto = req.headers['x-forwarded-proto'] || (host.includes('localhost') || host.includes('127.0.0.1') ? 'http' : 'https');
+      requestOrigin = `${proto}://${host}`.toLowerCase();
+      const isLocalHost = host.includes('localhost') || host.includes('127.0.0.1');
+      if (!isProduction || !isLocalHost) {
+        trustedOrigins.add(requestOrigin);
+      }
+    }
+  }
+
+  function isValidCallback(urlStr) {
+    if (!urlStr || typeof urlStr !== 'string') return false;
+    try {
+      const parsed = new URL(urlStr.trim());
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+
+      const isLocal = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1' || parsed.hostname.startsWith('192.168.') || parsed.hostname.startsWith('10.');
+
+      // In production, strictly reject localhost and local network callbacks
+      if (isProduction && isLocal) return false;
+
+      // Restrict path strictly to valid OAuth callback routes
+      if (parsed.pathname !== '/auth/google/callback' && parsed.pathname !== '/api/auth/google/callback') {
+        return false;
+      }
+
+      const origin = parsed.origin.toLowerCase();
+      if (!isProduction && isLocal) return true;
+
+      return trustedOrigins.has(origin);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // 1. If stateCallbackUrl is present and valid, prioritize it (ensures authorization code exchange matches consent redirect)
+  if (isValidCallback(stateCallbackUrl)) {
+    return stateCallbackUrl.trim();
+  }
+
+  // 2. Candidate from query / body
+  if (isValidCallback(candidateUrl)) {
+    return candidateUrl.trim();
+  }
+
+  // 3. Configured environment callback URL
+  if (isValidCallback(process.env.GOOGLE_CALLBACK_URL)) {
+    return process.env.GOOGLE_CALLBACK_URL.trim();
+  }
+
+  // 4. In production, derive dynamically from verified request origin or trusted non-local origin
+  if (isProduction) {
+    if (requestOrigin && !requestOrigin.includes('localhost') && !requestOrigin.includes('127.0.0.1')) {
+      return `${requestOrigin}/auth/google/callback`;
+    }
+    for (const origin of trustedOrigins) {
+      if (!origin.includes('localhost') && !origin.includes('127.0.0.1')) {
+        return `${origin}/auth/google/callback`;
+      }
+    }
+  }
+
+  // 5. Development fallback (only for genuine local development)
+  return 'http://localhost:5173/auth/google/callback';
+}
+
+exports.resolveGoogleCallbackUrl = resolveGoogleCallbackUrl;
+
 // GET /api/auth/google/url (Generate Google OAuth authorization URL)
 exports.getGoogleAuthUrl = async (req, res) => {
   try {
     const role = req.query.role || 'student';
     const clientId = process.env.GOOGLE_CLIENT_ID || '582752422278-6vfhbc64qfrr34m6r2nqf285tq545l7k.apps.googleusercontent.com';
     
-    // Resolve dynamic callback URL from query, env, or request headers
-    let callbackUrl = req.query.redirect_uri || process.env.GOOGLE_CALLBACK_URL;
-    if (!callbackUrl) {
-      const host = req.headers['x-forwarded-host'] || req.headers.host;
-      const proto = req.headers['x-forwarded-proto'] || (host && host.includes('localhost') ? 'http' : 'https');
-      if (host && !host.includes('localhost')) {
-        callbackUrl = `${proto}://${host}/auth/google/callback`;
-      } else if (process.env.FRONTEND_URL) {
-        callbackUrl = `${process.env.FRONTEND_URL.replace(/\/$/, '')}/auth/google/callback`;
-      } else {
-        callbackUrl = 'http://localhost:5173/auth/google/callback';
-      }
-    }
+    // Resolve dynamic callback URL from query, env, or request headers with environment awareness
+    const callbackUrl = resolveGoogleCallbackUrl(req, req.query.redirect_uri);
     const isCustom = !!(clientId && process.env.GOOGLE_CLIENT_SECRET && !clientId.includes('mock'));
 
     const stateObj = { role, isCustom: !!isCustom, callbackUrl, ts: Date.now() };
@@ -883,16 +988,16 @@ exports.getGoogleAuthUrl = async (req, res) => {
 // POST or GET /api/auth/google/callback (Handle Google Token Exchange & User Provisioning)
 exports.handleGoogleAuth = async (req, res) => {
   try {
-    const code = req.body.code || req.query.code;
-    const stateParam = req.body.state || req.query.state;
-    let targetRole = req.body.role || 'student';
-    let callbackUrl = req.body.redirect_uri || req.query.redirect_uri || process.env.GOOGLE_CALLBACK_URL;
+    const code = req.body?.code || req.query?.code;
+    const stateParam = req.body?.state || req.query?.state;
+    let targetRole = req.body?.role || 'student';
+    let stateCallbackUrl = null;
 
     if (stateParam) {
       try {
         const decoded = JSON.parse(Buffer.from(stateParam, 'base64').toString('utf8'));
         if (decoded.role) targetRole = decoded.role;
-        if (decoded.callbackUrl && !callbackUrl) callbackUrl = decoded.callbackUrl;
+        if (decoded.callbackUrl) stateCallbackUrl = decoded.callbackUrl;
       } catch (e) {
         if (stateParam === 'recruiter' || stateParam === 'student' || stateParam === 'admin') {
           targetRole = stateParam;
@@ -900,17 +1005,9 @@ exports.handleGoogleAuth = async (req, res) => {
       }
     }
 
-    if (!callbackUrl) {
-      const host = req.headers['x-forwarded-host'] || req.headers.host;
-      const proto = req.headers['x-forwarded-proto'] || (host && host.includes('localhost') ? 'http' : 'https');
-      if (host && !host.includes('localhost')) {
-        callbackUrl = `${proto}://${host}/auth/google/callback`;
-      } else if (process.env.FRONTEND_URL) {
-        callbackUrl = `${process.env.FRONTEND_URL.replace(/\/$/, '')}/auth/google/callback`;
-      } else {
-        callbackUrl = 'http://localhost:5173/auth/google/callback';
-      }
-    }
+    // Resolve callback URL using state (for strict parity with authorization step) or body/query with environment validation
+    const candidateUrl = req.body?.redirect_uri || req.query?.redirect_uri;
+    const callbackUrl = resolveGoogleCallbackUrl(req, candidateUrl, stateCallbackUrl);
 
     if (!code) {
       return res.status(400).json({
@@ -978,7 +1075,7 @@ exports.handleGoogleAuth = async (req, res) => {
         name: username === 'google-user' || username === 'student' || username === 'google-student' 
           ? (targetRole === 'recruiter' ? 'Verified Google Recruiter' : 'Verified Google Student') 
           : (username.charAt(0).toUpperCase() + username.slice(1)),
-        email: `${username.toLowerCase()}@gmail.com`,
+        email: username.includes('@') ? username.toLowerCase() : `${username.toLowerCase()}@gmail.com`,
         avatar_url: 'https://lh3.googleusercontent.com/a/default-user'
       };
     }
@@ -1010,28 +1107,36 @@ exports.handleGoogleAuth = async (req, res) => {
     let finalUser = null;
 
     if (existingUser) {
+      // Existing user: Preserve verified role from database/memory
+      finalUser = existingUser;
+      if (!finalUser.role) {
+        finalUser.role = 'student';
+      }
+
       // Update with Google attributes
-      existingUser.googleId = googleUser.id;
-      existingUser.avatar = googleUser.avatar_url || existingUser.avatar;
-      existingUser.authProvider = 'google';
+      finalUser.googleId = googleUser.id;
+      finalUser.avatar = googleUser.avatar_url || finalUser.avatar;
+      finalUser.authProvider = 'google';
 
       if (mongoose.connection.readyState === 1) {
-        await User.findByIdAndUpdate(existingUser._id || existingUser.id, {
+        await User.findByIdAndUpdate(finalUser._id || finalUser.id, {
           googleId: googleUser.id,
           avatar: googleUser.avatar_url,
           authProvider: 'google'
         });
       }
-      finalUser = existingUser;
     } else {
-      // Create new user record
+      // New user registration via Google OAuth:
+      // Assign standard 'student' role. Never automatically grant admin or recruiter permissions.
+      // Do not trust an elevated role supplied by the browser.
+      const assignedRole = 'student';
       const newUserId = new mongoose.Types.ObjectId().toString();
       const newUserObj = {
         _id: newUserId,
         id: newUserId,
         email: cleanEmail,
         name: googleUser.name,
-        role: targetRole,
+        role: assignedRole,
         googleId: googleUser.id,
         avatar: googleUser.avatar_url,
         authProvider: 'google',
@@ -1040,57 +1145,32 @@ exports.handleGoogleAuth = async (req, res) => {
 
       memoryUsers.set(cleanEmail, newUserObj);
 
-      if (targetRole === 'student') {
-        const studentNo = 'GOOG' + String(Date.now()).slice(-6);
-        const newStudentObj = {
-          user: newUserId,
-          studentNo,
-          name: googleUser.name,
-          department: 'Computer Science',
-          gradYear: 2026,
-          cgpa: 8.8,
-          backlogs: 0,
-          verified: true
-        };
-        memoryStudents.set(newUserId, newStudentObj);
-      } else if (targetRole === 'recruiter') {
-        const newCompanyObj = {
-          user: newUserId,
-          companyName: googleUser.name + ' Ventures',
-          industry: 'Technology',
-          website: 'https://google.com',
-          hrContact: googleUser.name,
-          phone: '+91 9876543210',
-          verified: true
-        };
-        memoryCompanies.set(newUserId, newCompanyObj);
-      }
+      const studentNo = 'GOOG' + String(Date.now()).slice(-6);
+      const newStudentObj = {
+        user: newUserId,
+        studentNo,
+        name: googleUser.name,
+        department: 'Computer Science',
+        gradYear: 2026,
+        cgpa: 8.8,
+        backlogs: 0,
+        verified: true
+      };
+      memoryStudents.set(newUserId, newStudentObj);
 
       if (mongoose.connection.readyState === 1) {
         try {
           const created = await User.create(newUserObj);
-          if (targetRole === 'student') {
-            await Student.create({
-              user: created._id,
-              studentNo: 'GOOG' + String(Date.now()).slice(-6),
-              name: googleUser.name,
-              department: 'Computer Science',
-              gradYear: 2026,
-              cgpa: 8.8,
-              backlogs: 0,
-              verified: true
-            });
-          } else if (targetRole === 'recruiter') {
-            await Company.create({
-              user: created._id,
-              companyName: googleUser.name + ' Ventures',
-              industry: 'Technology',
-              website: 'https://google.com',
-              hrContact: googleUser.name,
-              phone: '+91 9876543210',
-              verified: true
-            });
-          }
+          await Student.create({
+            user: created._id,
+            studentNo,
+            name: googleUser.name,
+            department: 'Computer Science',
+            gradYear: 2026,
+            cgpa: 8.8,
+            backlogs: 0,
+            verified: true
+          });
           finalUser = created;
         } catch (dbErr) {
           console.warn('[MongoDB Create Warning]: Continuing with memory provisioned record:', dbErr.message);
@@ -1101,10 +1181,24 @@ exports.handleGoogleAuth = async (req, res) => {
       }
     }
 
-    // 4. Retrieve linked profile
+    // 4. Retrieve or create linked profile
     if (mongoose.connection.readyState === 1) {
       if (finalUser.role === 'student') {
         profile = await Student.findOne({ user: finalUser._id || finalUser.id });
+        if (!profile) {
+          try {
+            profile = await Student.create({
+              user: finalUser._id || finalUser.id,
+              studentNo: 'GOOG' + String(Date.now()).slice(-6),
+              name: finalUser.name || googleUser.name,
+              department: 'Computer Science',
+              gradYear: 2026,
+              cgpa: 8.8,
+              backlogs: 0,
+              verified: true
+            });
+          } catch (e) {}
+        }
       } else if (finalUser.role === 'recruiter') {
         profile = await Company.findOne({ user: finalUser._id || finalUser.id });
       }
@@ -1114,20 +1208,33 @@ exports.handleGoogleAuth = async (req, res) => {
       profile = finalUser.role === 'student'
         ? memoryStudents.get(finalUser._id || finalUser.id)
         : memoryCompanies.get(finalUser._id || finalUser.id);
+      if (!profile && finalUser.role === 'student') {
+        profile = {
+          user: finalUser._id || finalUser.id,
+          studentNo: 'GOOG' + String(Date.now()).slice(-6),
+          name: finalUser.name || googleUser.name,
+          department: 'Computer Science',
+          gradYear: 2026,
+          cgpa: 8.8,
+          backlogs: 0,
+          verified: true
+        };
+        memoryStudents.set(finalUser._id || finalUser.id, profile);
+      }
     }
 
-    // 5. Generate signed JWT token
-    const token = generateToken(finalUser._id || finalUser.id, finalUser.role);
+    // 5. Generate signed JWT token with valid user ID and role
+    const token = generateToken(finalUser);
 
     return res.status(200).json({
       success: true,
       message: 'Google authentication successful! Initializing placement workspace.',
       token,
       user: {
-        id: finalUser._id || finalUser.id,
+        id: (finalUser._id || finalUser.id).toString(),
         name: finalUser.name || googleUser.name,
         email: finalUser.email,
-        role: finalUser.role,
+        role: finalUser.role || 'student',
         avatar: finalUser.avatar || googleUser.avatar_url,
         authProvider: 'google',
         profile: profile || null

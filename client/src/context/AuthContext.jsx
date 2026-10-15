@@ -31,6 +31,13 @@ export const AuthProvider = ({ children }) => {
           }
         } catch (err) {
           console.warn('[Auth] Session verify notice:', err.message);
+          if (err.status === 401) {
+            localStorage.removeItem('campus_jwt_token');
+            localStorage.removeItem('cc_token');
+            localStorage.removeItem('campus_user');
+            setToken(null);
+            setUser(null);
+          }
         }
       }
       setLoading(false);
