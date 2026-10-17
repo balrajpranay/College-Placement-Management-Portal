@@ -538,6 +538,29 @@ export async function getAdminDriveDetailApi(id) {
   return handleResponse(res);
 }
 
+export async function approveAdminDriveApi(id) {
+  const res = await fetch(`${API_BASE_URL}/admin/drives/${id}/approve`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeader()
+    }
+  });
+  return handleResponse(res);
+}
+
+export async function rejectAdminDriveApi(id, reason) {
+  const res = await fetch(`${API_BASE_URL}/admin/drives/${id}/reject`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeader()
+    },
+    body: JSON.stringify({ reason })
+  });
+  return handleResponse(res);
+}
+
 export async function getAdminApplicationsApi(params = {}) {
   const query = new URLSearchParams(params).toString();
   const res = await fetch(`${API_BASE_URL}/admin/applications${query ? `?${query}` : ''}`, {

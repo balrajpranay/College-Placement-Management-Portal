@@ -64,6 +64,30 @@ const DriveSchema = new mongoose.Schema({
     type: String,
     enum: ['active', 'closed', 'cancelled'],
     default: 'active'
+  },
+  approvalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending',
+    index: true
+  },
+  rejectionReason: {
+    type: String,
+    default: ''
+  },
+  approvedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  approvedAt: {
+    type: Date,
+    default: null
+  },
+  recruiter: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
   }
 }, {
   timestamps: true

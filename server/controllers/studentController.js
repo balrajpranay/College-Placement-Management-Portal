@@ -1097,7 +1097,14 @@ exports.getDrives = async (req, res) => {
     // 1. If MongoDB is connected, read from Drive collection
     if (mongoose.connection.readyState === 1) {
       try {
-        const mongoDrives = await Drive.find({ status: 'active' }).populate('company').sort({ deadline: 1 }).lean();
+        const mongoDrives = await Drive.find({
+          status: 'active',
+          $or: [
+            { approvalStatus: 'approved' },
+            { approvalStatus: { $exists: false } },
+            { approvalStatus: null }
+          ]
+        }).populate('company').sort({ deadline: 1 }).lean();
         if (mongoDrives && mongoDrives.length > 0) {
           driveList = mongoDrives.map(d => formatDriveForStudent(d));
         }
@@ -1108,7 +1115,9 @@ exports.getDrives = async (req, res) => {
 
     // 2. Fallback to in-memory studentStore.drives
     if (driveList.length === 0) {
-      driveList = studentStore.drives.map(d => formatDriveForStudent(d));
+      driveList = studentStore.drives
+        .filter(d => !d.approvalStatus || d.approvalStatus === 'approved')
+        .map(d => formatDriveForStudent(d));
     }
 
     let items = driveList.map(d => {
@@ -1160,6 +1169,9 @@ exports.getDriveDetail = async (req, res) => {
       try {
         const doc = await Drive.findById(id).populate('company').lean();
         if (doc) {
+          if (doc.approvalStatus && doc.approvalStatus !== 'approved') {
+            return res.status(404).json({ success: false, message: 'Placement drive not found or pending approval.' });
+          }
           drive = formatDriveForStudent(doc);
         }
       } catch (err) {
@@ -1170,7 +1182,7 @@ exports.getDriveDetail = async (req, res) => {
     // 2. Fallback in-memory
     if (!drive) {
       const fallback = studentStore.drives.find(d => String(d.id) === String(id) || String(d._id) === String(id));
-      if (fallback) {
+      if (fallback && (!fallback.approvalStatus || fallback.approvalStatus === 'approved')) {
         drive = formatDriveForStudent(fallback);
       }
     }
@@ -1258,6 +1270,13 @@ exports.applyToDrive = async (req, res) => {
 
     if (!drive) {
       return res.status(404).json({ success: false, message: 'Placement drive not found.' });
+    }
+
+    if (driveDoc && driveDoc.approvalStatus && driveDoc.approvalStatus !== 'approved') {
+      return res.status(400).json({
+        success: false,
+        message: 'This placement opportunity is pending institutional approval and is not accepting applications.'
+      });
     }
 
     const eligibility = checkEligibility(student, drive);

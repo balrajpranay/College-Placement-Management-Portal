@@ -8,6 +8,11 @@ const Interview = require('../models/Interview');
 const PlacementResult = require('../models/PlacementResult');
 const Notification = require('../models/Notification');
 
+let recruiterStore = null;
+try {
+  recruiterStore = require('./recruiterController').recruiterStore;
+} catch (e) {}
+
 // Institutional Students Master Data
 const institutionalStudents = [
   {
@@ -530,6 +535,10 @@ function formatAdminDrive(d) {
   const companyObj = d.company && typeof d.company === 'object' ? d.company : null;
   const compName = companyObj?.name || d.companyName || d.company_name || 'Corporate Partner';
   const compEmail = companyObj?.email || d.companyEmail || d.company_email || '';
+  const compWebsite = companyObj?.website || '';
+  const compLocation = companyObj?.location || '';
+  const compHrContact = companyObj?.hrContact || '';
+  const compPhone = companyObj?.phone || '';
 
   const deadlineStr = d.deadline instanceof Date
     ? d.deadline.toISOString().split('T')[0]
@@ -545,19 +554,29 @@ function formatAdminDrive(d) {
   const ctc = d.ctc !== undefined ? Number(d.ctc) : 0;
   const applicantCount = d.applicantCount !== undefined ? Number(d.applicantCount) : (d.applicant_count !== undefined ? Number(d.applicant_count) : 0);
 
+  const approvalStatus = d.approvalStatus || d.approval_status || 'approved';
+  const rejectionReason = d.rejectionReason || d.rejection_reason || '';
+  const approvedBy = d.approvedBy || d.approved_by || null;
+  const approvedAt = d.approvedAt || d.approved_at || null;
+  const recruiter = d.recruiter || null;
+
   return {
     id: idStr,
     _id: idStr,
     title: d.title || '',
+    company: companyObj,
     companyName: compName,
     company_name: compName,
     companyEmail: compEmail,
     company_email: compEmail,
+    companyWebsite: compWebsite,
+    hrContact: compHrContact,
+    companyPhone: compPhone,
     jobType: jobType,
     job_type: jobType,
     ctc: ctc,
     package: ctc,
-    location: d.location || 'Bengaluru',
+    location: d.location || compLocation || 'Bengaluru',
     minCgpa: minCgpa,
     min_cgpa: minCgpa,
     maxBacklogs: maxBacklogs,
@@ -569,6 +588,15 @@ function formatAdminDrive(d) {
     applicantCount: applicantCount,
     applicant_count: applicantCount,
     status: d.status || 'active',
+    approvalStatus: approvalStatus,
+    approval_status: approvalStatus,
+    rejectionReason: rejectionReason,
+    rejection_reason: rejectionReason,
+    approvedBy: approvedBy,
+    approved_by: approvedBy,
+    approvedAt: approvedAt,
+    approved_at: approvedAt,
+    recruiter: recruiter,
     branches: Array.isArray(d.branches) ? d.branches : [],
     skills: Array.isArray(d.skills) ? d.skills : [],
     description: d.description || ''
@@ -664,9 +692,12 @@ exports.getDashboard = async (req, res) => {
     let highestPkg = '18.00';
     let avgPkg = '11.20';
 
+    let pendingDrivesCount = 0;
+
     if (mongoose.connection.readyState === 1) {
       try {
         const count = await Drive.countDocuments({ status: 'active' });
+        pendingDrivesCount = await Drive.countDocuments({ approvalStatus: 'pending' });
         const mongoDrives = await Drive.find().populate('company').sort({ createdAt: -1 }).limit(5).lean();
         if (mongoDrives && mongoDrives.length > 0) {
           activeDrivesCount = count;
@@ -696,6 +727,7 @@ exports.getDashboard = async (req, res) => {
       totalStudents: institutionalStudents.length + 5, // 13 enrolled
       totalCompanies: institutionalCompanies.length, // 8 companies
       activeDrives: activeDrivesCount,
+      pendingDrives: pendingDrivesCount,
       totalApplications: totalAppsCount,
       placedStudents: placedCount,
       placementRate: `${((placedCount / 13) * 100).toFixed(1)}%`,
@@ -964,7 +996,7 @@ exports.rejectCompany = async (req, res) => {
 // GET /api/admin/drives
 exports.getDrives = async (req, res) => {
   try {
-    const { q, jobType, status } = req.query;
+    const { q, jobType, status, approvalStatus, approval_status } = req.query;
     let drives = [];
 
     // 1. Read from MongoDB if connected
@@ -1001,10 +1033,164 @@ exports.getDrives = async (req, res) => {
       drives = drives.filter(d => d.status.toLowerCase() === status.toLowerCase());
     }
 
+    const targetApproval = approvalStatus || approval_status;
+    if (targetApproval && targetApproval !== 'All' && targetApproval !== 'all') {
+      drives = drives.filter(d => (d.approvalStatus || 'approved').toLowerCase() === targetApproval.toLowerCase());
+    }
+
     return res.status(200).json({
       success: true,
       total: drives.length,
       data: drives
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// PUT/POST /api/admin/drives/:id/approve
+exports.approveDrive = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const adminId = req.user?._id || req.user?.id;
+    let drive = null;
+
+    if (mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(id)) {
+      try {
+        const updated = await Drive.findByIdAndUpdate(
+          id,
+          {
+            $set: {
+              approvalStatus: 'approved',
+              approvedBy: adminId && mongoose.Types.ObjectId.isValid(adminId) ? adminId : null,
+              approvedAt: new Date(),
+              rejectionReason: ''
+            }
+          },
+          { new: true }
+        ).populate('company');
+
+        if (updated) {
+          drive = formatAdminDrive(updated);
+
+          // Dispatch notification to recruiter/company
+          try {
+            await Notification.create({
+              company: updated.company?._id,
+              recipientRole: 'recruiter',
+              title: 'Placement Drive Approved',
+              message: `Your campus hiring drive '${updated.title}' has been approved by the Placement Cell and is now live for student applications.`,
+              link: '/recruiter/drives',
+              isRead: false
+            });
+          } catch (notifErr) {
+            console.warn('[Admin Approve Drive Notification Notice]:', notifErr.message);
+          }
+        }
+      } catch (err) {
+        console.warn('[Admin Mongo Approve Drive Warning]:', err.message);
+      }
+    }
+
+    // In-memory fallback
+    if (recruiterStore && Array.isArray(recruiterStore.drives)) {
+      const memIndex = recruiterStore.drives.findIndex(
+        d => String(d.id) === String(id) || String(d._id) === String(id)
+      );
+      if (memIndex !== -1) {
+        recruiterStore.drives[memIndex].approvalStatus = 'approved';
+        recruiterStore.drives[memIndex].approval_status = 'approved';
+        recruiterStore.drives[memIndex].approvedBy = adminId;
+        recruiterStore.drives[memIndex].approvedAt = new Date().toISOString();
+        recruiterStore.drives[memIndex].rejectionReason = '';
+        if (!drive) drive = formatAdminDrive(recruiterStore.drives[memIndex]);
+      }
+    }
+
+    if (!drive) {
+      return res.status(404).json({ success: false, message: 'Placement drive not found.' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Placement drive '${drive.title}' has been approved and published to students.`,
+      data: drive
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// PUT/POST /api/admin/drives/:id/reject
+exports.rejectDrive = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const adminId = req.user?._id || req.user?.id;
+    const { reason } = req.body;
+
+    const rejectionReason = (reason && reason.trim()) ? reason.trim() : 'Does not meet institutional placement standards or missing mandatory specifications.';
+    let drive = null;
+
+    if (mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(id)) {
+      try {
+        const updated = await Drive.findByIdAndUpdate(
+          id,
+          {
+            $set: {
+              approvalStatus: 'rejected',
+              rejectionReason: rejectionReason,
+              approvedBy: adminId && mongoose.Types.ObjectId.isValid(adminId) ? adminId : null,
+              approvedAt: null
+            }
+          },
+          { new: true }
+        ).populate('company');
+
+        if (updated) {
+          drive = formatAdminDrive(updated);
+
+          // Dispatch notification to recruiter/company
+          try {
+            await Notification.create({
+              company: updated.company?._id,
+              recipientRole: 'recruiter',
+              title: 'Placement Drive Needs Revision',
+              message: `Your campus hiring drive '${updated.title}' was reviewed and rejected by the Placement Cell. Reason: ${rejectionReason}`,
+              link: `/recruiter/drives/${updated._id}/edit`,
+              isRead: false
+            });
+          } catch (notifErr) {
+            console.warn('[Admin Reject Drive Notification Notice]:', notifErr.message);
+          }
+        }
+      } catch (err) {
+        console.warn('[Admin Mongo Reject Drive Warning]:', err.message);
+      }
+    }
+
+    // In-memory fallback
+    if (recruiterStore && Array.isArray(recruiterStore.drives)) {
+      const memIndex = recruiterStore.drives.findIndex(
+        d => String(d.id) === String(id) || String(d._id) === String(id)
+      );
+      if (memIndex !== -1) {
+        recruiterStore.drives[memIndex].approvalStatus = 'rejected';
+        recruiterStore.drives[memIndex].approval_status = 'rejected';
+        recruiterStore.drives[memIndex].rejectionReason = rejectionReason;
+        recruiterStore.drives[memIndex].rejection_reason = rejectionReason;
+        recruiterStore.drives[memIndex].approvedBy = adminId;
+        if (!drive) drive = formatAdminDrive(recruiterStore.drives[memIndex]);
+      }
+    }
+
+    if (!drive) {
+      return res.status(404).json({ success: false, message: 'Placement drive not found.' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Placement drive '${drive.title}' has been rejected.`,
+      data: drive
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });

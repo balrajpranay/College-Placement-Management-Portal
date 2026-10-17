@@ -8,6 +8,7 @@ export default function RecruiterDrives() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [actionMsg, setActionMsg] = useState(null);
+  const [viewReasonDrive, setViewReasonDrive] = useState(null);
 
   const fetchDrives = async () => {
     try {
@@ -90,61 +91,148 @@ export default function RecruiterDrives() {
                   <th style={{ padding: '12px 16px' }}>Package (CTC)</th>
                   <th style={{ padding: '12px 16px' }}>Openings</th>
                   <th style={{ padding: '12px 16px' }}>Deadline</th>
-                  <th style={{ padding: '12px 16px' }}>Drive Date</th>
+                  <th style={{ padding: '12px 16px' }}>Approval Status</th>
                   <th style={{ padding: '12px 16px' }}>Applicants</th>
-                  <th style={{ padding: '12px 16px' }}>Status</th>
                   <th style={{ padding: '12px 16px' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {drives.map((d) => (
-                  <tr key={d.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td className="cell-primary font-semibold" style={{ padding: '14px 16px', fontWeight: 600 }}>
-                      <div>{d.title}</div>
-                      <div className="text-xs text-muted" style={{ fontWeight: 400 }}>{d.job_type || 'Full-Time'} · {d.location || 'Bengaluru'}</div>
-                    </td>
-                    <td className="cell-muted font-medium" style={{ padding: '14px 16px' }}>
-                      ₹{d.ctc} LPA
-                    </td>
-                    <td style={{ padding: '14px 16px' }}>{d.openings || 1}</td>
-                    <td className="cell-muted" style={{ padding: '14px 16px' }}>{d.deadline}</td>
-                    <td className="cell-muted" style={{ padding: '14px 16px' }}>{d.drive_date || '—'}</td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <Link
-                        to={`/recruiter/applicants?drive_id=${d.id}`}
-                        className="badge badge-brand font-semibold"
-                        style={{ fontSize: '0.75rem', padding: '4px 10px', borderRadius: 4, background: 'rgba(0, 150, 255, 0.12)', color: 'var(--brand-500)', textDecoration: 'none' }}
-                      >
-                        {d.applicant_count || 0} Candidates &rarr;
-                      </Link>
-                    </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <span className={`badge ${d.status === 'active' ? 'badge-success' : 'badge-gray'}`} style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: 4 }}>
-                        {d.status ? d.status.charAt(0).toUpperCase() + d.status.slice(1) : 'Active'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'nowrap' }}>
-                        <Link to={`/recruiter/applicants?drive_id=${d.id}`} className="btn btn-sm btn-outline" style={{ padding: '4px 10px', fontSize: '0.8rem' }}>
-                          Pipeline
-                        </Link>
-                        <Link to={`/recruiter/drives/${d.id}/edit`} className="btn btn-sm btn-ghost" style={{ padding: '4px 10px', fontSize: '0.8rem' }}>
-                          Edit
-                        </Link>
-                        {d.status === 'active' && (
-                          <button
-                            onClick={() => handleCloseDrive(d.id, d.title)}
-                            className="btn btn-sm btn-ghost text-danger"
-                            title="Close Drive"
-                            style={{ padding: '4px 8px', fontSize: '0.8rem', color: 'var(--danger-500)' }}
-                          >
-                            Close
-                          </button>
+                {drives.map((d) => {
+                  const appr = (d.approvalStatus || d.approval_status || 'approved').toLowerCase();
+                  const isPending = appr === 'pending';
+                  const isApproved = appr === 'approved';
+                  const isRejected = appr === 'rejected';
+
+                  return (
+                    <tr key={d.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td className="cell-primary font-semibold" style={{ padding: '14px 16px', fontWeight: 600 }}>
+                        <div>{d.title}</div>
+                        <div className="text-xs text-muted" style={{ fontWeight: 400 }}>{d.job_type || 'Full-Time'} · {d.location || 'Bengaluru'}</div>
+                      </td>
+                      <td className="cell-muted font-medium" style={{ padding: '14px 16px' }}>
+                        ₹{d.ctc} LPA
+                      </td>
+                      <td style={{ padding: '14px 16px' }}>{d.openings || 1}</td>
+                      <td className="cell-muted" style={{ padding: '14px 16px' }}>{d.deadline}</td>
+                      <td style={{ padding: '14px 16px' }}>
+                        {isPending && (
+                          <div>
+                            <span
+                              className="badge badge-warning font-semibold"
+                              style={{
+                                fontSize: '0.75rem',
+                                padding: '3px 8px',
+                                borderRadius: 4,
+                                background: 'var(--warning-50, #FFFBEB)',
+                                color: 'var(--warning-700, #B45309)',
+                                border: '1px solid var(--warning-200, #FDE68A)'
+                              }}
+                            >
+                              Under Review
+                            </span>
+                            <div className="text-xs text-muted" style={{ marginTop: 2 }}>
+                              Pending Admin Review
+                            </div>
+                          </div>
                         )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                        {isApproved && (
+                          <div>
+                            <span
+                              className="badge badge-success font-semibold"
+                              style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: 4 }}
+                            >
+                              Approved & Live
+                            </span>
+                            <div className="text-xs text-muted" style={{ marginTop: 2 }}>
+                              Visible to Students
+                            </div>
+                          </div>
+                        )}
+                        {isRejected && (
+                          <div>
+                            <span
+                              className="badge badge-danger font-semibold"
+                              style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: 4 }}
+                            >
+                              Revision Needed
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setViewReasonDrive(d)}
+                              className="text-xs text-danger"
+                              style={{
+                                display: 'block',
+                                marginTop: 3,
+                                background: 'none',
+                                border: 'none',
+                                padding: 0,
+                                textDecoration: 'underline',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              View Admin Feedback
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ padding: '14px 16px' }}>
+                        {isApproved ? (
+                          <Link
+                            to={`/recruiter/applicants?drive_id=${d.id}`}
+                            className="badge badge-brand font-semibold"
+                            style={{ fontSize: '0.75rem', padding: '4px 10px', borderRadius: 4, background: 'rgba(0, 150, 255, 0.12)', color: 'var(--brand-500)', textDecoration: 'none' }}
+                          >
+                            {d.applicant_count || 0} Candidates &rarr;
+                          </Link>
+                        ) : (
+                          <span className="text-xs text-muted">
+                            {isPending ? 'Unpublished' : 'Inactive'}
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'nowrap' }}>
+                          {isRejected ? (
+                            <Link
+                              to={`/recruiter/drives/${d.id}/edit`}
+                              className="btn btn-sm btn-primary"
+                              style={{ padding: '4px 10px', fontSize: '0.8rem' }}
+                            >
+                              Edit & Resubmit
+                            </Link>
+                          ) : isPending ? (
+                            <Link
+                              to={`/recruiter/drives/${d.id}/edit`}
+                              className="btn btn-sm btn-outline"
+                              style={{ padding: '4px 10px', fontSize: '0.8rem' }}
+                            >
+                              Edit
+                            </Link>
+                          ) : (
+                            <>
+                              <Link to={`/recruiter/applicants?drive_id=${d.id}`} className="btn btn-sm btn-outline" style={{ padding: '4px 10px', fontSize: '0.8rem' }}>
+                                Pipeline
+                              </Link>
+                              <Link to={`/recruiter/drives/${d.id}/edit`} className="btn btn-sm btn-ghost" style={{ padding: '4px 10px', fontSize: '0.8rem' }}>
+                                Edit
+                              </Link>
+                              {d.status === 'active' && (
+                                <button
+                                  onClick={() => handleCloseDrive(d.id, d.title)}
+                                  className="btn btn-sm btn-ghost text-danger"
+                                  title="Close Drive"
+                                  style={{ padding: '4px 8px', fontSize: '0.8rem', color: 'var(--danger-500)' }}
+                                >
+                                  Close
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -163,6 +251,56 @@ export default function RecruiterDrives() {
           </div>
         )}
       </div>
+
+      {/* Rejection Feedback Modal for Recruiter */}
+      {viewReasonDrive && (
+        <div className="modal-backdrop" onClick={() => setViewReasonDrive(null)}>
+          <div className="modal-dialog" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="h3" style={{ margin: 0 }}>Administrator Review Feedback</h3>
+              <button className="btn-close" onClick={() => setViewReasonDrive(null)}>
+                <Icon name="x" size={18} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="mb-4">
+                <div className="text-xs text-muted mb-1">OPPORTUNITY</div>
+                <h4 className="h4" style={{ margin: 0 }}>{viewReasonDrive.title}</h4>
+              </div>
+
+              <div
+                className="p-3 mb-4"
+                style={{
+                  background: 'rgba(239, 68, 68, 0.08)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: 8
+                }}
+              >
+                <div className="text-xs font-semibold text-danger mb-1">REASON FOR REJECTION</div>
+                <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                  {viewReasonDrive.rejection_reason || viewReasonDrive.rejectionReason || 'No specific reason provided by administrator.'}
+                </p>
+              </div>
+
+              <p className="text-xs text-muted" style={{ margin: 0 }}>
+                You can edit the job requirements, package, or description to address the administrator's feedback. Saving your edits will automatically resubmit this opportunity for approval.
+              </p>
+            </div>
+            <div className="modal-footer flex-between">
+              <button className="btn btn-outline" onClick={() => setViewReasonDrive(null)}>
+                Close
+              </button>
+              <Link
+                to={`/recruiter/drives/${viewReasonDrive.id}/edit`}
+                className="btn btn-primary"
+                onClick={() => setViewReasonDrive(null)}
+              >
+                Edit & Resubmit
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

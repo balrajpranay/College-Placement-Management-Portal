@@ -54,20 +54,36 @@ export default function AdminDashboard() {
             Real-time season statistics, institutional hiring pipeline health, and departmental outcomes.
           </p>
         </div>
-        {Number(stats.pendingCompanies || 0) > 0 && (
-          <NavLink
-            to="/admin/recruiters"
-            className="btn btn-warning"
-            style={{
-              background: 'var(--warning-50, #FFFBEB)',
-              color: 'var(--warning-700, #B45309)',
-              borderColor: 'var(--warning-200, #FDE68A)'
-            }}
-          >
-            <Icon name="alert" size={16} />{' '}
-            {stats.pendingCompanies} {stats.pendingCompanies === 1 ? 'Company' : 'Companies'} Awaiting Verification
-          </NavLink>
-        )}
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          {Number(stats.pendingDrives || 0) > 0 && (
+            <NavLink
+              to="/admin/drives"
+              className="btn btn-warning"
+              style={{
+                background: 'var(--warning-50, #FFFBEB)',
+                color: 'var(--warning-700, #B45309)',
+                borderColor: 'var(--warning-200, #FDE68A)'
+              }}
+            >
+              <Icon name="briefcase" size={16} />{' '}
+              {stats.pendingDrives} {stats.pendingDrives === 1 ? 'Job Post' : 'Job Posts'} Pending Approval
+            </NavLink>
+          )}
+          {Number(stats.pendingCompanies || 0) > 0 && (
+            <NavLink
+              to="/admin/recruiters"
+              className="btn btn-warning"
+              style={{
+                background: 'var(--warning-50, #FFFBEB)',
+                color: 'var(--warning-700, #B45309)',
+                borderColor: 'var(--warning-200, #FDE68A)'
+              }}
+            >
+              <Icon name="alert" size={16} />{' '}
+              {stats.pendingCompanies} {stats.pendingCompanies === 1 ? 'Company' : 'Companies'} Awaiting Verification
+            </NavLink>
+          )}
+        </div>
       </div>
 
       {/* Primary Key Metric Cards */}

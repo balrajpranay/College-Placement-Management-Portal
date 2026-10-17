@@ -185,7 +185,7 @@ export default function CreateDrive() {
 
     try {
       if (isEditMode) {
-        await updateRecruiterDriveApi(id, formData);
+        await updateRecruiterDriveApi(id, { ...formData, resubmit: true });
       } else {
         await createRecruiterDriveApi(formData);
       }

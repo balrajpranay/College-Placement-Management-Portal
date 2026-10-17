@@ -27,6 +27,10 @@ router.put('/companies/:id/reject', adminController.rejectCompany);
 // Placement Drives Module
 router.get('/drives', adminController.getDrives);
 router.get('/drives/:id', adminController.getDriveById);
+router.put('/drives/:id/approve', adminController.approveDrive);
+router.post('/drives/:id/approve', adminController.approveDrive);
+router.put('/drives/:id/reject', adminController.rejectDrive);
+router.post('/drives/:id/reject', adminController.rejectDrive);
 
 // Applications Module
 router.get('/applications', adminController.getApplications);

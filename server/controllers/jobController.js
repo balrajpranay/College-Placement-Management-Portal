@@ -27542,9 +27542,17 @@ async function fetchVerifiedCompanyOpportunities() {
 
   if (mongoose.connection && mongoose.connection.readyState === 1 && Drive) {
     try {
-      const drives = await Drive.find({ status: 'active' }).populate('company').sort({ createdAt: -1 }).lean();
+      const drives = await Drive.find({
+        status: 'active',
+        $or: [
+          { approvalStatus: 'approved' },
+          { approvalStatus: { $exists: false } },
+          { approvalStatus: null }
+        ]
+      }).populate('company').sort({ createdAt: -1 }).lean();
       for (const d of drives) {
-        if (d.company && d.company.approved === true) {
+        const isPostApproved = !d.approvalStatus || d.approvalStatus === 'approved';
+        if (d.company && d.company.approved === true && isPostApproved) {
           const opp = mapDriveToOpportunity(d);
           if (opp) {
             verifiedList.push(opp);
@@ -27560,7 +27568,8 @@ async function fetchVerifiedCompanyOpportunities() {
   if (recruiterStore && Array.isArray(recruiterStore.drives)) {
     for (const d of recruiterStore.drives) {
       const dId = String(d._id || d.id);
-      if (!seenIds.has(dId) && d.status === 'active') {
+      const isDriveApproved = !d.approvalStatus || d.approvalStatus === 'approved' || !d.approval_status || d.approval_status === 'approved';
+      if (!seenIds.has(dId) && d.status === 'active' && isDriveApproved) {
         let isApproved = d.company?.approved === true || d.companyApproved === true;
         if (!isApproved && d.company_email && recruiterStore.companies && recruiterStore.companies.has(d.company_email)) {
           isApproved = recruiterStore.companies.get(d.company_email)?.approved === true;
@@ -27772,7 +27781,8 @@ async function findOpportunityByIdAsync(jobId) {
   if (mongoose.connection && mongoose.connection.readyState === 1 && Drive && mongoose.Types.ObjectId.isValid(cleanId)) {
     try {
       const doc = await Drive.findById(cleanId).populate('company').lean();
-      if (doc && doc.company && doc.company.approved) {
+      const isPostApproved = !doc?.approvalStatus || doc.approvalStatus === 'approved';
+      if (doc && doc.company && doc.company.approved && isPostApproved) {
         return mapDriveToOpportunity(doc);
       }
     } catch (e) {}
@@ -27780,7 +27790,8 @@ async function findOpportunityByIdAsync(jobId) {
 
   if (recruiterStore && Array.isArray(recruiterStore.drives)) {
     const memDrive = recruiterStore.drives.find(d => String(d.id) === cleanId || String(d._id) === cleanId || String(d.id) === String(jobId));
-    if (memDrive) {
+    const isDriveApproved = !memDrive?.approvalStatus || memDrive.approvalStatus === 'approved' || !memDrive?.approval_status || memDrive.approval_status === 'approved';
+    if (memDrive && isDriveApproved) {
       return mapDriveToOpportunity(memDrive);
     }
   }
@@ -27809,6 +27820,31 @@ exports.getJobById = async (req, res) => {
 // POST /api/jobs/:id/apply
 exports.applyForJob = async (req, res) => {
   const jobId = req.params.id;
+  const cleanId = String(jobId).replace(/^drive-/, '');
+
+  // Reject applications to drives pending institutional approval
+  if (mongoose.connection && mongoose.connection.readyState === 1 && Drive && mongoose.Types.ObjectId.isValid(cleanId)) {
+    try {
+      const doc = await Drive.findById(cleanId);
+      if (doc && doc.approvalStatus && doc.approvalStatus !== 'approved') {
+        return res.status(400).json({
+          success: false,
+          message: 'This placement opportunity is pending institutional approval and is not accepting applications.'
+        });
+      }
+    } catch (e) {}
+  }
+
+  if (recruiterStore && Array.isArray(recruiterStore.drives)) {
+    const memDrive = recruiterStore.drives.find(d => String(d.id) === cleanId || String(d._id) === cleanId || String(d.id) === String(jobId));
+    if (memDrive && memDrive.approvalStatus && memDrive.approvalStatus !== 'approved') {
+      return res.status(400).json({
+        success: false,
+        message: 'This placement opportunity is pending institutional approval and is not accepting applications.'
+      });
+    }
+  }
+
   const job = await findOpportunityByIdAsync(jobId);
 
   if (!job) {
@@ -27839,6 +27875,13 @@ exports.applyForJob = async (req, res) => {
         studentDoc = await Student.findOne({ $or: [{ user: userId }, { email: userEmail }] });
         if (mongoose.Types.ObjectId.isValid(cleanDriveId)) {
           driveDoc = await Drive.findById(cleanDriveId).populate('company');
+        }
+
+        if (driveDoc && driveDoc.approvalStatus && driveDoc.approvalStatus !== 'approved') {
+          return res.status(400).json({
+            success: false,
+            message: 'This placement opportunity is pending institutional approval and is not accepting applications.'
+          });
         }
 
         if (studentDoc && driveDoc) {

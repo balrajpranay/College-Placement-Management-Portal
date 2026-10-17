@@ -463,6 +463,8 @@ async function seedDemoDrivesIfEmpty() {
           branches: Array.isArray(d.branches) ? d.branches : ['Computer Science', 'Information Technology', 'Electronics & Comm.'],
           skills: Array.isArray(d.skills) ? d.skills : ['Python', 'Java', 'Data Structures', 'REST APIs'],
           status: d.status || 'active',
+          approvalStatus: 'approved',
+          rejectionReason: ''
         });
       }
     }
@@ -726,6 +728,15 @@ function formatRecruiterDrive(d, company) {
     applicant_count: applicantCount,
     applicantCount: applicantCount,
     status: d.status || 'active',
+    approval_status: d.approvalStatus || d.approval_status || 'approved',
+    approvalStatus: d.approvalStatus || d.approval_status || 'approved',
+    rejection_reason: d.rejectionReason || d.rejection_reason || '',
+    rejectionReason: d.rejectionReason || d.rejection_reason || '',
+    approved_by: d.approvedBy || d.approved_by || null,
+    approvedBy: d.approvedBy || d.approved_by || null,
+    approved_at: d.approvedAt || d.approved_at || null,
+    approvedAt: d.approvedAt || d.approved_at || null,
+    recruiter: d.recruiter || null,
     category: d.category || (jobType.toLowerCase().includes('intern') ? 'Internships' : (jobType.toLowerCase().includes('skill') ? 'Skill Up' : 'Placements')),
     opportunityType: d.opportunityType || (jobType.toLowerCase().includes('intern') ? 'Internship' : (jobType.toLowerCase().includes('skill') ? 'Skill' : 'Placement')),
     description: d.description || '',
@@ -1321,6 +1332,11 @@ exports.createDrive = async (req, res) => {
             branches: branchList,
             skills: skillList,
             status: 'active',
+            approvalStatus: 'pending',
+            rejectionReason: '',
+            approvedBy: null,
+            approvedAt: null,
+            recruiter: userId && mongoose.Types.ObjectId.isValid(userId) ? userId : null,
             description: resolvedDesc
           });
           if (doc) {
@@ -1363,36 +1379,25 @@ exports.createDrive = async (req, res) => {
       applicant_count: 0,
       applicantCount: 0,
       status: 'active',
+      approval_status: 'pending',
+      approvalStatus: 'pending',
+      rejection_reason: '',
+      rejectionReason: '',
+      approved_by: null,
+      approvedBy: null,
+      approved_at: null,
+      approvedAt: null,
       description: resolvedDesc,
       created_at: new Date().toISOString()
     };
 
     recruiterStore.drives.unshift(newDrive);
 
-    // Keep student fallback store aligned
-    studentStore.drives.unshift({
-      id: String(newDrive.id || newDrive._id),
-      _id: String(newDrive._id || newDrive.id),
-      title: newDrive.title,
-      company_name: newDrive.company_name || newDrive.companyName,
-      logo: null,
-      location: newDrive.location,
-      ctc: newDrive.ctc,
-      job_type: newDrive.job_type,
-      min_cgpa: newDrive.min_cgpa,
-      max_backlogs: newDrive.max_backlogs,
-      branches: newDrive.branches,
-      skills: newDrive.skills,
-      openings: newDrive.openings,
-      deadline: newDrive.deadline,
-      drive_date: newDrive.drive_date,
-      description: newDrive.description,
-      company_desc: ''
-    });
+    // Pending drives are NOT published to studentStore until approved by administrator
 
     return res.status(201).json({
       success: true,
-      message: 'Placement drive published successfully.',
+      message: 'Placement drive submitted successfully and is pending administrator review.',
       drive: newDrive
     });
   } catch (err) {
@@ -1484,6 +1489,14 @@ exports.updateDrive = async (req, res) => {
         if (skills !== undefined) updateData.skills = Array.isArray(skills) ? skills : skills.split(',').map(s => s.trim()).filter(Boolean);
         if (status !== undefined) updateData.status = status;
 
+        // Reset to pending if the posting was rejected or if explicit resubmission
+        if (existing.approvalStatus === 'rejected' || req.body.resubmit) {
+          updateData.approvalStatus = 'pending';
+          updateData.rejectionReason = '';
+          updateData.approvedBy = null;
+          updateData.approvedAt = null;
+        }
+
         const saved = await Drive.findByIdAndUpdate(driveId, { $set: updateData }, { new: true }).populate('company').lean();
         if (saved) {
           updatedDoc = formatRecruiterDrive(saved, mongoComp);
@@ -1528,7 +1541,11 @@ exports.updateDrive = async (req, res) => {
         maxBacklogs: max_backlogs !== undefined ? parseInt(max_backlogs, 10) : (maxBacklogs !== undefined ? parseInt(maxBacklogs, 10) : currentDrive.max_backlogs),
         branches: Array.isArray(branches) ? branches : currentDrive.branches,
         skills: Array.isArray(skills) ? skills : (typeof skills === 'string' ? skills.split(',').map(s => s.trim()).filter(Boolean) : currentDrive.skills),
-        status: status || currentDrive.status
+        status: status || currentDrive.status,
+        approval_status: (currentDrive.approvalStatus === 'rejected' || req.body.resubmit) ? 'pending' : (currentDrive.approvalStatus || currentDrive.approval_status || 'approved'),
+        approvalStatus: (currentDrive.approvalStatus === 'rejected' || req.body.resubmit) ? 'pending' : (currentDrive.approvalStatus || currentDrive.approval_status || 'approved'),
+        rejection_reason: (currentDrive.approvalStatus === 'rejected' || req.body.resubmit) ? '' : (currentDrive.rejectionReason || currentDrive.rejection_reason || ''),
+        rejectionReason: (currentDrive.approvalStatus === 'rejected' || req.body.resubmit) ? '' : (currentDrive.rejectionReason || currentDrive.rejection_reason || '')
       };
 
       recruiterStore.drives[index] = updatedDrive;
