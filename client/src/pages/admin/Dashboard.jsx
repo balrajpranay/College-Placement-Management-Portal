@@ -8,15 +8,15 @@ export default function AdminDashboard() {
   const [error, setError] = useState(null);
   const [data, setData] = useState({
     stats: {
-      totalStudents: 13,
-      totalCompanies: 8,
-      activeDrives: 7,
-      totalApplications: 20,
-      placedStudents: 5,
-      placementRate: '38.5%',
-      avgPackage: '11.20',
-      highestPackage: '18.00',
-      pendingCompanies: 1,
+      totalStudents: 0,
+      totalCompanies: 0,
+      activeDrives: 0,
+      totalApplications: 0,
+      placedStudents: 0,
+      placementRate: '0%',
+      avgPackage: '0.00',
+      highestPackage: '0.00',
+      pendingCompanies: 0,
       recentDrives: []
     }
   });
@@ -57,7 +57,7 @@ export default function AdminDashboard() {
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           {Number(stats.pendingDrives || 0) > 0 && (
             <NavLink
-              to="/admin/drives"
+              to="/admin/drives?approvalStatus=pending"
               className="btn btn-warning"
               style={{
                 background: 'var(--warning-50, #FFFBEB)',
@@ -94,7 +94,7 @@ export default function AdminDashboard() {
               <Icon name="graduation" size={20} />
             </div>
           </div>
-          <div className="stat-value">{stats.totalStudents || 13}</div>
+          <div className="stat-value">{stats.totalStudents ?? 0}</div>
           <div className="stat-label">Enrolled Candidates</div>
         </div>
 
@@ -104,7 +104,7 @@ export default function AdminDashboard() {
               <Icon name="building" size={20} />
             </div>
           </div>
-          <div className="stat-value">{stats.totalCompanies || 8}</div>
+          <div className="stat-value">{stats.totalCompanies ?? 0}</div>
           <div className="stat-label">Verified Recruiters</div>
         </div>
 
@@ -114,7 +114,7 @@ export default function AdminDashboard() {
               <Icon name="briefcase" size={20} />
             </div>
           </div>
-          <div className="stat-value">{stats.activeDrives || 7}</div>
+          <div className="stat-value">{stats.activeDrives ?? 0}</div>
           <div className="stat-label">Active Campus Drives</div>
         </div>
 
@@ -124,7 +124,7 @@ export default function AdminDashboard() {
               <Icon name="clipboard" size={20} />
             </div>
           </div>
-          <div className="stat-value">{stats.totalApplications || 20}</div>
+          <div className="stat-value">{stats.totalApplications ?? 0}</div>
           <div className="stat-label">Total Applications</div>
         </div>
       </div>
@@ -137,7 +137,7 @@ export default function AdminDashboard() {
               <Icon name="award" size={20} />
             </div>
           </div>
-          <div className="stat-value">{stats.placedStudents || 5}</div>
+          <div className="stat-value">{stats.placedStudents ?? 0}</div>
           <div className="stat-label">Unique Students Placed</div>
         </div>
 
@@ -147,7 +147,7 @@ export default function AdminDashboard() {
               <Icon name="trending-up" size={20} />
             </div>
           </div>
-          <div className="stat-value">{stats.placementRate || '38.5%'}</div>
+          <div className="stat-value">{stats.placementRate || '0%'}</div>
           <div className="stat-label">Placement Conversion Rate</div>
         </div>
 
@@ -157,7 +157,7 @@ export default function AdminDashboard() {
               <Icon name="dollar" size={20} />
             </div>
           </div>
-          <div className="stat-value">₹{stats.avgPackage || '11.20'}L</div>
+          <div className="stat-value">₹{stats.avgPackage ?? '0.00'}L</div>
           <div className="stat-label">Average Annual CTC</div>
         </div>
 
@@ -167,7 +167,7 @@ export default function AdminDashboard() {
               <Icon name="award" size={20} />
             </div>
           </div>
-          <div className="stat-value">₹{stats.highestPackage || '18.00'}L</div>
+          <div className="stat-value">₹{stats.highestPackage ?? '0.00'}L</div>
           <div className="stat-label">Highest Package Offered</div>
         </div>
       </div>
@@ -199,34 +199,36 @@ export default function AdminDashboard() {
               </tr>
             </thead>
             <tbody>
-              {(stats.recentDrives && stats.recentDrives.length > 0 ? stats.recentDrives : [
-                { id: 1, title: 'Software Engineer - New Grad', companyName: 'TechNova Solutions', ctc: 12.0, location: 'Bengaluru', applicantsCount: 5, status: 'active' },
-                { id: 2, title: 'Data Platform Engineer', companyName: 'DataEdge Analytics', ctc: 14.5, location: 'Hyderabad', applicantsCount: 4, status: 'active' },
-                { id: 3, title: 'Cloud Infrastructure Associate', companyName: 'Apex Cloud Systems', ctc: 11.0, location: 'Pune', applicantsCount: 3, status: 'active' },
-                { id: 4, title: 'Graduate DevOps Engineer', companyName: 'CyberGuard Security', ctc: 10.5, location: 'Bengaluru', applicantsCount: 3, status: 'active' },
-                { id: 5, title: 'Full Stack Developer', companyName: 'NextGen Mobility', ctc: 13.0, location: 'Chennai', applicantsCount: 5, status: 'active' }
-              ]).map((drive) => (
-                <tr key={drive.id}>
-                  <td className="font-semibold">{drive.title}</td>
-                  <td>
-                    <span className="badge badge-brand" style={{ fontWeight: 500 }}>
-                      {drive.companyName}
-                    </span>
-                  </td>
-                  <td className="font-medium text-brand">₹{drive.ctc} LPA</td>
-                  <td className="text-muted">{drive.location}</td>
-                  <td>
-                    <span className="badge badge-neutral">
-                      {drive.applicantsCount} Applied
-                    </span>
-                  </td>
-                  <td>
-                    <span className="badge badge-success">
-                      {drive.status === 'active' ? 'Active' : drive.status}
-                    </span>
+              {stats.recentDrives && stats.recentDrives.length > 0 ? (
+                stats.recentDrives.map((drive) => (
+                  <tr key={drive.id}>
+                    <td className="font-semibold">{drive.title}</td>
+                    <td>
+                      <span className="badge badge-brand" style={{ fontWeight: 500 }}>
+                        {drive.companyName}
+                      </span>
+                    </td>
+                    <td className="font-medium text-brand">₹{drive.ctc} LPA</td>
+                    <td className="text-muted">{drive.location}</td>
+                    <td>
+                      <span className="badge badge-neutral">
+                        {drive.applicantsCount || drive.applicantCount || 0} Applied
+                      </span>
+                    </td>
+                    <td>
+                      <span className="badge badge-success">
+                        {drive.status === 'active' ? 'Active' : drive.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="6" className="text-center py-6 text-muted">
+                    No campus placement drives created yet.
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

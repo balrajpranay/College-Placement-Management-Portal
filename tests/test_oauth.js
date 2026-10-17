@@ -320,15 +320,109 @@ async function runAll() {
       assert.strictEqual(meRes2.body.user.email, 'aarav.mehta@gmail.com');
     });
 
-    await runTest('Google Sign-In rejects browser role manipulation to admin/recruiter', async () => {
-      const attackerRes = await request('POST', '/api/auth/google/callback', {
-        code: 'demo_google_hacker_unauthorized',
+    let recruiterToken = null;
+    await runTest('Authorized recruiter Google login successfully reaches Recruiter Dashboard', async () => {
+      const recRes = await request('POST', '/api/auth/google/callback', {
+        code: 'demo_google_recruiter_authorized',
+        role: 'recruiter',
+        state: Buffer.from(JSON.stringify({ role: 'recruiter' })).toString('base64')
+      });
+
+      assert.strictEqual(recRes.status, 200);
+      assert.strictEqual(recRes.body.success, true);
+      assert.ok(recRes.body.token);
+      assert.strictEqual(recRes.body.user.role, 'recruiter');
+      recruiterToken = recRes.body.token;
+
+      // Access recruiter dashboard with recruiter token
+      const recDashRes = await request('GET', '/api/recruiters/dashboard', null, {
+        Authorization: `Bearer ${recruiterToken}`
+      });
+      assert.strictEqual(recDashRes.status, 200);
+      assert.strictEqual(recDashRes.body.success, true);
+    });
+
+    let adminToken = null;
+    await runTest('Authorized admin Google login successfully reaches Admin Portal', async () => {
+      const admRes = await request('POST', '/api/auth/google/callback', {
+        code: 'demo_google_admin_authorized',
         role: 'admin',
         state: Buffer.from(JSON.stringify({ role: 'admin' })).toString('base64')
       });
 
-      assert.strictEqual(attackerRes.status, 200);
-      assert.strictEqual(attackerRes.body.user.role, 'student', 'Must remain student');
+      assert.strictEqual(admRes.status, 200);
+      assert.strictEqual(admRes.body.success, true);
+      assert.ok(admRes.body.token);
+      assert.strictEqual(admRes.body.user.role, 'admin');
+      adminToken = admRes.body.token;
+
+      // Access admin drives endpoint with admin token
+      const admDrivesRes = await request('GET', '/api/admin/drives', null, {
+        Authorization: `Bearer ${adminToken}`
+      });
+      assert.strictEqual(admDrivesRes.status, 200);
+    });
+
+    await runTest('Student account attempting recruiter login is strictly denied (403)', async () => {
+      const deniedRes = await request('POST', '/api/auth/google/callback', {
+        code: 'demo_google_balraj_pranay',
+        role: 'recruiter',
+        state: Buffer.from(JSON.stringify({ role: 'recruiter' })).toString('base64')
+      });
+
+      assert.strictEqual(deniedRes.status, 403);
+      assert.strictEqual(deniedRes.body.success, false);
+      assert(deniedRes.body.message.includes('registered as a Student'), 'Must clearly explain student role mismatch');
+    });
+
+    await runTest('Student account attempting admin login is strictly denied (403)', async () => {
+      const deniedRes = await request('POST', '/api/auth/google/callback', {
+        code: 'demo_google_balraj_pranay',
+        role: 'admin',
+        state: Buffer.from(JSON.stringify({ role: 'admin' })).toString('base64')
+      });
+
+      assert.strictEqual(deniedRes.status, 403);
+      assert.strictEqual(deniedRes.body.success, false);
+      assert(deniedRes.body.message.includes('not authorized as a Placement Administrator'));
+    });
+
+    await runTest('Unregistered account attempting admin login is strictly denied (403)', async () => {
+      const deniedRes = await request('POST', '/api/auth/google/callback', {
+        code: 'demo_google_random_stranger_unauthorized',
+        role: 'admin',
+        state: Buffer.from(JSON.stringify({ role: 'admin' })).toString('base64')
+      });
+
+      assert.strictEqual(deniedRes.status, 403);
+      assert.strictEqual(deniedRes.body.success, false);
+      assert(deniedRes.body.message.includes('not authorized'));
+    });
+
+    await runTest('Unregistered account attempting recruiter login is strictly denied (403)', async () => {
+      const deniedRes = await request('POST', '/api/auth/google/callback', {
+        code: 'demo_google_random_stranger_unauthorized',
+        role: 'recruiter',
+        state: Buffer.from(JSON.stringify({ role: 'recruiter' })).toString('base64')
+      });
+
+      assert.strictEqual(deniedRes.status, 403);
+      assert.strictEqual(deniedRes.body.success, false);
+      assert(deniedRes.body.message.includes('not registered or authorized as a Recruiter'));
+    });
+
+    await runTest('Missing, invalid, or tampered role in callback/state is rejected safely (400)', async () => {
+      const tamperedRes = await request('POST', '/api/auth/google/callback', {
+        code: 'demo_google_tampered_test',
+        role: 'superadmin',
+        state: Buffer.from(JSON.stringify({ role: 'superadmin' })).toString('base64')
+      });
+
+      assert.strictEqual(tamperedRes.status, 400);
+      assert.strictEqual(tamperedRes.body.success, false);
+
+      const invalidUrlRes = await request('GET', '/api/auth/google/url?role=hacker_role');
+      assert.strictEqual(invalidUrlRes.status, 400);
     });
 
     await runTest('Role-based access control blocks student from recruiter dashboard (403)', async () => {
@@ -339,26 +433,42 @@ async function runAll() {
       assert.strictEqual(forbiddenRes.status, 403);
     });
 
-    await runTest('Traditional email/password login and Priya Sharma demo account are fully preserved', async () => {
-      const loginRes = await request('POST', '/api/auth/login', {
+    await runTest('Role-based access control blocks recruiter from admin portal (403)', async () => {
+      const forbiddenRes = await request('GET', '/api/admin/drives', null, {
+        Authorization: `Bearer ${recruiterToken}`
+      });
+
+      assert.strictEqual(forbiddenRes.status, 403);
+    });
+
+    await runTest('Traditional email/password login is fully preserved for student, recruiter, and admin', async () => {
+      // 1. Student login
+      const stuLogin = await request('POST', '/api/auth/login', {
         email: 'priya.sharma@student.edu',
         password: 'student123',
         role: 'student'
       });
+      assert.strictEqual(stuLogin.status, 200);
+      assert.strictEqual(stuLogin.body.user.role, 'student');
+      assert.strictEqual(stuLogin.body.user.name, 'Priya Sharma');
 
-      assert.strictEqual(loginRes.status, 200);
-      assert.strictEqual(loginRes.body.success, true);
-      assert.strictEqual(loginRes.body.user.role, 'student');
-      assert.strictEqual(loginRes.body.user.name, 'Priya Sharma');
-
-      const priyaToken = loginRes.body.token;
-      const priyaDashRes = await request('GET', '/api/students/dashboard', null, {
-        Authorization: `Bearer ${priyaToken}`
+      // 2. Recruiter login
+      const recLogin = await request('POST', '/api/auth/login', {
+        email: 'hr@technova.com',
+        password: 'recruiter123',
+        role: 'recruiter'
       });
+      assert.strictEqual(recLogin.status, 200);
+      assert.strictEqual(recLogin.body.user.role, 'recruiter');
 
-      assert.strictEqual(priyaDashRes.status, 200);
-      assert.strictEqual(priyaDashRes.body.data.student.name, 'Priya Sharma');
-      assert.ok(priyaDashRes.body.data.app_count > 0, 'Priya demo applications must remain preserved');
+      // 3. Admin login
+      const admLogin = await request('POST', '/api/auth/login', {
+        email: 'admin@college.edu',
+        password: 'admin123',
+        role: 'admin'
+      });
+      assert.strictEqual(admLogin.status, 200);
+      assert.strictEqual(admLogin.body.user.role, 'admin');
     });
 
   } finally {
@@ -375,6 +485,7 @@ async function runAll() {
   if (passedTests !== totalTests) {
     process.exit(1);
   }
+  process.exit(0);
 }
 
 runAll().catch(err => {

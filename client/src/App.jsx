@@ -135,6 +135,7 @@ export default function App() {
             <Route path="students" element={<AdminStudents />} />
             <Route path="recruiters" element={<AdminRecruiters />} />
             <Route path="drives" element={<AdminDrives />} />
+            <Route path="approvals" element={<AdminDrives defaultApprovalStatus="pending" />} />
             <Route path="applications" element={<AdminApplications />} />
             <Route path="notifications" element={<AdminNotifications />} />
           </Route>
@@ -146,4 +147,3 @@ export default function App() {
     </BrowserRouter>
   );
 }
-

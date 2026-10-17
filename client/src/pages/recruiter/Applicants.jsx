@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import Icon from '../../components/Icon';
 import { getRecruiterApplicantsApi, updateApplicantStatusApi, getRecruiterProfileApi } from '../../services/api';
 
@@ -13,6 +13,7 @@ const STATUS_STAGES = [
 ];
 
 export default function RecruiterApplicants() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [applicants, setApplicants] = useState([]);
   const [drives, setDrives] = useState([]);
   const [company, setCompany] = useState(null);
@@ -21,9 +22,18 @@ export default function RecruiterApplicants() {
   const [notification, setNotification] = useState(null);
 
   // Filters & Search
-  const [filterDrive, setFilterDrive] = useState('');
+  const initialDrive = searchParams.get('drive_id') || searchParams.get('driveId') || '';
+  const [filterDrive, setFilterDrive] = useState(initialDrive);
   const [filterStatus, setFilterStatus] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Keep filterDrive in sync if URL query parameter changes
+  useEffect(() => {
+    const qDrive = searchParams.get('drive_id') || searchParams.get('driveId') || '';
+    if (qDrive !== filterDrive) {
+      setFilterDrive(qDrive);
+    }
+  }, [searchParams]);
 
   // Track status update loading per candidate
   const [actionLoadingId, setActionLoadingId] = useState(null);
@@ -157,6 +167,7 @@ export default function RecruiterApplicants() {
     setFilterDrive('');
     setFilterStatus('');
     setSearchQuery('');
+    setSearchParams({});
   };
 
   const handleStatusUpdate = async (appId, newStatus, studentName) => {
@@ -299,7 +310,16 @@ export default function RecruiterApplicants() {
             {/* Drive Filter Dropdown */}
             <select
               value={filterDrive}
-              onChange={(e) => setFilterDrive(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setFilterDrive(val);
+                setSearchParams(prev => {
+                  const next = new URLSearchParams(prev);
+                  if (val) next.set('drive_id', val);
+                  else next.delete('drive_id');
+                  return next;
+                });
+              }}
               className="filter-select"
               aria-label="Filter by managed drive"
             >

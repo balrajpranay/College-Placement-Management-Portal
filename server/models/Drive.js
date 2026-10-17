@@ -60,6 +60,18 @@ const DriveSchema = new mongoose.Schema({
     type: String,
     trim: true
   }],
+  workMode: {
+    type: String,
+    default: 'On-Site'
+  },
+  responsibilities: [{
+    type: String,
+    trim: true
+  }],
+  graduationYear: {
+    type: String,
+    default: '2025–2026 Batch'
+  },
   status: {
     type: String,
     enum: ['active', 'closed', 'cancelled'],

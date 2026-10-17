@@ -501,9 +501,9 @@ function formatRecruiterApplicant(appDoc, company) {
   const drive = appDoc.drive && typeof appDoc.drive === 'object' ? appDoc.drive : {};
   const comp = drive.company && typeof drive.company === 'object' ? drive.company : (company || {});
 
-  const candName = student.name || appDoc.student_name || appDoc.studentName || appDoc.name || 'Candidate';
+  const candName = student.name || student.user?.name || appDoc.student_name || appDoc.studentName || appDoc.name || 'Candidate';
   const candNo = student.studentNo || student.student_no || appDoc.student_no || appDoc.studentNo || 'STU1001';
-  const candEmail = student.email || appDoc.student_email || appDoc.studentEmail || 'student@college.edu';
+  const candEmail = student.user?.email || student.email || appDoc.student_email || appDoc.studentEmail || 'student@college.edu';
   const dept = student.department || appDoc.department || 'Computer Science';
   const cgpaVal = student.cgpa !== undefined ? Number(student.cgpa) : (appDoc.cgpa !== undefined ? Number(appDoc.cgpa) : 8.0);
   const resumeFile = student.resumeFilename || student.resume_filename || appDoc.resume_filename || null;
@@ -915,11 +915,26 @@ exports.getDashboard = async (req, res) => {
 
     // Calculate metrics and drives
     let userDrives = [];
-    if (mongoose.connection.readyState === 1 && company?._id) {
+    if (mongoose.connection.readyState === 1 && (company?._id || userId)) {
       try {
-        const mongoDrives = await Drive.find({ company: company._id }).populate('company').sort({ createdAt: -1 }).lean();
+        const driveQuery = { $or: [] };
+        if (company?._id) driveQuery.$or.push({ company: company._id });
+        if (userId && mongoose.Types.ObjectId.isValid(userId)) driveQuery.$or.push({ recruiter: userId });
+        if (driveQuery.$or.length === 0 && company?._id) driveQuery.$or.push({ company: company._id });
+
+        const mongoDrives = await Drive.find(driveQuery).populate('company').sort({ createdAt: -1 }).lean();
         if (mongoDrives && mongoDrives.length > 0) {
-          userDrives = mongoDrives.map(d => formatRecruiterDrive(d, company));
+          const driveIds = mongoDrives.map(d => d._id);
+          const appCounts = await Application.aggregate([
+            { $match: { drive: { $in: driveIds }, status: { $ne: 'Withdrawn' } } },
+            { $group: { _id: '$drive', count: { $sum: 1 } } }
+          ]);
+          const countMap = new Map(appCounts.map(c => [String(c._id), c.count]));
+
+          userDrives = mongoDrives.map(d => {
+            const count = countMap.get(String(d._id)) ?? (d.applicantCount || 0);
+            return formatRecruiterDrive({ ...d, applicantCount: count, applicant_count: count }, company);
+          });
         }
       } catch (err) {
         console.warn('[Recruiter Mongo Dashboard Drives Warning]:', err.message);
@@ -938,8 +953,20 @@ exports.getDashboard = async (req, res) => {
       total_applicants += (d.applicant_count || d.applicantCount || 0);
     });
 
-    const shortlisted = email === 'hr@technova.com' ? 2 : 0;
-    const selected = email === 'hr@technova.com' ? 0 : 0;
+    let shortlisted = 0;
+    let selected = 0;
+    if (mongoose.connection.readyState === 1 && userDrives.length > 0) {
+      try {
+        const validIds = userDrives.map(d => d.id || d._id).filter(id => mongoose.Types.ObjectId.isValid(id)).map(id => new mongoose.Types.ObjectId(id));
+        if (validIds.length > 0) {
+          shortlisted = await Application.countDocuments({ drive: { $in: validIds }, status: 'Shortlisted' });
+          selected = await Application.countDocuments({ drive: { $in: validIds }, status: 'Selected' });
+        }
+      } catch (_) {}
+    }
+    if (shortlisted === 0 && email === 'hr@technova.com' && userDrives.length === 0) {
+      shortlisted = 2;
+    }
 
     return res.status(200).json({
       success: true,
@@ -1123,9 +1150,24 @@ exports.getDrives = async (req, res) => {
         const company = await getOrCreateMongoCompany(userId, email);
         if (company) {
           await seedDemoDrivesIfEmpty();
-          const mongoDrives = await Drive.find({ company: company._id }).populate('company').sort({ createdAt: -1 }).lean();
+          const driveQuery = { $or: [] };
+          if (company._id) driveQuery.$or.push({ company: company._id });
+          if (userId && mongoose.Types.ObjectId.isValid(userId)) driveQuery.$or.push({ recruiter: userId });
+          if (driveQuery.$or.length === 0) driveQuery.$or.push({ company: company._id });
+
+          const mongoDrives = await Drive.find(driveQuery).populate('company').sort({ createdAt: -1 }).lean();
           if (mongoDrives && mongoDrives.length > 0) {
-            const formatted = mongoDrives.map(d => formatRecruiterDrive(d, company));
+            const driveIds = mongoDrives.map(d => d._id);
+            const appCounts = await Application.aggregate([
+              { $match: { drive: { $in: driveIds }, status: { $ne: 'Withdrawn' } } },
+              { $group: { _id: '$drive', count: { $sum: 1 } } }
+            ]);
+            const countMap = new Map(appCounts.map(c => [String(c._id), c.count]));
+
+            const formatted = mongoDrives.map(d => {
+              const count = countMap.get(String(d._id)) ?? (d.applicantCount || 0);
+              return formatRecruiterDrive({ ...d, applicantCount: count, applicant_count: count }, company);
+            });
             return res.status(200).json({
               success: true,
               count: formatted.length,
@@ -1261,7 +1303,12 @@ exports.createDrive = async (req, res) => {
       max_backlogs,
       maxBacklogs,
       branches,
-      skills
+      skills,
+      work_mode,
+      workMode,
+      responsibilities,
+      graduation_year,
+      graduationYear
     } = req.body;
 
     const errors = [];
@@ -1302,12 +1349,21 @@ exports.createDrive = async (req, res) => {
       skillList = skills.split(',').map(s => s.trim()).filter(Boolean);
     }
 
+    let respList = [];
+    if (Array.isArray(responsibilities)) {
+      respList = responsibilities;
+    } else if (typeof responsibilities === 'string' && responsibilities.trim()) {
+      respList = responsibilities.split('\n').map(r => r.trim()).filter(Boolean);
+    }
+
     const resolvedJobType = job_type || jobType || 'Full-Time';
     const resolvedOppType = opportunityType || opportunity_type || (resolvedJobType === 'Internship' ? 'Internship' : (resolvedJobType === 'Skill' ? 'Skill' : 'Placement'));
     const resolvedCategory = category || (resolvedJobType === 'Internship' ? 'Internships' : (resolvedJobType === 'Skill' || resolvedOppType === 'Skill' ? 'Skill Up' : 'Placements'));
     const resolvedDriveDate = drive_date || driveDate || null;
     const resolvedLocation = location ? location.trim() : (company.location || 'Bengaluru');
     const resolvedDesc = description ? description.trim() : `Exciting career opportunity with ${company.name}.`;
+    const resolvedWorkMode = work_mode || workMode || 'Hybrid';
+    const resolvedGradYear = graduation_year || graduationYear || '2025–2026 Batch';
 
     let createdDrive = null;
 
@@ -1324,6 +1380,9 @@ exports.createDrive = async (req, res) => {
             opportunityType: resolvedOppType,
             ctc: parsedCtc,
             location: resolvedLocation,
+            workMode: resolvedWorkMode,
+            graduationYear: resolvedGradYear,
+            responsibilities: respList,
             minCgpa: parsedMinCgpa,
             maxBacklogs: parsedMaxBacklogs,
             openings: parsedOpenings,
@@ -1397,7 +1456,7 @@ exports.createDrive = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: 'Placement drive submitted successfully and is pending administrator review.',
+      message: 'Your opportunity has been submitted to the Placement Cell for review.',
       drive: newDrive
     });
   } catch (err) {
@@ -1487,6 +1546,11 @@ exports.updateDrive = async (req, res) => {
         if (max_backlogs !== undefined || maxBacklogs !== undefined) updateData.maxBacklogs = parseInt(max_backlogs ?? maxBacklogs, 10);
         if (branches !== undefined) updateData.branches = Array.isArray(branches) ? branches : branches.split(',').map(b => b.trim()).filter(Boolean);
         if (skills !== undefined) updateData.skills = Array.isArray(skills) ? skills : skills.split(',').map(s => s.trim()).filter(Boolean);
+        if (req.body.work_mode !== undefined || req.body.workMode !== undefined) updateData.workMode = req.body.work_mode || req.body.workMode;
+        if (req.body.graduation_year !== undefined || req.body.graduationYear !== undefined) updateData.graduationYear = req.body.graduation_year || req.body.graduationYear;
+        if (req.body.responsibilities !== undefined) {
+          updateData.responsibilities = Array.isArray(req.body.responsibilities) ? req.body.responsibilities : req.body.responsibilities.split('\n').map(r => r.trim()).filter(Boolean);
+        }
         if (status !== undefined) updateData.status = status;
 
         // Reset to pending if the posting was rejected or if explicit resubmission
@@ -1673,11 +1737,16 @@ exports.getApplicants = async (req, res) => {
 
     let apps = [];
     let userDrives = [];
+    let mongoQueryPerformed = false;
 
     // 1. If MongoDB is connected, query Application collection
-    if (mongoose.connection.readyState === 1 && company._id) {
+    if (mongoose.connection.readyState === 1 && (company?._id || userId)) {
       try {
-        const mongoDrives = await Drive.find({ company: company._id }).lean();
+        mongoQueryPerformed = true;
+        const driveFilter = [];
+        if (company?._id) driveFilter.push({ company: company._id });
+        if (userId) driveFilter.push({ recruiter: userId });
+        const mongoDrives = await Drive.find(driveFilter.length > 1 ? { $or: driveFilter } : driveFilter[0] || {}).lean();
         userDrives = mongoDrives.map(d => ({
           id: String(d._id),
           _id: String(d._id),
@@ -1689,7 +1758,10 @@ exports.getApplicants = async (req, res) => {
           drive: { $in: driveIds },
           status: { $ne: 'Withdrawn' }
         })
-          .populate('student')
+          .populate({
+            path: 'student',
+            populate: { path: 'user', select: 'name email role' }
+          })
           .populate('drive')
           .sort({ createdAt: -1 })
           .lean();
@@ -1702,8 +1774,8 @@ exports.getApplicants = async (req, res) => {
       }
     }
 
-    // 2. Fallback to in-memory store if needed
-    if (apps.length === 0) {
+    // 2. Fallback to in-memory store only if MongoDB query was not performed
+    if (!mongoQueryPerformed) {
       userDrives = recruiterStore.drives.filter(
         d => d.company_email === email || d.company_id === company.id
       ).map(d => ({ id: d.id, _id: d.id, title: d.title }));
@@ -1777,8 +1849,12 @@ exports.getApplicantById = async (req, res) => {
 
         if (appDoc) {
           const driveCompId = appDoc.drive?.company ? String(appDoc.drive.company) : '';
-          const myCompId = company._id ? String(company._id) : String(company.id);
-          if (driveCompId && myCompId && driveCompId !== myCompId) {
+          const driveRecruiterId = appDoc.drive?.recruiter ? String(appDoc.drive.recruiter) : '';
+          const myCompId = company._id ? String(company._id) : (company.id ? String(company.id) : '');
+          const myUserId = userId ? String(userId) : '';
+          const isOwner = (driveCompId && myCompId && driveCompId === myCompId) ||
+                          (driveRecruiterId && myUserId && driveRecruiterId === myUserId);
+          if (!isOwner && (driveCompId || driveRecruiterId)) {
             return res.status(403).json({
               success: false,
               message: 'Access Denied: You do not have permission to view this applicant.'

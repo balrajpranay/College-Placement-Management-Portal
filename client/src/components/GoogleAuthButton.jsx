@@ -20,6 +20,8 @@ export default function GoogleAuthButton({
       const fromPath = location.state?.from?.pathname || (typeof location.state?.from === 'string' ? location.state.from : null);
       if (fromPath && !fromPath.includes('/login') && !fromPath.includes('/auth/')) {
         sessionStorage.setItem('post_auth_redirect', fromPath);
+      } else {
+        sessionStorage.removeItem('post_auth_redirect');
       }
 
       // Retrieve Google OAuth endpoint config from backend

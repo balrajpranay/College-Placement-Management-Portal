@@ -58,8 +58,17 @@ export async function registerRecruiterApi(data) {
   return handleResponse(res);
 }
 
+function getCanonicalOrigin() {
+  if (typeof window === 'undefined') return '';
+  const origin = window.location.origin || '';
+  if (origin.includes('localhost') || origin.includes('127.0.0.1') || origin.includes('192.168.') || origin.includes('10.')) {
+    return 'http://localhost:5173';
+  }
+  return origin;
+}
+
 export async function getGoogleAuthUrlApi(role = 'student') {
-  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+  const currentOrigin = getCanonicalOrigin();
   const redirectUri = currentOrigin ? `${currentOrigin}/auth/google/callback` : '';
   const query = new URLSearchParams({ role, ...(redirectUri ? { redirect_uri: redirectUri } : {}) });
   const res = await fetch(`${API_BASE_URL}/auth/google/url?${query.toString()}`);
@@ -67,7 +76,7 @@ export async function getGoogleAuthUrlApi(role = 'student') {
 }
 
 export async function googleAuthCallbackApi(payload) {
-  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+  const currentOrigin = getCanonicalOrigin();
   const redirectUri = currentOrigin ? `${currentOrigin}/auth/google/callback` : '';
   const res = await fetch(`${API_BASE_URL}/auth/google/callback`, {
     method: 'POST',

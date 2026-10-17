@@ -27494,6 +27494,10 @@ function mapDriveToOpportunity(d) {
     drive_id: (d._id || d.id).toString(),
     is_campus_drive: true,
     is_verified: true,
+    is_college_approved: true,
+    isCollegeApproved: true,
+    approved_at: d.approvedAt ? (d.approvedAt instanceof Date ? d.approvedAt.toISOString() : String(d.approvedAt)) : (d.createdAt ? (d.createdAt instanceof Date ? d.createdAt.toISOString() : String(d.createdAt)) : new Date().toISOString()),
+    approval_status: d.approvalStatus || 'approved',
     title: d.title,
     company: compName,
     company_name: compName,
@@ -27508,7 +27512,7 @@ function mapDriveToOpportunity(d) {
     experience: `Eligible CGPA: ${d.minCgpa ?? d.min_cgpa ?? 6.0}+`,
     min_cgpa: d.minCgpa ?? d.min_cgpa ?? 6.0,
     tags: Array.from(new Set(tags)),
-    source: `${compName} (Verified Placement Partner)`,
+    source: `${compName} (Placement Cell Approved)`,
     url: `/student/opportunities`,
     application_url: `/student/opportunities`,
     direct_job_url: `/student/opportunities`,
@@ -27549,7 +27553,7 @@ async function fetchVerifiedCompanyOpportunities() {
           { approvalStatus: { $exists: false } },
           { approvalStatus: null }
         ]
-      }).populate('company').sort({ createdAt: -1 }).lean();
+      }).populate('company').sort({ approvedAt: -1, createdAt: -1 }).lean();
       for (const d of drives) {
         const isPostApproved = !d.approvalStatus || d.approvalStatus === 'approved';
         if (d.company && d.company.approved === true && isPostApproved) {
@@ -27581,6 +27585,9 @@ async function fetchVerifiedCompanyOpportunities() {
       }
     }
   }
+
+  // Sort newest approved / created first
+  verifiedList.sort((a, b) => new Date(b.approved_at || b.posted_at || 0) - new Date(a.approved_at || a.posted_at || 0));
 
   return verifiedList;
 }
@@ -27697,6 +27704,7 @@ exports.getJobs = async (req, res) => {
     limit: perPage,
     total_pages: totalPages,
     featured_companies: relevantFeaturedCompanies,
+    latest_college_approved: verifiedOpportunities.slice(0, 10),
     data: paginatedJobs
   });
 };
@@ -27871,8 +27879,16 @@ exports.applyForJob = async (req, res) => {
       let studentDoc = null;
       let driveDoc = null;
 
-      if (mongoose.connection && mongoose.connection.readyState === 1 && Student && Drive && Application) {
-        studentDoc = await Student.findOne({ $or: [{ user: userId }, { email: userEmail }] });
+      if (mongoose.connection && mongoose.connection.readyState === 1 && Drive && Application) {
+        try {
+          const { getOrCreateMongoStudent } = require('./studentController');
+          studentDoc = await getOrCreateMongoStudent(userId, userEmail, req.user?.name);
+        } catch (e) {
+          if (Student) {
+            studentDoc = await Student.findOne({ user: userId });
+          }
+        }
+
         if (mongoose.Types.ObjectId.isValid(cleanDriveId)) {
           driveDoc = await Drive.findById(cleanDriveId).populate('company');
         }
@@ -27885,8 +27901,8 @@ exports.applyForJob = async (req, res) => {
         }
 
         if (studentDoc && driveDoc) {
-          const existingApp = await Application.findOne({ student: studentDoc._id, drive: driveDoc._id });
-          if (existingApp && existingApp.status !== 'Withdrawn') {
+          const existingApp = await Application.findOne({ student: studentDoc._id, drive: driveDoc._id, status: { $ne: 'Withdrawn' } });
+          if (existingApp) {
             return res.status(400).json({
               success: false,
               message: `You have already applied for ${job.title} at ${job.company}. Check your Applications tab.`
@@ -27953,18 +27969,18 @@ exports.applyForJob = async (req, res) => {
     }
   }
 
-  // Standard external opportunity response
+  // Standard external opportunity response — accurate tracking label
   return res.status(200).json({
     success: true,
-    message: `Application recorded for ${job.title} at ${job.company}! Opening official application portal...`,
+    message: `External application link opened for ${job.title} at ${job.company}. Complete your application on the official employer portal.`,
     data: {
-      application_id: `APP-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      tracker_id: `TRACK-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       job_id: job.id,
       req_id: job.req_id || 'REQ-DIRECT',
       title: job.title,
       company: job.company,
-      applied_at: new Date().toISOString(),
-      status: 'Applied',
+      opened_at: new Date().toISOString(),
+      status: 'External Link Opened',
       redirect_url: job.direct_job_url || job.application_url || job.url
     }
   });

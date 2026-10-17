@@ -548,6 +548,9 @@ function formatAdminDrive(d) {
     : (d.driveDate ? String(d.driveDate).split('T')[0] : (d.drive_date ? String(d.drive_date).split('T')[0] : ''));
 
   const jobType = d.jobType || d.job_type || 'Full-Time';
+  const oppType = d.opportunityType || d.opportunity_type || (jobType.toLowerCase().includes('intern') ? 'Internship' : (jobType.toLowerCase().includes('skill') ? 'Skill' : 'Placement'));
+  const category = d.category || (oppType === 'Internship' ? 'Internships' : (oppType === 'Skill' ? 'Skill Up' : 'Placements'));
+  const workMode = d.workMode || d.work_mode || (d.location?.toLowerCase().includes('remote') ? 'Remote' : (d.location?.toLowerCase().includes('hybrid') ? 'Hybrid' : 'On-Site'));
   const minCgpa = d.minCgpa !== undefined ? Number(d.minCgpa) : (d.min_cgpa !== undefined ? Number(d.min_cgpa) : 0);
   const maxBacklogs = d.maxBacklogs !== undefined ? Number(d.maxBacklogs) : (d.max_backlogs !== undefined ? Number(d.max_backlogs) : 0);
   const openings = d.openings !== undefined ? Number(d.openings) : 1;
@@ -558,7 +561,19 @@ function formatAdminDrive(d) {
   const rejectionReason = d.rejectionReason || d.rejection_reason || '';
   const approvedBy = d.approvedBy || d.approved_by || null;
   const approvedAt = d.approvedAt || d.approved_at || null;
-  const recruiter = d.recruiter || null;
+  const recruiterObj = d.recruiter && typeof d.recruiter === 'object' ? d.recruiter : null;
+  const recruiter = recruiterObj || d.recruiter || null;
+  const recruiterName = recruiterObj?.name || compHrContact || 'Recruiter Lead';
+  const recruiterEmail = recruiterObj?.email || compEmail || '';
+  const createdAtStr = d.createdAt
+    ? (d.createdAt instanceof Date ? d.createdAt.toISOString().split('T')[0] : String(d.createdAt).split('T')[0])
+    : (d.created_at ? String(d.created_at).split('T')[0] : '2026-09-01');
+
+  const responsibilities = Array.isArray(d.responsibilities) && d.responsibilities.length > 0
+    ? d.responsibilities
+    : (typeof d.responsibilities === 'string' && d.responsibilities.trim() ? d.responsibilities.split('\n').map(r => r.trim()).filter(Boolean) : []);
+
+  const graduationYear = d.gradYear || d.grad_year || d.graduationYear || d.graduationRequirements || '2025–2026 Batch';
 
   return {
     id: idStr,
@@ -572,8 +587,26 @@ function formatAdminDrive(d) {
     companyWebsite: compWebsite,
     hrContact: compHrContact,
     companyPhone: compPhone,
+    companyIndustry: companyObj?.industry || '',
+    companyDescription: companyObj?.description || '',
+    companyApproved: Boolean(companyObj?.approved),
+    companyLocation: compLocation || d.location || 'Bengaluru',
+    recruiter: recruiter,
+    recruiterName: recruiterName,
+    recruiter_name: recruiterName,
+    recruiterEmail: recruiterEmail,
+    recruiter_email: recruiterEmail,
+    createdAt: createdAtStr,
+    created_at: createdAtStr,
+    submissionDate: createdAtStr,
+    submission_date: createdAtStr,
     jobType: jobType,
     job_type: jobType,
+    opportunityType: oppType,
+    opportunity_type: oppType,
+    category: category,
+    workMode: workMode,
+    work_mode: workMode,
     ctc: ctc,
     package: ctc,
     location: d.location || compLocation || 'Bengaluru',
@@ -596,9 +629,10 @@ function formatAdminDrive(d) {
     approved_by: approvedBy,
     approvedAt: approvedAt,
     approved_at: approvedAt,
-    recruiter: recruiter,
     branches: Array.isArray(d.branches) ? d.branches : [],
     skills: Array.isArray(d.skills) ? d.skills : [],
+    responsibilities: responsibilities,
+    graduationYear: graduationYear,
     description: d.description || ''
   };
 }
@@ -683,57 +717,72 @@ function formatAdminPlacementResult(r) {
 // GET /api/admin/dashboard
 exports.getDashboard = async (req, res) => {
   try {
-    const pendingCount = institutionalCompanies.filter(c => !c.approved).length;
-
-    let activeDrivesCount = institutionalDrives.length;
-    let recentDrivesList = institutionalDrives.slice(0, 5);
-    let totalAppsCount = 20;
-    let placedCount = 5;
-    let highestPkg = '18.00';
-    let avgPkg = '11.20';
-
+    let totalStudents = 0;
+    let totalCompanies = 0;
+    let activeDrivesCount = 0;
     let pendingDrivesCount = 0;
+    let totalAppsCount = 0;
+    let placedCount = 0;
+    let highestPkg = '0.00';
+    let avgPkg = '0.00';
+    let pendingCompaniesCount = 0;
+    let recentDrivesList = [];
 
     if (mongoose.connection.readyState === 1) {
       try {
-        const count = await Drive.countDocuments({ status: 'active' });
+        totalStudents = await Student.countDocuments();
+        totalCompanies = await Company.countDocuments();
+        activeDrivesCount = await Drive.countDocuments({ status: 'active', approvalStatus: 'approved' });
         pendingDrivesCount = await Drive.countDocuments({ approvalStatus: 'pending' });
+        pendingCompaniesCount = await Company.countDocuments({ approved: false });
+        totalAppsCount = await Application.countDocuments({ status: { $ne: 'Withdrawn' } });
+
+        const placedDocs = await Application.find({ status: 'Selected' }).lean();
+        placedCount = placedDocs.length;
+
         const mongoDrives = await Drive.find().populate('company').sort({ createdAt: -1 }).limit(5).lean();
         if (mongoDrives && mongoDrives.length > 0) {
-          activeDrivesCount = count;
           recentDrivesList = mongoDrives.map(d => formatAdminDrive(d));
         }
 
-        const appCount = await Application.countDocuments({ status: { $ne: 'Withdrawn' } });
-        if (appCount > 0) totalAppsCount = appCount;
-
-        if (PlacementResult) {
-          const placedDocs = await PlacementResult.find({ status: 'Selected' }).lean();
-          if (placedDocs && placedDocs.length > 0) {
-            placedCount = placedDocs.length;
-            const pkgs = placedDocs.map(p => Number(p.package || 0)).filter(p => p > 0);
-            if (pkgs.length > 0) {
-              highestPkg = Math.max(...pkgs).toFixed(2);
-              avgPkg = (pkgs.reduce((a, b) => a + b, 0) / pkgs.length).toFixed(2);
-            }
-          }
+        const approvedDrives = await Drive.find({ approvalStatus: 'approved' }).lean();
+        const pkgs = approvedDrives.map(d => Number(d.ctc || 0)).filter(p => p > 0);
+        if (pkgs.length > 0) {
+          highestPkg = Math.max(...pkgs).toFixed(2);
+          avgPkg = (pkgs.reduce((a, b) => a + b, 0) / pkgs.length).toFixed(2);
         }
       } catch (err) {
         console.warn('[Admin Mongo Dashboard Warning]:', err.message);
       }
+    } else {
+      // In-memory fallback if standalone mode
+      try {
+        const { memoryStudents, memoryCompanies } = require('./authController');
+        if (memoryStudents) totalStudents = memoryStudents.size;
+        if (memoryCompanies) totalCompanies = memoryCompanies.size;
+      } catch (_) {}
+      if (recruiterStore && Array.isArray(recruiterStore.drives)) {
+        activeDrivesCount = recruiterStore.drives.filter(d => d.status === 'active' && (d.approvalStatus === 'approved' || d.approval_status === 'approved')).length;
+        pendingDrivesCount = recruiterStore.drives.filter(d => (d.approvalStatus || d.approval_status) === 'pending').length;
+        recentDrivesList = recruiterStore.drives.slice(0, 5).map(d => formatAdminDrive(d));
+      }
     }
 
+    const placementRate = totalStudents > 0
+      ? `${((placedCount / totalStudents) * 100).toFixed(1)}%`
+      : '0.0%';
+
     const stats = {
-      totalStudents: institutionalStudents.length + 5, // 13 enrolled
-      totalCompanies: institutionalCompanies.length, // 8 companies
+      totalStudents,
+      totalCompanies,
       activeDrives: activeDrivesCount,
       pendingDrives: pendingDrivesCount,
       totalApplications: totalAppsCount,
       placedStudents: placedCount,
-      placementRate: `${((placedCount / 13) * 100).toFixed(1)}%`,
+      placementRate,
       avgPackage: avgPkg,
       highestPackage: highestPkg,
-      pendingCompanies: pendingCount,
+      pendingCompanies: pendingCompaniesCount,
       recentDrives: recentDrivesList
     };
 
@@ -759,14 +808,95 @@ exports.getDashboard = async (req, res) => {
 exports.getStudents = async (req, res) => {
   try {
     const { q, department } = req.query;
-    let students = [...institutionalStudents];
+    let students = [];
+
+    if (mongoose.connection.readyState === 1) {
+      try {
+        const studentDocs = await Student.find()
+          .populate('user', 'name email role isActive')
+          .sort({ createdAt: -1 })
+          .lean();
+
+        if (studentDocs && studentDocs.length > 0) {
+          const studentIds = studentDocs.map(s => s._id);
+          const apps = await Application.find({
+            student: { $in: studentIds },
+            status: { $ne: 'Withdrawn' }
+          }).lean();
+
+          const appCountMap = new Map();
+          const appStatusMap = new Map();
+          for (const a of apps) {
+            const sid = String(a.student);
+            appCountMap.set(sid, (appCountMap.get(sid) || 0) + 1);
+            const current = appStatusMap.get(sid);
+            if (a.status === 'Selected') {
+              appStatusMap.set(sid, 'Selected');
+            } else if (a.status === 'Interview Scheduled' && current !== 'Selected') {
+              appStatusMap.set(sid, 'Interview Scheduled');
+            } else if (!current) {
+              appStatusMap.set(sid, a.status || 'Applied');
+            }
+          }
+
+          students = studentDocs.map(s => {
+            const sid = String(s._id);
+            const email = s.user?.email || s.email || '';
+            const name = s.name || s.user?.name || 'Candidate';
+            const status = appStatusMap.get(sid) || (s.cgpa >= 7 ? 'Eligible' : 'Active');
+            return {
+              id: sid,
+              _id: sid,
+              studentNo: s.studentNo || 'N/A',
+              name: name,
+              email: email,
+              phone: s.phone || '',
+              department: s.department || 'General',
+              gradYear: s.gradYear || new Date().getFullYear(),
+              cgpa: s.cgpa !== undefined ? Number(s.cgpa) : 0,
+              backlogs: s.backlogs || 0,
+              isActive: s.user?.isActive !== false,
+              skills: Array.isArray(s.skills) ? s.skills : [],
+              applicationsCount: appCountMap.get(sid) || 0,
+              status: status
+            };
+          });
+        }
+      } catch (dbErr) {
+        console.warn('[Admin Mongo getStudents Warning]:', dbErr.message);
+      }
+    } else {
+      try {
+        const { memoryStudents } = require('./authController');
+        if (memoryStudents) {
+          for (const [id, s] of memoryStudents.entries()) {
+            students.push({
+              id: String(id),
+              _id: String(id),
+              studentNo: s.studentNo || 'N/A',
+              name: s.name || 'Candidate',
+              email: s.email || '',
+              phone: s.phone || '',
+              department: s.department || 'General',
+              gradYear: s.gradYear || 2026,
+              cgpa: s.cgpa || 0,
+              backlogs: s.backlogs || 0,
+              isActive: true,
+              skills: Array.isArray(s.skills) ? s.skills : [],
+              applicationsCount: 0,
+              status: 'Active'
+            });
+          }
+        }
+      } catch (_) {}
+    }
 
     if (q) {
       const queryStr = q.toLowerCase();
       students = students.filter(s =>
-        s.name.toLowerCase().includes(queryStr) ||
-        s.email.toLowerCase().includes(queryStr) ||
-        s.studentNo.toLowerCase().includes(queryStr)
+        (s.name && s.name.toLowerCase().includes(queryStr)) ||
+        (s.email && s.email.toLowerCase().includes(queryStr)) ||
+        (s.studentNo && s.studentNo.toLowerCase().includes(queryStr))
       );
     }
 
@@ -787,14 +917,78 @@ exports.getStudents = async (req, res) => {
 // GET /api/admin/students/:id
 exports.getStudentById = async (req, res) => {
   try {
-    const student = institutionalStudents.find(s => String(s.id) === String(req.params.id));
+    const rawId = req.params.id;
+    const cleanId = String(rawId).trim();
+    let student = null;
+    let apps = [];
+
+    if (mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(cleanId)) {
+      try {
+        const sDoc = await Student.findById(cleanId).populate('user', 'name email role isActive').lean();
+        if (sDoc) {
+          const rawApps = await Application.find({ student: cleanId, status: { $ne: 'Withdrawn' } })
+            .populate({ path: 'drive', populate: { path: 'company' } })
+            .sort({ createdAt: -1 })
+            .lean();
+
+          apps = rawApps.map(formatAdminApplication);
+
+          student = {
+            id: String(sDoc._id),
+            _id: String(sDoc._id),
+            studentNo: sDoc.studentNo || 'N/A',
+            name: sDoc.name || sDoc.user?.name || 'Candidate',
+            email: sDoc.user?.email || sDoc.email || '',
+            phone: sDoc.phone || '',
+            department: sDoc.department || 'General',
+            gradYear: sDoc.gradYear || new Date().getFullYear(),
+            cgpa: sDoc.cgpa !== undefined ? Number(sDoc.cgpa) : 0,
+            backlogs: sDoc.backlogs || 0,
+            isActive: sDoc.user?.isActive !== false,
+            skills: Array.isArray(sDoc.skills) ? sDoc.skills : [],
+            applicationsCount: apps.length,
+            status: apps.some(a => a.status === 'Selected') ? 'Selected' : (apps.length > 0 ? 'Applied' : 'Active'),
+            applications: apps
+          };
+        }
+      } catch (err) {
+        console.warn('[Admin Mongo getStudentById Warning]:', err.message);
+      }
+    }
+
+    if (!student) {
+      try {
+        const { memoryStudents } = require('./authController');
+        if (memoryStudents && memoryStudents.has(cleanId)) {
+          const s = memoryStudents.get(cleanId);
+          student = {
+            id: cleanId,
+            _id: cleanId,
+            studentNo: s.studentNo || 'N/A',
+            name: s.name || 'Candidate',
+            email: s.email || '',
+            phone: s.phone || '',
+            department: s.department || 'General',
+            gradYear: s.gradYear || 2026,
+            cgpa: s.cgpa || 0,
+            backlogs: s.backlogs || 0,
+            isActive: true,
+            skills: Array.isArray(s.skills) ? s.skills : [],
+            applicationsCount: 0,
+            status: 'Active',
+            applications: []
+          };
+        }
+      } catch (_) {}
+    }
+
     if (!student) {
       return res.status(404).json({ success: false, message: 'Student record not found.' });
     }
-    const apps = institutionalApplications.filter(a => a.studentId === student.id);
+
     return res.status(200).json({
       success: true,
-      data: { ...student, applications: apps }
+      data: student
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -810,7 +1004,7 @@ exports.getCompanies = async (req, res) => {
     // 1. Fetch from MongoDB if connected
     if (mongoose.connection.readyState === 1) {
       try {
-        const mongoDocs = await Company.find().lean();
+        const mongoDocs = await Company.find().sort({ createdAt: -1 }).lean();
         if (mongoDocs && mongoDocs.length > 0) {
           companies = mongoDocs.map(c => ({
             id: String(c._id),
@@ -831,16 +1025,29 @@ exports.getCompanies = async (req, res) => {
       } catch (dbErr) {
         console.warn('[Admin Mongo getCompanies Warning]:', dbErr.message);
       }
-    }
-
-    // Merge with in-memory institutionalCompanies (avoid duplicates by email or name)
-    const existingEmails = new Set(companies.map(c => c.email?.toLowerCase()).filter(Boolean));
-    const existingNames = new Set(companies.map(c => c.name?.toLowerCase()).filter(Boolean));
-
-    for (const inst of institutionalCompanies) {
-      if (!existingEmails.has(inst.email?.toLowerCase()) && !existingNames.has(inst.name?.toLowerCase())) {
-        companies.push(inst);
-      }
+    } else {
+      try {
+        const { memoryCompanies } = require('./authController');
+        if (memoryCompanies) {
+          for (const [id, c] of memoryCompanies.entries()) {
+            companies.push({
+              id: String(id),
+              _id: String(id),
+              name: c.name,
+              industry: c.industry || 'Technology',
+              website: c.website || '',
+              hr_contact: c.hrContact || 'HR Lead',
+              hrContact: c.hrContact || 'HR Lead',
+              email: c.email || '',
+              phone: c.phone || '',
+              location: c.location || 'Bengaluru, India',
+              description: c.description || '',
+              approved: Boolean(c.approved),
+              created_at: new Date().toISOString()
+            });
+          }
+        }
+      } catch (_) {}
     }
 
     if (q) {
@@ -871,21 +1078,41 @@ exports.getCompanies = async (req, res) => {
 // GET /api/admin/recruiters/:id
 exports.getCompanyById = async (req, res) => {
   try {
-    const compId = req.params.id;
+    const rawId = req.params.id;
+    const compId = String(rawId).trim();
     let company = null;
+    let drives = [];
 
-    if (mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(compId)) {
+    if (mongoose.connection.readyState === 1) {
       try {
-        company = await Company.findById(compId).lean();
-      } catch (e) {}
+        if (mongoose.Types.ObjectId.isValid(compId)) {
+          company = await Company.findById(compId).lean();
+        }
+        if (!company) {
+          company = await Company.findOne({ email: compId }).lean();
+        }
+        if (company) {
+          const compDrives = await Drive.find({ company: company._id }).populate('company').sort({ createdAt: -1 }).lean();
+          if (compDrives && compDrives.length > 0) {
+            drives = compDrives.map(d => formatAdminDrive(d));
+          }
+        }
+      } catch (e) {
+        console.warn('[Admin Mongo getCompanyById Warning]:', e.message);
+      }
+    } else {
+      try {
+        const { memoryCompanies } = require('./authController');
+        if (memoryCompanies && (memoryCompanies.has(compId) || memoryCompanies.has(rawId))) {
+          company = memoryCompanies.get(compId) || memoryCompanies.get(rawId);
+        }
+      } catch (_) {}
     }
-    if (!company) {
-      company = institutionalCompanies.find(c => String(c.id) === String(compId) || c.email === compId);
-    }
+
     if (!company) {
       return res.status(404).json({ success: false, message: 'Recruiter company record not found.' });
     }
-    const drives = institutionalDrives.filter(d => d.companyEmail === company.email || d.companyName === company.name);
+
     return res.status(200).json({
       success: true,
       data: { ...company, drives }
@@ -913,16 +1140,18 @@ exports.approveCompany = async (req, res) => {
       } catch (err) {
         console.warn('[Admin Mongo Approve Company Warning]:', err.message);
       }
+    } else {
+      try {
+        const { memoryCompanies } = require('./authController');
+        if (memoryCompanies && memoryCompanies.has(compId)) {
+          const c = memoryCompanies.get(compId);
+          c.approved = true;
+          found = c;
+        }
+      } catch (_) {}
     }
 
-    // 2. Also update in-memory
-    const memComp = institutionalCompanies.find(c => String(c.id) === String(compId) || c.email === compId);
-    if (memComp) {
-      memComp.approved = true;
-      if (!found) found = memComp;
-    }
-
-    // 3. Recruiter Notification
+    // Recruiter Notification
     try {
       if (found?.email && Notification && mongoose.connection.readyState === 1) {
         await Notification.create({
@@ -938,15 +1167,15 @@ exports.approveCompany = async (req, res) => {
       console.warn('[Admin Approve Notification Warning]:', notifErr.message);
     }
 
-    if (!found && !memComp) {
+    if (!found) {
       return res.status(404).json({ success: false, message: 'Company not found.' });
     }
 
-    const companyName = found?.name || memComp?.name || 'Company';
+    const companyName = found?.name || 'Company';
     return res.status(200).json({
       success: true,
       message: `${companyName} has been verified and approved successfully for campus recruitment.`,
-      data: found || memComp
+      data: found
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -970,23 +1199,26 @@ exports.rejectCompany = async (req, res) => {
       } catch (err) {
         console.warn('[Admin Mongo Reject Company Warning]:', err.message);
       }
+    } else {
+      try {
+        const { memoryCompanies } = require('./authController');
+        if (memoryCompanies && memoryCompanies.has(compId)) {
+          const c = memoryCompanies.get(compId);
+          c.approved = false;
+          found = c;
+        }
+      } catch (_) {}
     }
 
-    const memComp = institutionalCompanies.find(c => String(c.id) === String(compId) || c.email === compId);
-    if (memComp) {
-      memComp.approved = false;
-      if (!found) found = memComp;
-    }
-
-    if (!found && !memComp) {
+    if (!found) {
       return res.status(404).json({ success: false, message: 'Company not found.' });
     }
 
-    const companyName = found?.name || memComp?.name || 'Company';
+    const companyName = found?.name || 'Company';
     return res.status(200).json({
       success: true,
       message: `${companyName} verification has been revoked / set to pending review.`,
-      data: found || memComp
+      data: found
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -1002,7 +1234,11 @@ exports.getDrives = async (req, res) => {
     // 1. Read from MongoDB if connected
     if (mongoose.connection.readyState === 1) {
       try {
-        const mongoDrives = await Drive.find().populate('company').sort({ createdAt: -1 }).lean();
+        const mongoDrives = await Drive.find()
+          .populate('company')
+          .populate('recruiter', 'name email role')
+          .sort({ createdAt: -1 })
+          .lean();
         if (mongoDrives && mongoDrives.length > 0) {
           drives = mongoDrives.map(d => formatAdminDrive(d));
         }
@@ -1011,17 +1247,28 @@ exports.getDrives = async (req, res) => {
       }
     }
 
-    // 2. Fallback to in-memory institutionalDrives
-    if (drives.length === 0) {
-      drives = institutionalDrives.map(d => formatAdminDrive(d));
+    // 2. Merge in-memory recruiter submissions if any
+    if (recruiterStore && Array.isArray(recruiterStore.drives)) {
+      const seenIds = new Set(drives.map(d => String(d.id || d._id)));
+      for (const memD of recruiterStore.drives) {
+        const memId = String(memD.id || memD._id);
+        if (!seenIds.has(memId)) {
+          drives.unshift(formatAdminDrive(memD));
+          seenIds.add(memId);
+        }
+      }
     }
+
+    const pendingCount = drives.filter(d => (d.approvalStatus || d.approval_status) === 'pending').length;
 
     if (q) {
       const queryStr = q.toLowerCase();
       drives = drives.filter(d =>
         d.title.toLowerCase().includes(queryStr) ||
         d.companyName.toLowerCase().includes(queryStr) ||
-        d.location.toLowerCase().includes(queryStr)
+        d.location.toLowerCase().includes(queryStr) ||
+        (d.recruiterName && d.recruiterName.toLowerCase().includes(queryStr)) ||
+        (d.recruiterEmail && d.recruiterEmail.toLowerCase().includes(queryStr))
       );
     }
 
@@ -1041,6 +1288,7 @@ exports.getDrives = async (req, res) => {
     return res.status(200).json({
       success: true,
       total: drives.length,
+      pendingCount,
       data: drives
     });
   } catch (err) {
@@ -1114,7 +1362,8 @@ exports.approveDrive = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: `Placement drive '${drive.title}' has been approved and published to students.`,
-      data: drive
+      data: drive,
+      drive: drive
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -1190,7 +1439,8 @@ exports.rejectDrive = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: `Placement drive '${drive.title}' has been rejected.`,
-      data: drive
+      data: drive,
+      drive: drive
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -1200,12 +1450,17 @@ exports.rejectDrive = async (req, res) => {
 // GET /api/admin/drives/:id
 exports.getDriveById = async (req, res) => {
   try {
-    const { id } = req.params;
+    const rawId = req.params.id;
+    const cleanId = String(rawId).replace(/^drive-/, '');
     let drive = null;
 
-    if (mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(id)) {
+    if (mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(cleanId)) {
       try {
-        const doc = await Drive.findById(id).populate('company').lean();
+        const doc = await Drive.findById(cleanId)
+          .populate('company')
+          .populate('recruiter', 'name email role')
+          .populate('approvedBy', 'name email role')
+          .lean();
         if (doc) {
           drive = formatAdminDrive(doc);
         }
@@ -1214,10 +1469,10 @@ exports.getDriveById = async (req, res) => {
       }
     }
 
-    if (!drive) {
-      const fallback = institutionalDrives.find(d => String(d.id) === String(id) || String(d._id) === String(id));
-      if (fallback) {
-        drive = formatAdminDrive(fallback);
+    if (!drive && recruiterStore && Array.isArray(recruiterStore.drives)) {
+      const memDrive = recruiterStore.drives.find(d => String(d.id) === cleanId || String(d._id) === cleanId || String(d.id) === String(rawId));
+      if (memDrive) {
+        drive = formatAdminDrive(memDrive);
       }
     }
 
@@ -1226,13 +1481,13 @@ exports.getDriveById = async (req, res) => {
     }
 
     let apps = [];
-    if (mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(id)) {
+    if (mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(cleanId)) {
       try {
         const mongoApps = await Application.find({
-          drive: id,
+          drive: cleanId,
           status: { $ne: 'Withdrawn' }
         })
-          .populate('student')
+          .populate({ path: 'student', populate: { path: 'user', select: 'name email role' } })
           .populate({ path: 'drive', populate: { path: 'company' } })
           .sort({ createdAt: -1 })
           .lean();
@@ -1243,13 +1498,14 @@ exports.getDriveById = async (req, res) => {
       } catch (e) {}
     }
 
-    if (apps.length === 0) {
-      apps = institutionalApplications.filter(a => String(a.driveId) === String(drive.id) || String(a.drive_id) === String(drive.id)).map(formatAdminApplication);
-    }
+    drive.applicantCount = apps.length;
+    drive.applicant_count = apps.length;
 
+    const driveResult = { ...drive, applications: apps };
     return res.status(200).json({
       success: true,
-      data: { ...drive, applications: apps }
+      data: driveResult,
+      drive: driveResult
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -1279,11 +1535,6 @@ exports.getApplications = async (req, res) => {
       }
     }
 
-    // 2. Fallback to in-memory institutionalApplications
-    if (apps.length === 0) {
-      apps = institutionalApplications.map(formatAdminApplication);
-    }
-
     if (q) {
       const queryStr = q.toLowerCase();
       apps = apps.filter(a =>
@@ -1307,115 +1558,9 @@ exports.getApplications = async (req, res) => {
   }
 };
 
-// Helper: Seed initial demo notifications if MongoDB is connected and collection is empty
+// Helper: Seed initial demo notifications if MongoDB is connected and collection is empty (disabled for clean presentation)
 async function seedDemoNotificationsIfEmpty() {
-  if (mongoose.connection.readyState !== 1) return;
-  try {
-    const count = await Notification.countDocuments();
-    if (count === 0) {
-      const studentDoc = await Student.findOne({ studentNo: 'CS2023001' });
-      const driveDoc = await Drive.findOne({ title: 'Software Engineer - New Grad' }).populate('company');
-      const companyDoc = driveDoc?.company;
-
-      const initialNotifs = [
-        // Student notifications
-        {
-          student: studentDoc?._id,
-          recipientRole: 'student',
-          title: 'Interview Scheduled',
-          message: 'Interview Scheduled: Technical Coding & DSA Round with TechNova Solutions on Sep 18 at 11:00 AM.',
-          link: '/student/interviews',
-          isRead: false
-        },
-        {
-          student: studentDoc?._id,
-          recipientRole: 'student',
-          title: 'New Placement Drive',
-          message: 'New Placement Drive Announced: Microsoft Cloud Solutions & AI Trainee (₹18.5 LPA). Apply before Sep 22.',
-          link: '/student/drives',
-          isRead: false
-        },
-        {
-          student: studentDoc?._id,
-          recipientRole: 'student',
-          title: 'Application Submitted',
-          message: 'Application Submitted: Application successfully received for Software Engineer - New Grad at TechNova Solutions.',
-          link: '/student/applications',
-          isRead: true
-        },
-        // Recruiter notifications
-        {
-          company: companyDoc?._id,
-          recipientRole: 'recruiter',
-          title: 'New Applicant',
-          message: "Priya Sharma applied to your drive 'Software Engineer - New Grad'.",
-          link: '/recruiter/applicants',
-          isRead: false
-        },
-        {
-          company: companyDoc?._id,
-          recipientRole: 'recruiter',
-          title: 'New Applicant',
-          message: "Rahul Verma applied to your drive 'Software Engineer - New Grad'.",
-          link: '/recruiter/applicants',
-          isRead: true
-        },
-        {
-          company: companyDoc?._id,
-          recipientRole: 'recruiter',
-          title: 'Drive Approved',
-          message: "Your campus hiring drive 'Software Engineer - New Grad' was approved by the placement cell.",
-          link: '/recruiter/drives',
-          isRead: true
-        },
-        {
-          company: companyDoc?._id,
-          recipientRole: 'recruiter',
-          title: 'Profile Verified',
-          message: 'Corporate partner profile verified by the Institutional Placement Officer.',
-          link: '/recruiter/profile',
-          isRead: true
-        },
-        // Admin notifications
-        {
-          recipientRole: 'admin',
-          title: 'New Recruiter Verification Required',
-          message: 'InnovateAI Solutions has submitted employer registration for placement season review.',
-          type: 'company_approval',
-          link: '/admin/companies',
-          isRead: false
-        },
-        {
-          recipientRole: 'admin',
-          title: 'Drive Deadline Approaching',
-          message: 'TechNova Solutions placement drive registration closes in 3 days.',
-          type: 'drive_alert',
-          link: '/admin/drives',
-          isRead: false
-        },
-        {
-          recipientRole: 'admin',
-          title: 'Batch Result Published',
-          message: '5 candidates have accepted final offers across TechNova and DataEdge.',
-          type: 'placement_success',
-          link: '/admin/applications',
-          isRead: true
-        },
-        {
-          recipientRole: 'admin',
-          title: 'System Health & ATS Sync',
-          message: 'Institutional candidate resumes and ATS scoring pipelines synchronized successfully.',
-          type: 'system',
-          link: '/admin/reports',
-          isRead: true
-        }
-      ];
-
-      await Notification.insertMany(initialNotifs);
-    }
-  } catch (err) {
-    console.warn('[Seed Demo Notifications Notice]:', err.message);
-  }
+  return;
 }
 
 // Helper: Format Notification for Admin responses
@@ -1449,7 +1594,6 @@ exports.getNotifications = async (req, res) => {
     // 1. Read from MongoDB if connected
     if (mongoose.connection.readyState === 1) {
       try {
-        await seedDemoNotificationsIfEmpty();
         const mongoNotifs = await Notification.find({
           $or: [
             { recipientRole: { $in: ['admin', 'all'] } }
@@ -1462,11 +1606,6 @@ exports.getNotifications = async (req, res) => {
       } catch (err) {
         console.warn('[Admin Mongo Get Notifications Warning]:', err.message);
       }
-    }
-
-    // 2. Fallback to in-memory store
-    if (notifs.length === 0) {
-      notifs = institutionalNotifications.map(formatAdminNotification);
     }
 
     return res.status(200).json({
@@ -1494,17 +1633,10 @@ exports.markNotificationRead = async (req, res) => {
       }
     }
 
-    // 2. Also update in-memory fallback
-    const notif = institutionalNotifications.find(n => String(n.id) === String(id) || String(n._id) === String(id));
-    if (notif) {
-      notif.isRead = true;
-      notif.is_read = true;
-    }
-
     return res.status(200).json({
       success: true,
       message: 'Notification marked as read.',
-      data: notif ? formatAdminNotification(notif) : { id, isRead: true }
+      data: { id, isRead: true }
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -1525,12 +1657,6 @@ exports.markAllNotificationsRead = async (req, res) => {
         console.warn('[Admin Mongo Mark All Read Warning]:', err.message);
       }
     }
-
-    // 2. Also update in-memory fallback
-    institutionalNotifications.forEach(n => {
-      n.isRead = true;
-      n.is_read = true;
-    });
 
     return res.status(200).json({
       success: true,

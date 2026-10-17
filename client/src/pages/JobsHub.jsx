@@ -45,6 +45,7 @@ export default function JobsHub({ isStudentPortal }) {
   const urlPage = parseInt(searchParams.get('page') || '1', 10);
 
   const [jobs, setJobs] = useState([]);
+  const [collegeOpportunities, setCollegeOpportunities] = useState([]);
   const [featuredCompanies, setFeaturedCompanies] = useState([]);
   const [stats, setStats] = useState({ total_jobs: 520, total_all_count: 520, total_placements_count: 260, total_internships_count: 260, total_skills_count: 50, total_pages: 44 });
   const [loading, setLoading] = useState(true);
@@ -92,6 +93,12 @@ export default function JobsHub({ isStudentPortal }) {
 
       if (res && res.data) {
         setJobs(res.data);
+        if (res.latest_college_approved && Array.isArray(res.latest_college_approved)) {
+          setCollegeOpportunities(res.latest_college_approved);
+        } else {
+          const collegeOpps = res.data.filter(j => j.is_campus_drive || j.is_college_approved);
+          setCollegeOpportunities(collegeOpps);
+        }
         setStats({
           total_jobs: res.total_jobs !== undefined ? res.total_jobs : res.data.length,
           total_all_count: res.total_all_count !== undefined ? res.total_all_count : 600,
@@ -172,32 +179,50 @@ export default function JobsHub({ isStudentPortal }) {
       }
     }
 
-    // If student is logged in, silently record application in background tracker
+    // If student is logged in, silently record external link tracker
     if (isAuthenticated && user?.role === 'student') {
       try {
         setApplyingJobId(job.id);
         await applyForJobApi(job.id);
-        setApplyStatus({
-          type: 'success',
-          message: `Application recorded in your student tracker! Opening specific opening for ${cleanTitle} at ${job.company}...`
-        });
       } catch (err) {
-        setApplyStatus({
-          type: 'success',
-          message: `Opening specific opening for ${cleanTitle} at ${job.company}...`
-        });
+        // silent tracker ignore
       } finally {
         setApplyingJobId(null);
       }
-    } else {
-      setApplyStatus({
-        type: 'success',
-        message: `Opening specific opening for ${cleanTitle} at ${job.company}...`
-      });
     }
+
+    setApplyStatus({
+      type: 'info',
+      message: `External application link opened for "${cleanTitle}" at ${job.company || cleanComp}. Complete your application on the official employer portal.`
+    });
 
     // Directly open external job link in new tab without navigating away
     window.open(targetUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleApplyOpportunity = async (job) => {
+    if (!job) return;
+    if (!isAuthenticated) {
+      navigate('/login?role=student');
+      return;
+    }
+    try {
+      setApplyingJobId(job.id);
+      setApplyStatus(null);
+      const res = await applyForJobApi(job.id);
+      setApplyStatus({
+        type: 'success',
+        message: res.message || `Application successfully submitted for "${job.title}" at ${job.company || job.company_name}!`
+      });
+      handleSelectJob(job);
+    } catch (err) {
+      setApplyStatus({
+        type: 'error',
+        message: err.message || `Unable to apply for "${job.title}".`
+      });
+    } finally {
+      setApplyingJobId(null);
+    }
   };
 
   // Student profile qualifications match evaluation
@@ -471,11 +496,211 @@ export default function JobsHub({ isStudentPortal }) {
         </div>
       </div>
 
+      {/* College Placement Cell Latest Opportunities Section */}
+      <div
+        className="card mb-6"
+        style={{
+          padding: '1.25rem 1.5rem',
+          background: 'var(--bg-surface)',
+          border: '1px solid rgba(10, 102, 194, 0.25)',
+          borderRadius: 12,
+          boxShadow: '0 2px 8px rgba(10, 102, 194, 0.05)',
+          marginBottom: 24
+        }}
+      >
+        <div className="flex-between mb-3" style={{ flexWrap: 'wrap', gap: '0.75rem', alignItems: 'flex-start' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '1.2rem' }}>🏛️</span>
+              <h2 className="h3" style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                Latest Opportunities from the Placement Cell
+              </h2>
+              <span
+                className="badge badge-brand"
+                style={{
+                  fontSize: '0.7rem',
+                  padding: '2px 8px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                  background: 'rgba(10, 102, 194, 0.1)',
+                  color: '#0A66C2',
+                  border: '1px solid rgba(10, 102, 194, 0.25)',
+                  fontWeight: 700
+                }}
+              >
+                Reviewed & Verified
+              </span>
+            </div>
+            <p className="text-muted" style={{ margin: '4px 0 0', fontSize: '0.875rem' }}>
+              Explore the latest jobs, internships, and placement drives reviewed and approved by your college Placement Cell.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (detailPaneRef.current) {
+                detailPaneRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }
+            }}
+            className="btn btn-outline btn-sm"
+            style={{ fontSize: '0.8rem', padding: '4px 12px', borderRadius: 6 }}
+          >
+            View All Opportunities &darr;
+          </button>
+        </div>
+
+        {collegeOpportunities.length === 0 ? (
+          <div
+            style={{
+              padding: '1.5rem 1rem',
+              textAlign: 'center',
+              background: 'var(--bg-surface-secondary, rgba(0,0,0,0.02))',
+              borderRadius: 8,
+              border: '1px dashed var(--border-subtle)'
+            }}
+          >
+            <Icon name="briefcase" size={28} className="text-muted mb-2" />
+            <div className="font-semibold text-sm" style={{ color: 'var(--text-secondary)' }}>
+              No newly approved opportunities right now
+            </div>
+            <div className="text-xs text-muted" style={{ marginTop: 4 }}>
+              New recruiter opportunities will automatically appear here as soon as approved by the Placement Cell.
+            </div>
+          </div>
+        ) : (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+              gap: '1rem',
+              marginTop: '1rem'
+            }}
+          >
+            {collegeOpportunities.map((opp) => {
+              const pubDate = opp.approved_at || opp.posted_at || opp.createdAt;
+              const isNew = pubDate && (Date.now() - new Date(pubDate).getTime() < 7 * 24 * 60 * 60 * 1000);
+              const isSelected = selectedJob && (String(selectedJob.id) === String(opp.id) || String(selectedJob.mongo_id) === String(opp.mongo_id));
+
+              return (
+                <div
+                  key={opp.id}
+                  className="card"
+                  style={{
+                    padding: '1rem 1.15rem',
+                    borderRadius: 10,
+                    border: isSelected ? '2px solid #0A66C2' : '1px solid var(--border-subtle)',
+                    background: isSelected ? 'rgba(10, 102, 194, 0.03)' : 'var(--bg-surface)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    position: 'relative',
+                    boxShadow: isSelected ? '0 4px 12px rgba(10, 102, 194, 0.12)' : 'none',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <div>
+                    <div className="flex-between mb-2" style={{ alignItems: 'flex-start', gap: 8 }}>
+                      <div className="font-bold text-sm" style={{ color: 'var(--text-primary)', lineHeight: 1.3 }}>
+                        {opp.title}
+                      </div>
+                      {isNew && (
+                        <span
+                          className="badge"
+                          style={{
+                            fontSize: '0.65rem',
+                            fontWeight: 800,
+                            padding: '2px 6px',
+                            borderRadius: 4,
+                            background: '#10B981',
+                            color: '#FFFFFF',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.04em',
+                            flexShrink: 0
+                          }}
+                        >
+                          NEW
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="text-xs font-semibold text-brand mb-2">
+                      {opp.company || opp.company_name}
+                    </div>
+
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                      <span className="badge badge-neutral" style={{ fontSize: '0.72rem' }}>
+                        {opp.job_type || 'Full-time'}
+                      </span>
+                      <span className="badge badge-brand" style={{ fontSize: '0.72rem', fontWeight: 700 }}>
+                        {opp.salary}
+                      </span>
+                    </div>
+
+                    <div className="text-xs text-muted mb-1" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <Icon name="map-pin" size={12} />
+                      <span>{opp.location || 'Campus / Hybrid'}</span>
+                    </div>
+
+                    {pubDate && (
+                      <div className="text-xs text-muted mb-1" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Icon name="clock" size={12} />
+                        <span>Published: {new Date(pubDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                      </div>
+                    )}
+
+                    <div className="text-xs text-muted font-mono" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <Icon name="calendar" size={12} />
+                      <span>Deadline: {opp.deadline || 'Open'}</span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8, marginTop: 14, paddingTop: 10, borderTop: '1px solid var(--border-subtle)' }}>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline"
+                      style={{ flex: 1, fontSize: '0.78rem', padding: '5px 8px' }}
+                      onClick={() => handleSelectJob(opp)}
+                    >
+                      View Details
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-primary"
+                      style={{ flex: 1, fontSize: '0.78rem', padding: '5px 8px', background: '#0A66C2', border: 'none' }}
+                      onClick={() => handleApplyOpportunity(opp)}
+                      disabled={applyingJobId === opp.id}
+                    >
+                      {applyingJobId === opp.id ? 'Applying...' : 'Apply Now'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Global Status Toast Alert */}
       {applyStatus && (
-        <div className={`alert-box ${applyStatus.type === 'error' ? 'alert-danger-box' : 'alert-success-box'} mb-4`} style={{ borderRadius: 8 }}>
+        <div
+          className={`alert-box ${
+            applyStatus.type === 'error'
+              ? 'alert-danger-box'
+              : applyStatus.type === 'info'
+                ? 'alert-info-box'
+                : 'alert-success-box'
+          } mb-4`}
+          style={{
+            borderRadius: 8,
+            borderLeft: applyStatus.type === 'info' ? '4px solid #0A66C2' : undefined,
+            background: applyStatus.type === 'info' ? 'rgba(10, 102, 194, 0.08)' : undefined
+          }}
+        >
           <div className="alert-box-icon">
-            <Icon name={applyStatus.type === 'error' ? 'alert' : 'check'} size={18} />
+            <Icon
+              name={applyStatus.type === 'error' ? 'alert' : applyStatus.type === 'info' ? 'info' : 'check'}
+              size={18}
+            />
           </div>
           <div className="alert-box-text">{applyStatus.message}</div>
           <button onClick={() => setApplyStatus(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', marginLeft: 'auto', color: 'inherit' }}>
@@ -553,13 +778,17 @@ export default function JobsHub({ isStudentPortal }) {
                       </div>
                     </div>
 
-                    {/* Quick direct apply button */}
+                    {/* Quick apply button */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDirectApply(job);
+                        if (job.is_campus_drive || job.is_college_approved) {
+                          handleApplyOpportunity(job);
+                        } else {
+                          handleDirectApply(job);
+                        }
                       }}
-                      title="Apply Directly on Official Portal ↗"
+                      title={job.is_campus_drive || job.is_college_approved ? "Apply via Campus Connect" : "Apply on Official Portal ↗"}
                       style={{
                         background: 'transparent',
                         border: 'none',
@@ -569,7 +798,7 @@ export default function JobsHub({ isStudentPortal }) {
                         alignSelf: 'flex-start'
                       }}
                     >
-                      <Icon name="external-link" size={16} />
+                      <Icon name={job.is_campus_drive || job.is_college_approved ? "send" : "external-link"} size={16} />
                     </button>
                   </div>
                 );
@@ -677,35 +906,74 @@ export default function JobsHub({ isStudentPortal }) {
                 )}
               </div>
 
-              {/* Action Bar with Direct Apply */}
+              {/* Action Bar with Direct Apply or Internal Campus Connect Apply */}
               <div className="linkedin-action-bar" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-                <button
-                  onClick={() => handleDirectApply(selectedJob, 'official')}
-                  disabled={applyingJobId === selectedJob.id}
-                  className="linkedin-direct-apply-btn"
-                >
-                  <Icon name="external-link" size={17} />
-                  <span>
-                    {applyingJobId === selectedJob.id
-                      ? 'Connecting...'
-                      : selectedJob.job_type === 'PM Internship Scheme'
-                        ? 'Apply via PM Scheme Portal ↗'
-                        : 'Apply on Career Opening ↗'}
-                  </span>
-                </button>
+                {selectedJob.is_campus_drive || selectedJob.is_college_approved ? (
+                  <>
+                    <button
+                      onClick={() => handleApplyOpportunity(selectedJob)}
+                      disabled={applyingJobId === selectedJob.id}
+                      className="btn btn-primary"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        padding: '10px 22px',
+                        borderRadius: 8,
+                        fontWeight: 700,
+                        fontSize: '0.925rem',
+                        background: '#0A66C2',
+                        color: '#fff',
+                        border: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Icon name="send" size={17} />
+                      <span>{applyingJobId === selectedJob.id ? 'Submitting Application...' : 'Apply via Campus Connect'}</span>
+                    </button>
+                    <span
+                      className="badge badge-brand"
+                      style={{ fontSize: '0.8rem', padding: '6px 12px', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <Icon name="check-circle" size={14} />
+                      <span>Verified College Placement Drive</span>
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => handleDirectApply(selectedJob, 'official')}
+                      disabled={applyingJobId === selectedJob.id}
+                      className="linkedin-direct-apply-btn"
+                    >
+                      <Icon name="external-link" size={17} />
+                      <span>
+                        {applyingJobId === selectedJob.id
+                          ? 'Opening Official Portal...'
+                          : selectedJob.job_type === 'PM Internship Scheme'
+                            ? 'Apply via PM Scheme Portal ↗'
+                            : 'Apply on Career Opening ↗'}
+                      </span>
+                    </button>
 
-                <button
-                  onClick={() => handleDirectApply(selectedJob, 'linkedin')}
-                  className="btn btn-outline"
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, fontWeight: 600, fontSize: '0.875rem' }}
-                >
-                  <span style={{ color: '#0A66C2', fontWeight: 800 }}>in</span>
-                  <span>View on LinkedIn Jobs ↗</span>
-                </button>
+                    <button
+                      onClick={() => handleDirectApply(selectedJob, 'linkedin')}
+                      className="btn btn-outline"
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, fontWeight: 600, fontSize: '0.875rem' }}
+                    >
+                      <span style={{ color: '#0A66C2', fontWeight: 800 }}>in</span>
+                      <span>View on LinkedIn Jobs ↗</span>
+                    </button>
+                  </>
+                )}
 
                 <div className="text-xs text-muted" style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', marginTop: 4 }}>
                   <Icon name="shield" size={14} />
-                  <span>Direct link specifically to this opening. No generic portals or intermediate barriers.</span>
+                  <span>
+                    {selectedJob.is_campus_drive || selectedJob.is_college_approved
+                      ? 'Official college opportunity. Your student profile, CGPA, and resume will be securely submitted to the recruiter.'
+                      : 'External opportunity aggregated by Campus Connect. Direct link specifically to this opening.'}
+                  </span>
                 </div>
               </div>
 
@@ -923,23 +1191,37 @@ export default function JobsHub({ isStudentPortal }) {
                 </div>
 
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    onClick={() => handleDirectApply(selectedJob, 'official')}
-                    className="linkedin-direct-apply-btn"
-                    style={{ padding: '8px 18px', fontSize: '0.875rem' }}
-                  >
-                    <Icon name="external-link" size={15} />
-                    <span>Apply Official ↗</span>
-                  </button>
+                  {selectedJob.is_campus_drive || selectedJob.is_college_approved ? (
+                    <button
+                      onClick={() => handleApplyOpportunity(selectedJob)}
+                      disabled={applyingJobId === selectedJob.id}
+                      className="btn btn-primary"
+                      style={{ padding: '8px 20px', fontSize: '0.875rem', background: '#0A66C2', color: '#fff', border: 'none', fontWeight: 700 }}
+                    >
+                      <Icon name="send" size={15} style={{ marginRight: 6 }} />
+                      <span>{applyingJobId === selectedJob.id ? 'Applying...' : 'Apply via Campus Connect'}</span>
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => handleDirectApply(selectedJob, 'official')}
+                        className="linkedin-direct-apply-btn"
+                        style={{ padding: '8px 18px', fontSize: '0.875rem' }}
+                      >
+                        <Icon name="external-link" size={15} />
+                        <span>Apply Official ↗</span>
+                      </button>
 
-                  <button
-                    onClick={() => handleDirectApply(selectedJob, 'linkedin')}
-                    className="btn btn-outline"
-                    style={{ padding: '8px 16px', fontSize: '0.875rem', fontWeight: 600 }}
-                  >
-                    <span style={{ color: '#0A66C2', fontWeight: 800, marginRight: 4 }}>in</span>
-                    <span>LinkedIn ↗</span>
-                  </button>
+                      <button
+                        onClick={() => handleDirectApply(selectedJob, 'linkedin')}
+                        className="btn btn-outline"
+                        style={{ padding: '8px 16px', fontSize: '0.875rem', fontWeight: 600 }}
+                      >
+                        <span style={{ color: '#0A66C2', fontWeight: 800, marginRight: 4 }}>in</span>
+                        <span>LinkedIn ↗</span>
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

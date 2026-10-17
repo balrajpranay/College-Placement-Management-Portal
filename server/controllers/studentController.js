@@ -1823,4 +1823,5 @@ exports.getPlacementStatus = async (req, res) => {
 };
 
 exports.studentStore = studentStore;
+exports.getOrCreateMongoStudent = getOrCreateMongoStudent;
 

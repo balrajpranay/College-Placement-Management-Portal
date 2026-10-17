@@ -186,10 +186,19 @@ export default function CreateDrive() {
     try {
       if (isEditMode) {
         await updateRecruiterDriveApi(id, { ...formData, resubmit: true });
+        navigate('/recruiter/drives', {
+          state: {
+            submittedMsg: 'Your opportunity has been resubmitted to the Placement Cell for review.'
+          }
+        });
       } else {
-        await createRecruiterDriveApi(formData);
+        const res = await createRecruiterDriveApi(formData);
+        navigate('/recruiter/drives', {
+          state: {
+            submittedMsg: res?.message || 'Your opportunity has been submitted to the Placement Cell for review.'
+          }
+        });
       }
-      navigate('/recruiter/drives');
     } catch (err) {
       console.error('Failed to save opportunity:', err);
       setAlert({ type: 'danger', message: err.message || 'Failed to save opportunity.' });

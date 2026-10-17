@@ -167,7 +167,7 @@ export default function Login() {
           <div style={{ marginBottom: 'var(--space-4)' }}>
             <GoogleAuthButton 
               role={role} 
-              actionText={role === 'student' ? 'Sign in with Google (Student)' : role === 'recruiter' ? 'Sign in with Google (Recruiter)' : 'Sign in with Google'} 
+              actionText={role === 'student' ? 'Sign in with Google (Student)' : role === 'recruiter' ? 'Sign in with Google (Recruiter)' : 'Sign in with Google (Placement Admin)'} 
             />
           </div>
 

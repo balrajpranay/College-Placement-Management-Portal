@@ -30,12 +30,26 @@ export default function GoogleCallback() {
 
       // 1. If backend already passed direct token via GET redirect
       if (directToken) {
+        const verifiedRole = ['student', 'recruiter', 'admin'].includes(directRole) ? directRole : 'student';
         setAuthSession(directToken, {
-          role: directRole || 'student',
+          role: verifiedRole,
           email: 'google.user@campusconnect.edu'
         });
-        const defaultDest = directRole === 'recruiter' ? '/recruiter/dashboard' : '/student/dashboard';
-        const destination = savedRedirect || defaultDest;
+        const defaultDest = verifiedRole === 'recruiter' 
+          ? '/recruiter/dashboard' 
+          : (verifiedRole === 'admin' ? '/admin/dashboard' : '/student/dashboard');
+
+        let destination = defaultDest;
+        if (savedRedirect) {
+          const isSafeForRole = 
+            (verifiedRole === 'student' && (savedRedirect.startsWith('/student') || savedRedirect.startsWith('/jobs') || savedRedirect.startsWith('/opportunities') || savedRedirect.startsWith('/skill-up') || savedRedirect.startsWith('/ai'))) ||
+            (verifiedRole === 'recruiter' && savedRedirect.startsWith('/recruiter')) ||
+            (verifiedRole === 'admin' && savedRedirect.startsWith('/admin'));
+          if (isSafeForRole) {
+            destination = savedRedirect;
+          }
+        }
+
         setTimeout(() => {
           navigate(destination, { replace: true });
         }, 1200);
@@ -43,7 +57,18 @@ export default function GoogleCallback() {
       }
 
       // 2. Process OAuth code exchange via POST
-      const authCode = code || 'demo_google_student';
+      const googleError = searchParams.get('error');
+      if (googleError) {
+        setErrorMsg(`Google authentication error: ${searchParams.get('error_description') || googleError}`);
+        return;
+      }
+
+      if (!code) {
+        setErrorMsg('Authorization code was not received from Google.');
+        return;
+      }
+
+      const authCode = code;
       let targetRole = 'student';
       if (state) {
         try {
@@ -54,13 +79,29 @@ export default function GoogleCallback() {
         }
       }
 
+      if (!['student', 'recruiter', 'admin'].includes(targetRole)) {
+        setErrorMsg('Invalid or tampered role in Google authentication state.');
+        return;
+      }
+
       try {
         const res = await loginWithGoogle(authCode, state, targetRole);
         const userRole = res?.user?.role || targetRole;
         const defaultDest = userRole === 'recruiter' 
           ? '/recruiter/dashboard' 
           : (userRole === 'admin' ? '/admin/dashboard' : '/student/dashboard');
-        const destination = savedRedirect || defaultDest;
+
+        let destination = defaultDest;
+        if (savedRedirect) {
+          const isSafeForRole = 
+            (userRole === 'student' && (savedRedirect.startsWith('/student') || savedRedirect.startsWith('/jobs') || savedRedirect.startsWith('/opportunities') || savedRedirect.startsWith('/skill-up') || savedRedirect.startsWith('/ai'))) ||
+            (userRole === 'recruiter' && savedRedirect.startsWith('/recruiter')) ||
+            (userRole === 'admin' && savedRedirect.startsWith('/admin'));
+          if (isSafeForRole) {
+            destination = savedRedirect;
+          }
+        }
+
         setTimeout(() => {
           navigate(destination, { replace: true });
         }, 1200);
@@ -97,7 +138,21 @@ export default function GoogleCallback() {
       provider="google"
       manualAction={{
         label: "Take me to dashboard now →",
-        onClick: () => navigate('/student/dashboard')
+        onClick: () => {
+          const searchParams = new URLSearchParams(location.search);
+          const state = searchParams.get('state');
+          let targetRole = 'student';
+          if (state) {
+            try {
+              const decoded = JSON.parse(atob(state));
+              if (decoded.role) targetRole = decoded.role;
+            } catch (e) {
+              if (state === 'recruiter' || state === 'student' || state === 'admin') targetRole = state;
+            }
+          }
+          const dest = targetRole === 'recruiter' ? '/recruiter/dashboard' : (targetRole === 'admin' ? '/admin/dashboard' : '/student/dashboard');
+          navigate(dest);
+        }
       }}
     />
   );

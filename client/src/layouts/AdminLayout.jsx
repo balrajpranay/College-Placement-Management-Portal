@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import Icon from '../components/Icon';
 import { BrandLockup } from '../components/Logo';
 import { useAuth } from '../context/AuthContext';
+import { getAdminDashboardApi } from '../services/api';
 
 export default function AdminLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [pendingDrivesCount, setPendingDrivesCount] = useState(0);
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('campus_theme') || document.documentElement.getAttribute('data-theme') || 'light';
   });
@@ -16,6 +19,24 @@ export default function AdminLayout() {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('campus_theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    async function fetchPendingCount() {
+      try {
+        const res = await getAdminDashboardApi();
+        if (res?.data?.stats?.pendingDrives !== undefined) {
+          setPendingDrivesCount(Number(res.data.stats.pendingDrives || 0));
+        }
+      } catch (e) {
+        // quiet fallback
+      }
+    }
+    fetchPendingCount();
+
+    const handleDrivesUpdated = () => fetchPendingCount();
+    window.addEventListener('drivesUpdated', handleDrivesUpdated);
+    return () => window.removeEventListener('drivesUpdated', handleDrivesUpdated);
+  }, []);
 
   const handleSignOut = () => {
     logout();
@@ -59,8 +80,36 @@ export default function AdminLayout() {
           {/* Section 2: Institutional Management */}
           <div className="sidebar-section-label">Institutional Management</div>
           <NavLink
+            to="/admin/drives?approvalStatus=pending"
+            className={`sidebar-link ${location.search.includes('approvalStatus=pending') ? 'active' : ''}`}
+            onClick={() => setMobileOpen(false)}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Icon name="check-square" size={18} />
+              <span>Pending Job Approvals</span>
+            </div>
+            {pendingDrivesCount > 0 && (
+              <span
+                className="badge badge-warning"
+                style={{
+                  fontSize: '0.75rem',
+                  padding: '2px 8px',
+                  borderRadius: 10,
+                  background: 'var(--warning-50, #FFFBEB)',
+                  color: 'var(--warning-700, #B45309)',
+                  border: '1px solid var(--warning-200, #FDE68A)',
+                  fontWeight: 700
+                }}
+              >
+                {pendingDrivesCount}
+              </span>
+            )}
+          </NavLink>
+
+          <NavLink
             to="/admin/students"
-            className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+            className={({ isActive }) => `sidebar-link ${isActive && !location.search.includes('approvalStatus=pending') ? 'active' : ''}`}
             onClick={() => setMobileOpen(false)}
           >
             <Icon name="graduation" size={18} />
@@ -78,7 +127,7 @@ export default function AdminLayout() {
 
           <NavLink
             to="/admin/drives"
-            className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+            className={({ isActive }) => `sidebar-link ${isActive && !location.search.includes('approvalStatus=pending') ? 'active' : ''}`}
             onClick={() => setMobileOpen(false)}
           >
             <Icon name="briefcase" size={18} />

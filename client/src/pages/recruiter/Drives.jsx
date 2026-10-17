@@ -1,14 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import Icon from '../../components/Icon';
 import { getRecruiterDrivesApi, closeRecruiterDriveApi } from '../../services/api';
 
 export default function RecruiterDrives() {
+  const location = useLocation();
   const [drives, setDrives] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [actionMsg, setActionMsg] = useState(null);
   const [viewReasonDrive, setViewReasonDrive] = useState(null);
+
+  useEffect(() => {
+    if (location.state?.submittedMsg) {
+      setActionMsg({
+        type: 'success',
+        text: location.state.submittedMsg
+      });
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const fetchDrives = async () => {
     try {
@@ -121,17 +132,18 @@ export default function RecruiterDrives() {
                               className="badge badge-warning font-semibold"
                               style={{
                                 fontSize: '0.75rem',
-                                padding: '3px 8px',
+                                padding: '4px 9px',
                                 borderRadius: 4,
                                 background: 'var(--warning-50, #FFFBEB)',
                                 color: 'var(--warning-700, #B45309)',
-                                border: '1px solid var(--warning-200, #FDE68A)'
+                                border: '1px solid var(--warning-200, #FDE68A)',
+                                fontWeight: 700
                               }}
                             >
-                              Under Review
+                              Pending Admin Approval
                             </span>
-                            <div className="text-xs text-muted" style={{ marginTop: 2 }}>
-                              Pending Admin Review
+                            <div className="text-xs text-muted" style={{ marginTop: 3 }}>
+                              Under review by Placement Cell
                             </div>
                           </div>
                         )}
@@ -139,12 +151,12 @@ export default function RecruiterDrives() {
                           <div>
                             <span
                               className="badge badge-success font-semibold"
-                              style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: 4 }}
+                              style={{ fontSize: '0.75rem', padding: '4px 9px', borderRadius: 4, fontWeight: 700 }}
                             >
-                              Approved & Live
+                              Approved — Live
                             </span>
-                            <div className="text-xs text-muted" style={{ marginTop: 2 }}>
-                              Visible to Students
+                            <div className="text-xs text-muted" style={{ marginTop: 3 }}>
+                              Visible & accepting applications
                             </div>
                           </div>
                         )}
@@ -152,17 +164,17 @@ export default function RecruiterDrives() {
                           <div>
                             <span
                               className="badge badge-danger font-semibold"
-                              style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: 4 }}
+                              style={{ fontSize: '0.75rem', padding: '4px 9px', borderRadius: 4, fontWeight: 700 }}
                             >
-                              Revision Needed
+                              Rejected — Review Required
                             </span>
                             <button
                               type="button"
                               onClick={() => setViewReasonDrive(d)}
-                              className="text-xs text-danger"
+                              className="text-xs text-danger font-semibold"
                               style={{
                                 display: 'block',
-                                marginTop: 3,
+                                marginTop: 4,
                                 background: 'none',
                                 border: 'none',
                                 padding: 0,
@@ -170,7 +182,7 @@ export default function RecruiterDrives() {
                                 cursor: 'pointer'
                               }}
                             >
-                              View Admin Feedback
+                              View Admin Feedback &rarr;
                             </button>
                           </div>
                         )}
