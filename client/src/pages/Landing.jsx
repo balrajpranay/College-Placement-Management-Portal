@@ -187,7 +187,7 @@ export default function Landing() {
           <div className="landing-hero-content">
             <div className="hero-season-badge">
               <span className="live-pulse-dot" aria-hidden="true"></span>
-              <span>Placement Season 2025–2026 Live</span>
+              <span>Placement Season 2026–2028 Live</span>
             </div>
 
             <h1 className="landing-hero-title">
