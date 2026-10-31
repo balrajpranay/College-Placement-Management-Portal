@@ -11,22 +11,10 @@ export default function StudentLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('campus_theme') || document.documentElement.getAttribute('data-theme') || 'light';
-  });
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('campus_theme', theme);
-  }, [theme]);
 
   const handleSignOut = () => {
     logout();
     navigate('/login?role=student');
-  };
-
-  const toggleTheme = () => {
-    setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
   };
 
   const queryParams = new URLSearchParams(location.search);
@@ -264,15 +252,6 @@ export default function StudentLayout() {
           </div>
 
           <div className="topbar-right">
-            <button
-              className="theme-toggle-btn"
-              aria-label="Toggle Theme"
-              title="Switch Theme"
-              onClick={toggleTheme}
-            >
-              {theme === 'dark' ? <Icon name="sun" size={17} /> : <Icon name="moon" size={17} />}
-            </button>
-
             <div className="topbar-notifications">
               <NavLink
                 to="/student/notifications"

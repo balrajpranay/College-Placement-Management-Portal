@@ -35,13 +35,13 @@ export default function GoogleCallback() {
           role: verifiedRole,
           email: 'google.user@campusconnect.edu'
         });
-        const defaultDest = verifiedRole === 'recruiter' 
-          ? '/recruiter/dashboard' 
+        const defaultDest = verifiedRole === 'recruiter'
+          ? '/recruiter/dashboard'
           : (verifiedRole === 'admin' ? '/admin/dashboard' : '/student/dashboard');
 
         let destination = defaultDest;
         if (savedRedirect) {
-          const isSafeForRole = 
+          const isSafeForRole =
             (verifiedRole === 'student' && (savedRedirect.startsWith('/student') || savedRedirect.startsWith('/jobs') || savedRedirect.startsWith('/opportunities') || savedRedirect.startsWith('/skill-up') || savedRedirect.startsWith('/ai'))) ||
             (verifiedRole === 'recruiter' && savedRedirect.startsWith('/recruiter')) ||
             (verifiedRole === 'admin' && savedRedirect.startsWith('/admin'));
@@ -87,13 +87,17 @@ export default function GoogleCallback() {
       try {
         const res = await loginWithGoogle(authCode, state, targetRole);
         const userRole = res?.user?.role || targetRole;
-        const defaultDest = userRole === 'recruiter' 
-          ? '/recruiter/dashboard' 
-          : (userRole === 'admin' ? '/admin/dashboard' : '/student/dashboard');
+        const profileComplete = res?.user?.profileComplete;
+        const defaultDest = userRole === 'recruiter'
+          ? (profileComplete === false ? '/recruiter/profile?complete=true' : '/recruiter/dashboard')
+          : (userRole === 'admin'
+              ? '/admin/dashboard'
+              : (profileComplete === false ? '/student/profile?complete=true' : '/student/dashboard')
+            );
 
         let destination = defaultDest;
         if (savedRedirect) {
-          const isSafeForRole = 
+          const isSafeForRole =
             (userRole === 'student' && (savedRedirect.startsWith('/student') || savedRedirect.startsWith('/jobs') || savedRedirect.startsWith('/opportunities') || savedRedirect.startsWith('/skill-up') || savedRedirect.startsWith('/ai'))) ||
             (userRole === 'recruiter' && savedRedirect.startsWith('/recruiter')) ||
             (userRole === 'admin' && savedRedirect.startsWith('/admin'));

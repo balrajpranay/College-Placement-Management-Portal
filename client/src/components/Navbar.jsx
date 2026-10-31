@@ -10,19 +10,6 @@ export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('campus_theme') || 'light';
-  });
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('campus_theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
-  };
-
   const handleLogout = () => {
     logout();
     navigate('/');
@@ -81,15 +68,6 @@ export default function Navbar() {
         </nav>
 
         <div className="nav-actions">
-          {/* Theme Switcher */}
-          <button className="theme-toggle-btn" onClick={toggleTheme} aria-label="Toggle dark/light mode" title="Switch Theme">
-            {theme === 'dark' ? (
-              <span className="theme-icon-sun"><Icon name="sun" size={17} /></span>
-            ) : (
-              <span className="theme-icon-moon"><Icon name="moon" size={17} /></span>
-            )}
-          </button>
-
           {isAuthenticated && user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {user.role === 'student' && (

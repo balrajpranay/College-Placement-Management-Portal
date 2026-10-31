@@ -14,7 +14,8 @@ export default function RecruiterProfile() {
     hr_contact: '',
     hr_position: '',
     gov_id: '',
-    phone: ''
+    phone: '',
+    gender: ''
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -38,7 +39,8 @@ export default function RecruiterProfile() {
             hr_contact: res.company.hr_contact || res.company.hrContact || '',
             hr_position: res.company.hr_position || res.company.hrPosition || '',
             gov_id: res.company.gov_id || res.company.govId || '',
-            phone: res.company.phone || res.company.mobile || ''
+            phone: res.company.phone || res.company.mobile || '',
+            gender: res.company.gender || ''
           });
         }
       } catch (err) {
@@ -64,7 +66,8 @@ export default function RecruiterProfile() {
       const res = await updateRecruiterProfileApi({
         ...formData,
         industry: formData.domain,
-        mobile: formData.phone
+        mobile: formData.phone,
+        gender: formData.gender
       });
       setAlert({ type: 'success', message: res.message || 'Company profile updated successfully.' });
     } catch (err) {
@@ -560,6 +563,34 @@ export default function RecruiterProfile() {
                   boxSizing: 'border-box'
                 }}
               />
+            </div>
+
+            {/* 10. Gender */}
+            <div className="form-group">
+              <label className="form-label" style={{ display: 'block', marginBottom: 6, fontWeight: 600, fontSize: '0.875rem' }}>
+                Gender <span className="text-muted" style={{ fontWeight: 400, fontSize: '0.75rem' }}>(Optional)</span>
+              </label>
+              <select
+                name="gender"
+                value={formData.gender || ''}
+                onChange={handleChange}
+                className="form-control"
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: 'var(--radius-md, 8px)',
+                  border: '1px solid var(--border-subtle)',
+                  background: 'var(--bg-surface)',
+                  color: 'var(--text-main)',
+                  boxSizing: 'border-box'
+                }}
+              >
+                <option value="">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Non-Binary">Non-Binary</option>
+                <option value="Prefer not to say">Prefer not to say</option>
+              </select>
             </div>
           </div>
         </div>

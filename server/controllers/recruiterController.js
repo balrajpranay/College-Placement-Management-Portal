@@ -1027,6 +1027,7 @@ exports.getProfile = async (req, res) => {
         govId: company.govId || company.gov_id || '',
         phone: company.phone || company.mobile || '',
         mobile: company.phone || company.mobile || '',
+        gender: company.gender || '',
         approved: Boolean(company?.approved)
       }
     });
@@ -1044,21 +1045,22 @@ exports.getProfile = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     const email = req.user?.email || 'hr@technova.com';
-    const { 
-      name, 
-      website, 
-      location, 
-      industry, 
-      domain, 
-      email: contactEmail, 
-      hr_contact, 
-      hrContact, 
-      hr_position, 
-      hrPosition, 
-      gov_id, 
-      govId, 
-      phone, 
-      mobile 
+    const {
+      name,
+      website,
+      location,
+      industry,
+      domain,
+      email: contactEmail,
+      hr_contact,
+      hrContact,
+      hr_position,
+      hrPosition,
+      gov_id,
+      govId,
+      phone,
+      mobile,
+      gender
     } = req.body;
 
     if (!name || !name.trim()) {
@@ -1077,6 +1079,7 @@ exports.updateProfile = async (req, res) => {
     const hrPos = (hrPosition || hr_position || '').trim();
     const govIdentifier = (govId || gov_id || '').trim();
     const compPhone = (mobile || phone || '').trim();
+    const compGender = (gender || '').trim();
 
     // Update in-memory fallback
     const current = getCompanyByEmail(email);
@@ -1095,7 +1098,8 @@ exports.updateProfile = async (req, res) => {
       gov_id: govIdentifier,
       govId: govIdentifier,
       phone: compPhone,
-      mobile: compPhone
+      mobile: compPhone,
+      gender: compGender
     };
     recruiterStore.companies.set(email, updated);
 
@@ -1114,7 +1118,8 @@ exports.updateProfile = async (req, res) => {
               hrContact: hrName,
               hrPosition: hrPos,
               govId: govIdentifier,
-              phone: compPhone
+              phone: compPhone,
+              gender: compGender
             }
           },
           { new: true, upsert: true }
@@ -2138,7 +2143,7 @@ exports.updateApplicantStatus = async (req, res) => {
 
         // D. Create the immediate Student Notification / Announcement with Google Meet Link
         const announcementMsg = `🎉 Candidate Selection Confirmed: You have been Selected for '${driveTitle}' at ${company.name}! Selection Round: ${roundName}. Date: ${schedDate} at ${schedTime}. Google Meet Link: ${meetUrl}. Instructions: ${instructions}`;
-        
+
         if (!studentStore.notifications) studentStore.notifications = [];
         studentStore.notifications.unshift({
           id: `notif-${Date.now()}`,

@@ -11,14 +11,6 @@ export default function AdminLayout() {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [pendingDrivesCount, setPendingDrivesCount] = useState(0);
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('campus_theme') || document.documentElement.getAttribute('data-theme') || 'light';
-  });
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('campus_theme', theme);
-  }, [theme]);
 
   useEffect(() => {
     async function fetchPendingCount() {
@@ -41,10 +33,6 @@ export default function AdminLayout() {
   const handleSignOut = () => {
     logout();
     navigate('/login?role=admin');
-  };
-
-  const toggleTheme = () => {
-    setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
   };
 
   const adminDisplayName = user?.name || user?.email?.split('@')[0] || 'Placement Administrator';
@@ -212,15 +200,6 @@ export default function AdminLayout() {
           </div>
 
           <div className="topbar-right">
-            <button
-              className="theme-toggle-btn"
-              aria-label="Toggle Theme"
-              title="Switch Theme"
-              onClick={toggleTheme}
-            >
-              {theme === 'dark' ? <Icon name="sun" size={17} /> : <Icon name="moon" size={17} />}
-            </button>
-
             <div className="topbar-notifications">
               <NavLink
                 to="/admin/notifications"

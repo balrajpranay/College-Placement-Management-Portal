@@ -260,12 +260,16 @@ export default function ResumeBuilderStudio({
       }
     }
 
+    const initialLocation = profileData?.city
+      ? (profileData.city + (profileData.collegeName ? ` • ${profileData.collegeName}` : (profileData.department ? ` • ${profileData.department}` : '')))
+      : (profileData?.department ? `${profileData.department}, Campus Connect` : DEFAULT_CONTACT.location);
+
     const initialContact = {
       fullName: profileData?.name || DEFAULT_CONTACT.fullName,
-      headline: profileData?.headline || profileData?.targetRole || DEFAULT_CONTACT.headline,
+      headline: profileData?.headline || profileData?.targetRole || (profileData?.department ? `${profileData.department} Undergraduate` : DEFAULT_CONTACT.headline),
       phone: profileData?.phone || DEFAULT_CONTACT.phone,
       email: profileData?.email || DEFAULT_CONTACT.email,
-      location: profileData?.department ? `${profileData.department}, Campus Connect` : DEFAULT_CONTACT.location,
+      location: initialLocation,
       linkedin: '',
       github: '',
       portfolio: '',
@@ -286,6 +290,9 @@ export default function ResumeBuilderStudio({
       }
       if ((!mergedContact.phone || mergedContact.phone === 'Phone Number') && profileData?.phone) {
         mergedContact.phone = profileData.phone;
+      }
+      if ((!mergedContact.location || mergedContact.location === 'City, State') && profileData?.city) {
+        mergedContact.location = initialLocation;
       }
       if (!mergedContact.layout) {
         mergedContact.layout = 'left';
@@ -349,7 +356,17 @@ export default function ResumeBuilderStudio({
     const parsed = parseInitial();
     setResume(parsed);
     setContactForm(parsed.contact);
-  }, [initialData, profileData?.name, profileData?.email]);
+  }, [
+    initialData,
+    profileData?.name,
+    profileData?.email,
+    profileData?.phone,
+    profileData?.collegeName,
+    profileData?.city,
+    profileData?.department,
+    profileData?.academicYear,
+    profileData?.gradYear
+  ]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -609,78 +626,61 @@ export default function ResumeBuilderStudio({
       return;
     }
 
-    const skillsStr = Array.isArray(profileData.technical_skills)
-      ? profileData.technical_skills.join(', ')
-      : profileData.technical_skills || 'React, Node.js, Python, SQL, REST APIs';
+    const sCollege = profileData.collegeName || profileData.college_name || '';
+    const sCity = profileData.city || '';
+    const sDept = profileData.department || '';
+    const sGrad = profileData.gradYear || 2026;
+    const sYear = profileData.academicYear || profileData.academic_year || '';
+    const sRoll = profileData.studentNo || profileData.student_no || '';
 
     const syncedContact = {
+      ...resume.contact,
       fullName: profileData.name || resume.contact?.fullName || 'Candidate Name',
-      headline: resume.contact?.headline || profileData?.headline || `${profileData?.department || 'Computer Science'} Student`,
+      headline: resume.contact?.headline || (sDept ? `${sDept} Undergraduate` : 'Student'),
       phone: profileData.phone || resume.contact?.phone || '+91 98765 43210',
       email: profileData.email || resume.contact?.email || 'student@university.edu',
-      location: profileData.department ? `${profileData.department}, Campus Connect` : (resume.contact?.location || DEFAULT_CONTACT.location),
-      linkedin: resume.contact?.linkedin || '',
-      github: resume.contact?.github || '',
-      portfolio: resume.contact?.portfolio || '',
-      layout: resume.contact?.layout || 'left',
-      separator: resume.contact?.separator || 'pipe'
+      location: sCity ? `${sCity}${sCollege ? ' • ' + sCollege : ''}` : (sDept ? `${sDept}, Campus Connect` : (resume.contact?.location || DEFAULT_CONTACT.location))
     };
 
-    const syncedSections = [
-      {
-        id: 'prof_profiles',
-        title: 'Professional profiles',
-        content: `GitHub: https://github.com/${(profileData.name || 'candidate').toLowerCase().replace(/\s+/g, '')}\nLinkedIn: https://linkedin.com/in/${(profileData.name || 'candidate').toLowerCase().replace(/\s+/g, '')}`
-      },
-      {
-        id: 'summary',
-        title: 'Summary',
-        content: `Motivated ${profileData.department || 'Engineering'} undergraduate (Class of ${profileData.gradYear || 2026}) with a CGPA of ${profileData.cgpa || '8.5'}. Passionate about full-stack engineering, distributed systems, and modern software architectures. Proven ability to translate complex business requirements into high-performance web applications.`
-      },
-      {
-        id: 'skills',
-        title: 'Skills',
-        content: `• Core Technical: ${skillsStr}\n• Engineering Stacks: Frontend & Backend Web Architecture, Microservices, Database Systems\n• Tools & Cloud: Git, Docker, AWS Core Services, Postman, CI/CD Pipelines`
-      },
-      {
-        id: 'experience',
-        title: 'Experience',
-        content: profileData.internships || `WebCraft Systems | Bengaluru, India\nFull Stack Development Intern | May 2025 - Jul 2025\n• Engineered scalable RESTful API endpoints utilizing Node.js and Express, cutting API latency by 32%.\n• Designed modular React components with responsive UX, increasing user session engagement by 24%.\n• Collaborated in cross-functional Agile sprints with daily standups, code reviews, and Git flow branching.`
-      },
-      {
+    const eduContent = `${sCollege || 'College of Engineering & Technology'} | ${sCity || 'India'}\nB.Tech in ${sDept || 'Computer Science & Engineering'} | ${sYear ? sYear + ' · ' : ''}Class of ${sGrad}\n• Hall Ticket / Roll No: ${sRoll || 'Registered'}\n• Cumulative CGPA: ${profileData.cgpa || '8.5'} / 10.0\n• Relevant Coursework: Data Structures & Algorithms, Operating Systems, Database Management Systems, Computer Networks`;
+
+    let hasEdu = false;
+    let syncedSections = resume.sections.map(sec => {
+      if (sec.id === 'education') {
+        hasEdu = true;
+        return {
+          ...sec,
+          content: eduContent
+        };
+      }
+      if (sec.id === 'summary') {
+        // Only update summary if it is currently placeholder or empty
+        if (!sec.content || sec.content.includes("Click the 'Edit' button") || sec.content.trim().length === 0) {
+          return {
+            ...sec,
+            content: `Motivated ${sDept || 'Engineering'} student (${sYear || 'Undergraduate'}, Class of ${sGrad}) at ${sCollege || 'University'}. Passionate about software engineering, distributed systems, and modern scalable web applications.`
+          };
+        }
+      }
+      return sec;
+    });
+
+    if (!hasEdu) {
+      syncedSections.push({
         id: 'education',
         title: 'Education',
-        content: `College of Engineering & Technology | India\nB.Tech in ${profileData.department || 'Computer Science & Engineering'} | Expected ${profileData.gradYear || 2026}\n• Cumulative CGPA: ${profileData.cgpa || '8.9'} / 10.0 (0 Backlogs, Super Dream & Tier-1 Placement Qualified)\n• Key Coursework: Data Structures & Algorithms, Operating Systems, Database Management Systems, Computer Networks`
-      },
-      {
-        id: 'certificates',
-        title: 'Certificates',
-        content: profileData.certifications || '• AWS Certified Solutions Architect - Associate (2025)\n• Deep Learning Specialization - Coursera\n• HackerRank 5-Star Problem Solving Certification'
-      },
-      {
-        id: 'achievements',
-        title: 'Achievements',
-        content: "• Top 5% in National Coding Challenge (over 12,000 participants nationwide).\n• Finalist, Inter-College Smart Campus Hackathon 2025.\n• Academic Dean's Honor List for consistent high semester GPA."
-      },
-      {
-        id: 'projects',
-        title: 'Projects',
-        content: profileData.projects || `Campus Connect Placement & Internship Ecosystem | React, Node.js, Express, MongoDB\n• Architected centralized campus placement hub serving 800+ candidates and top corporate recruiters.\n• Implemented automated resume parsing, real-time qualification filtering, and live job application tracking.`
-      },
-      {
-        id: 'interests',
-        title: 'Interests',
-        content: 'Cloud computing, open source software contributions, technical blogging, competitive algorithmic coding, badminton.'
-      }
-    ];
+        type: 'text',
+        content: eduContent
+      });
+    }
 
-    const synced = { contact: syncedContact, sections: syncedSections };
+    const synced = { ...resume, contact: syncedContact, sections: syncedSections };
     setResume(synced);
     setContactForm(syncedContact);
     setEditingSectionId(null);
     setEditingContact(false);
     triggerUpdate(synced);
-    showToast('Autofilled resume using your verified student profile data!');
+    showToast('Synced contact & education details with student profile!');
   };
 
   const handleAiPolish = () => {

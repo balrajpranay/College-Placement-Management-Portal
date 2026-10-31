@@ -17,7 +17,11 @@ const studentStore = {
     email: 'priya.sharma@student.edu',
     phone: '+91 98765 43210',
     department: 'Computer Science',
+    collegeName: 'Apex Institute of Technology',
+    academicYear: '4th Year',
     gradYear: 2026,
+    city: 'Bengaluru',
+    gender: 'Female',
     cgpa: 8.9,
     tenthPct: 92.5,
     twelfthPct: 89.0,
@@ -376,9 +380,15 @@ function formatStudentResponse(s, fallbackEmail) {
     student_no: studentNum,
     email: s.email || fallbackEmail || 'priya.sharma@student.edu',
     phone: s.phone || '',
+    collegeName: s.collegeName || s.college_name || '',
+    college_name: s.collegeName || s.college_name || '',
     department: s.department || 'Computer Science',
+    academicYear: s.academicYear || s.academic_year || '',
+    academic_year: s.academicYear || s.academic_year || '',
     gradYear: gradY,
     grad_year: gradY,
+    city: s.city || '',
+    gender: s.gender || '',
     cgpa: s.cgpa !== undefined && s.cgpa !== null ? Number(s.cgpa) : 0,
     tenthPct: s.tenthPct !== undefined && s.tenthPct !== null ? Number(s.tenthPct) : null,
     twelfthPct: s.twelfthPct !== undefined && s.twelfthPct !== null ? Number(s.twelfthPct) : null,
@@ -925,6 +935,12 @@ exports.updateProfile = async (req, res) => {
     if (body.name !== undefined) updateData.name = body.name.trim();
     if (body.phone !== undefined) updateData.phone = body.phone.trim();
     if (body.department !== undefined) updateData.department = body.department.trim();
+    if (body.collegeName !== undefined) updateData.collegeName = String(body.collegeName).trim();
+    else if (body.college_name !== undefined) updateData.collegeName = String(body.college_name).trim();
+    if (body.academicYear !== undefined) updateData.academicYear = String(body.academicYear).trim();
+    else if (body.academic_year !== undefined) updateData.academicYear = String(body.academic_year).trim();
+    if (body.city !== undefined) updateData.city = String(body.city).trim();
+    if (body.gender !== undefined) updateData.gender = String(body.gender).trim();
     if (body.gradYear !== undefined || body.grad_year !== undefined) {
       updateData.gradYear = Number(body.gradYear || body.grad_year || 2026);
     }
@@ -1011,6 +1027,10 @@ exports.updateProfile = async (req, res) => {
     if (updateData.name !== undefined) memStudent.name = updateData.name;
     if (updateData.phone !== undefined) memStudent.phone = updateData.phone;
     if (updateData.department !== undefined) memStudent.department = updateData.department;
+    if (updateData.collegeName !== undefined) memStudent.collegeName = updateData.collegeName;
+    if (updateData.academicYear !== undefined) memStudent.academicYear = updateData.academicYear;
+    if (updateData.city !== undefined) memStudent.city = updateData.city;
+    if (updateData.gender !== undefined) memStudent.gender = updateData.gender;
     if (updateData.gradYear !== undefined) memStudent.gradYear = updateData.gradYear;
     if (updateData.cgpa !== undefined) memStudent.cgpa = updateData.cgpa;
     if (updateData.tenthPct !== undefined) memStudent.tenthPct = updateData.tenthPct;
@@ -1024,6 +1044,48 @@ exports.updateProfile = async (req, res) => {
     if (updateData.resumeData !== undefined) memStudent.resumeData = updateData.resumeData;
     if (updateData.skills !== undefined) {
       memStudent.technical_skills = updateData.skills;
+    }
+
+    // Non-destructive resume sync if contact/education fields updated without explicit resumeData
+    if (!updateData.resumeData && (updateData.name || updateData.phone || updateData.collegeName || updateData.city || updateData.department || updateData.academicYear || updateData.gradYear)) {
+      const existingResume = memStudent.resumeData || null;
+      if (existingResume && typeof existingResume === 'object') {
+        const sName = updateData.name || memStudent.name || '';
+        const sPhone = updateData.phone || memStudent.phone || '';
+        const sCollege = updateData.collegeName || memStudent.collegeName || '';
+        const sCity = updateData.city || memStudent.city || '';
+        const sDept = updateData.department || memStudent.department || '';
+        const sYear = updateData.academicYear || memStudent.academicYear || '';
+        const sGrad = updateData.gradYear || memStudent.gradYear || 2026;
+        const sRoll = updateData.studentNo || memStudent.studentNo || '';
+
+        const updatedContact = {
+          ...(existingResume.contact || {}),
+          fullName: sName || existingResume.contact?.fullName || '',
+          phone: sPhone || existingResume.contact?.phone || '',
+          location: sCity ? `${sCity}${sCollege ? ' • ' + sCollege : ''}` : (existingResume.contact?.location || '')
+        };
+
+        const updatedSections = (existingResume.sections || []).map(sec => {
+          if (sec.id === 'education') {
+            return {
+              ...sec,
+              content: `${sCollege || 'College of Engineering'} | ${sCity || 'India'}\nB.Tech in ${sDept || 'Computer Science'} | ${sYear ? sYear + ' · ' : ''}Class of ${sGrad}\n• Hall Ticket / Roll No: ${sRoll}\n• Cumulative CGPA: ${memStudent.cgpa || '8.5'} / 10.0\n• Relevant Coursework: Data Structures & Algorithms, Database Systems, Computer Networks`
+            };
+          }
+          return sec;
+        });
+
+        const syncedResume = {
+          ...existingResume,
+          contact: updatedContact,
+          sections: updatedSections
+        };
+        memStudent.resumeData = syncedResume;
+        if (mongoose.connection.readyState === 1 && userId) {
+          Student.findOneAndUpdate({ user: userId }, { $set: { resumeData: syncedResume } }).catch(() => {});
+        }
+      }
     }
 
     if (!updatedStudent) {

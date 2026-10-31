@@ -30,6 +30,22 @@ const StudentSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  collegeName: {
+    type: String,
+    trim: true
+  },
+  academicYear: {
+    type: String,
+    trim: true
+  },
+  city: {
+    type: String,
+    trim: true
+  },
+  gender: {
+    type: String,
+    trim: true
+  },
   cgpa: {
     type: Number,
     default: 0

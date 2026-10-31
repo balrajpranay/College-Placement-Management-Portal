@@ -8,22 +8,10 @@ export default function RecruiterLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('campus_theme') || document.documentElement.getAttribute('data-theme') || 'light';
-  });
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('campus_theme', theme);
-  }, [theme]);
 
   const handleSignOut = () => {
     logout();
     navigate('/login?role=recruiter');
-  };
-
-  const toggleTheme = () => {
-    setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
   };
 
   const companyDisplayName = user?.name || user?.email?.split('@')[0] || 'TechNova Solutions';
@@ -183,15 +171,6 @@ export default function RecruiterLayout() {
           </div>
 
           <div className="topbar-right">
-            <button
-              className="theme-toggle-btn"
-              aria-label="Toggle Theme"
-              title="Switch Theme"
-              onClick={toggleTheme}
-            >
-              {theme === 'dark' ? <Icon name="sun" size={17} /> : <Icon name="moon" size={17} />}
-            </button>
-
             <div className="topbar-notifications">
               <NavLink
                 to="/recruiter/notifications"

@@ -123,6 +123,11 @@ const initDemoAccounts = async () => {
     studentNo: 'CS2023001',
     name: 'Priya Sharma',
     department: 'Computer Science',
+    collegeName: 'Apex Institute of Technology',
+    academicYear: '4th Year',
+    phone: '+91 98765 43210',
+    city: 'Bengaluru',
+    gender: 'Female',
     gradYear: 2026,
     cgpa: 8.9,
     email: 'priya.sharma@student.edu'
@@ -331,6 +336,28 @@ exports.login = async (req, res) => {
 
     const token = generateToken(user);
 
+    let isProfileComplete = true;
+    if (user.role === 'student') {
+      const isActualPriya = cleanEmail === 'priya.sharma@student.edu';
+      isProfileComplete = isActualPriya || Boolean(
+        profile &&
+        profile.collegeName &&
+        profile.city &&
+        profile.phone &&
+        profile.studentNo &&
+        profile.academicYear
+      );
+    } else if (user.role === 'recruiter') {
+      isProfileComplete = Boolean(
+        profile &&
+        profile.name &&
+        (profile.govId || profile.gov_id) &&
+        (profile.hrPosition || profile.hr_position) &&
+        profile.phone &&
+        (profile.location || profile.city)
+      );
+    }
+
     return res.status(200).json({
       success: true,
       message: `Welcome back, you're logged in as ${user.role}.`,
@@ -340,7 +367,8 @@ exports.login = async (req, res) => {
         email: user.email,
         role: user.role,
         name: profile?.name || user.name || (user.role === 'admin' ? 'Placement Admin' : user.email.split('@')[0]),
-        profile: profile || null
+        profile: profile || null,
+        profileComplete: isProfileComplete
       }
     });
   } catch (err) {
@@ -366,16 +394,36 @@ exports.registerStudent = async (req, res) => {
       cgpa,
       password,
       confirm_password,
-      confirmPassword
+      confirmPassword,
+      collegeName,
+      college_name,
+      academicYear,
+      academic_year,
+      phone,
+      mobile,
+      city,
+      gender
     } = req.body;
 
     const studentEmail = (email || '').trim().toLowerCase();
     const pass = password || '';
     const confirmPass = confirm_password || confirmPassword || '';
+    const studentName = (name || '').trim();
+    const sCollege = (collegeName || college_name || '').trim();
+    const studentNum = (studentNo || student_no || '').trim();
+    const studentDept = (department || '').trim();
+    const sAcademicYear = (academicYear || academic_year || '').trim();
+    const sGradYear = Number(gradYear || grad_year);
+    const sPhone = (phone || mobile || '').trim();
+    const sCity = (city || '').trim();
+    const sGender = (gender || '').trim();
 
-    // Validation
-    if (!studentEmail || !studentEmail.includes('@')) {
-      return res.status(400).json({ success: false, message: 'A valid email is required.' });
+    // Required Field Validations
+    if (!studentName) {
+      return res.status(400).json({ success: false, message: 'Full Name is required.' });
+    }
+    if (!studentEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(studentEmail)) {
+      return res.status(400).json({ success: false, message: 'A valid email address is required.' });
     }
     if (pass.length < 6) {
       return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
@@ -383,14 +431,29 @@ exports.registerStudent = async (req, res) => {
     if (pass !== confirmPass) {
       return res.status(400).json({ success: false, message: 'Passwords do not match.' });
     }
+    if (!sCollege) {
+      return res.status(400).json({ success: false, message: 'College Name is required.' });
+    }
+    if (!studentNum) {
+      return res.status(400).json({ success: false, message: 'Hall Ticket No. / Roll No. is required.' });
+    }
+    if (!studentDept) {
+      return res.status(400).json({ success: false, message: 'Branch / Department is required.' });
+    }
+    if (!sAcademicYear) {
+      return res.status(400).json({ success: false, message: 'Current Academic Year is required.' });
+    }
+    if (!sGradYear || isNaN(sGradYear) || sGradYear < 2020 || sGradYear > 2035) {
+      return res.status(400).json({ success: false, message: 'A valid Graduation Year (e.g. 2026) is required.' });
+    }
+    const phoneClean = sPhone.replace(/[\s-]/g, '');
+    if (!sPhone || !/^[+]?\d{10,15}$/.test(phoneClean)) {
+      return res.status(400).json({ success: false, message: 'A valid 10-15 digit mobile number is required.' });
+    }
+    if (!sCity) {
+      return res.status(400).json({ success: false, message: 'City is required.' });
+    }
 
-    // Auto-generate sensible defaults for student attributes if not provided
-    const defaultName = studentEmail.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || 'Student';
-    const studentName = (name || defaultName).trim();
-    const generatedNum = 'STU' + Math.floor(100000 + Math.random() * 900000);
-    const studentNum = (student_no || studentNo || generatedNum).trim();
-    const studentDept = department || 'Computer Science';
-    const studentGradYear = parseInt(grad_year || gradYear || 2026, 10);
     const studentCgpa = parseFloat(cgpa || 0);
 
     // Duplicate checks
@@ -399,7 +462,7 @@ exports.registerStudent = async (req, res) => {
     }
     for (const s of memoryStudents.values()) {
       if (s.studentNo && s.studentNo.toLowerCase() === studentNum.toLowerCase()) {
-        return res.status(400).json({ success: false, message: 'This Student ID is already registered.' });
+        return res.status(400).json({ success: false, message: 'This Hall Ticket / Roll Number is already registered.' });
       }
     }
 
@@ -410,7 +473,7 @@ exports.registerStudent = async (req, res) => {
       }
       const idExists = await Student.findOne({ studentNo: studentNum });
       if (idExists) {
-        return res.status(400).json({ success: false, message: 'This Student ID is already registered.' });
+        return res.status(400).json({ success: false, message: 'This Hall Ticket / Roll Number is already registered.' });
       }
     }
 
@@ -428,14 +491,89 @@ exports.registerStudent = async (req, res) => {
       name: studentName
     };
 
+    // Auto-generate comprehensive initial placement-ready resume data
+    const initialResumeData = {
+      contact: {
+        fullName: studentName,
+        phone: sPhone,
+        email: studentEmail,
+        location: `${sCity}, ${sCollege}`,
+        headline: `${studentDept} Undergraduate`,
+        linkedin: '',
+        github: '',
+        portfolio: '',
+        layout: 'left',
+        separator: 'pipe'
+      },
+      sections: [
+        {
+          id: 'summary',
+          title: 'Summary',
+          type: 'text',
+          content: `Motivated ${studentDept} student (${sAcademicYear}, Class of ${sGradYear}) at ${sCollege}. Seeking impactful campus recruitment opportunities to apply technical skills in software development and engineering solutions.`
+        },
+        {
+          id: 'education',
+          title: 'Education',
+          type: 'text',
+          content: `${sCollege} | ${sCity}\nB.Tech in ${studentDept} | ${sAcademicYear} (Class of ${sGradYear})\n• Hall Ticket / Roll No: ${studentNum}\n• Cumulative CGPA: 8.5 / 10.0\n• Relevant Coursework: Data Structures & Algorithms, Database Systems, Computer Networks`
+        },
+        {
+          id: 'skills',
+          title: 'Skills',
+          type: 'text',
+          content: '• Programming Languages: Java, Python, C++, JavaScript\n• Web & Frameworks: React, Node.js, Express, HTML/CSS\n• Tools & Platforms: Git, GitHub, VS Code, Linux'
+        },
+        {
+          id: 'experience',
+          title: 'Experience',
+          type: 'text',
+          content: `Software Engineering Intern | Tech Solutions\nMay 2025 - July 2025 | ${sCity}\n• Developed full-stack features using modern web technologies.\n• Participated in agile sprints, code reviews, and API testing.`
+        },
+        {
+          id: 'projects',
+          title: 'Projects',
+          type: 'text',
+          content: `Campus Placement Portal | React, Node.js, Express, MongoDB\n• Built candidate application workflow and automated notification tracking.\n• Implemented secure JWT role-based access control and responsive UI.`
+        },
+        {
+          id: 'certificates',
+          title: 'Certificates',
+          type: 'text',
+          content: '• Full-Stack Web Development Specialization\n• Problem Solving (Intermediate) Certificate'
+        },
+        {
+          id: 'achievements',
+          title: 'Achievements',
+          type: 'text',
+          content: '• Finalist in inter-college technical hackathon.\n• Active coordinator in student technical symposium.'
+        },
+        {
+          id: 'interests',
+          title: 'Interests',
+          type: 'text',
+          content: 'Open-source software, competitive coding, cloud architecture, badminton.'
+        }
+      ],
+      fontFamily: 'plus-jakarta',
+      scale: 'standard',
+      template: 'modern'
+    };
+
     const newStudentObj = {
       user: newUserId,
       studentNo: studentNum,
       name: studentName,
       department: studentDept,
-      gradYear: studentGradYear,
+      collegeName: sCollege,
+      academicYear: sAcademicYear,
+      gradYear: sGradYear,
+      phone: sPhone,
+      city: sCity,
+      gender: sGender,
       cgpa: studentCgpa,
-      email: studentEmail
+      email: studentEmail,
+      resumeData: initialResumeData
     };
 
     // Store in memory
@@ -455,19 +593,26 @@ exports.registerStudent = async (req, res) => {
         studentNo: studentNum,
         name: studentName,
         department: studentDept,
-        gradYear: studentGradYear,
-        cgpa: studentCgpa
+        collegeName: sCollege,
+        academicYear: sAcademicYear,
+        gradYear: sGradYear,
+        phone: sPhone,
+        city: sCity,
+        gender: sGender,
+        cgpa: studentCgpa,
+        resumeData: initialResumeData
       });
     }
 
     return res.status(201).json({
       success: true,
-      message: 'Registration successful! Please log in to complete your profile.',
+      message: 'Registration successful! Your profile and resume have been automatically initialized. Please sign in.',
       user: {
         id: newUserId,
         email: studentEmail,
         name: studentName,
-        role: 'student'
+        role: 'student',
+        profileComplete: true
       }
     });
   } catch (err) {
@@ -488,9 +633,16 @@ exports.registerRecruiter = async (req, res) => {
       website,
       hr_contact,
       hrContact,
+      hr_position,
+      hrPosition,
+      gov_id,
+      govId,
       email,
       phone,
+      mobile,
       location,
+      city,
+      gender,
       description,
       password,
       confirm_password,
@@ -498,19 +650,25 @@ exports.registerRecruiter = async (req, res) => {
     } = req.body;
 
     const companyName = (name || '').trim();
-    const hrPerson = (hr_contact || hrContact || '').trim();
+    const hrPerson = (hrContact || hr_contact || '').trim();
+    const hrPos = (hrPosition || hr_position || '').trim();
+    const companyGovId = (govId || gov_id || '').trim();
     const companyEmail = (email || '').trim().toLowerCase();
+    const companyPhone = (phone || mobile || '').trim();
+    const companyLocation = (location || city || '').trim();
+    const companyGender = (gender || '').trim();
     const companyIndustry = (industry || '').trim();
     const companyWebsite = (website || '').trim();
-    const companyPhone = (phone || '').trim();
-    const companyLocation = (location || '').trim();
     const companyDesc = (description || '').trim();
     const pass = password || '';
     const confirmPass = confirm_password || confirmPassword || '';
 
-    // Validation matching Flask
-    if (!companyEmail || !companyEmail.includes('@')) {
-      return res.status(400).json({ success: false, message: 'A valid email is required.' });
+    // Validation
+    if (!hrPerson) {
+      return res.status(400).json({ success: false, message: 'Recruiter Full Name is required.' });
+    }
+    if (!companyEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(companyEmail)) {
+      return res.status(400).json({ success: false, message: 'A valid corporate work email is required.' });
     }
     if (pass.length < 6) {
       return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
@@ -519,10 +677,20 @@ exports.registerRecruiter = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Passwords do not match.' });
     }
     if (!companyName) {
-      return res.status(400).json({ success: false, message: 'Company name is required.' });
+      return res.status(400).json({ success: false, message: 'Company Name is required.' });
     }
-    if (!hrPerson) {
-      return res.status(400).json({ success: false, message: 'HR contact person name is required.' });
+    if (!companyGovId) {
+      return res.status(400).json({ success: false, message: 'Company ID / Recruiter ID is required.' });
+    }
+    if (!hrPos) {
+      return res.status(400).json({ success: false, message: 'Job Designation is required.' });
+    }
+    const phoneClean = companyPhone.replace(/[\s-]/g, '');
+    if (!companyPhone || !/^[+]?\d{10,15}$/.test(phoneClean)) {
+      return res.status(400).json({ success: false, message: 'A valid 10-15 digit mobile number is required.' });
+    }
+    if (!companyLocation) {
+      return res.status(400).json({ success: false, message: 'City is required.' });
     }
 
     // Duplicate check
@@ -553,14 +721,17 @@ exports.registerRecruiter = async (req, res) => {
     const newCompanyObj = {
       user: newUserId,
       name: companyName,
-      industry: companyIndustry,
+      industry: companyIndustry || 'Corporate Recruitment',
       website: companyWebsite,
       hrContact: hrPerson,
+      hrPosition: hrPos,
+      govId: companyGovId,
       email: companyEmail,
       phone: companyPhone,
       location: companyLocation,
+      gender: companyGender,
       description: companyDesc,
-      approved: false // Pending admin approval matching Flask
+      approved: false // Pending admin approval
     };
 
     memoryUsers.set(companyEmail, newUserObj);
@@ -576,12 +747,15 @@ exports.registerRecruiter = async (req, res) => {
       await Company.create({
         user: dbUser._id,
         name: companyName,
-        industry: companyIndustry,
+        industry: companyIndustry || 'Corporate Recruitment',
         website: companyWebsite,
         hrContact: hrPerson,
+        hrPosition: hrPos,
+        govId: companyGovId,
         email: companyEmail,
         phone: companyPhone,
         location: companyLocation,
+        gender: companyGender,
         description: companyDesc,
         approved: false
       });
@@ -595,7 +769,8 @@ exports.registerRecruiter = async (req, res) => {
         email: companyEmail,
         name: companyName,
         role: 'recruiter',
-        approved: false
+        approved: false,
+        profileComplete: true
       }
     });
   } catch (err) {
@@ -667,6 +842,30 @@ exports.getMe = async (req, res) => {
       }
     }
 
+    let isProfileComplete = true;
+    if (req.user.role === 'student') {
+      isProfileComplete = isActualPriya || Boolean(
+        profile &&
+        profile.collegeName &&
+        profile.studentNo &&
+        profile.department &&
+        profile.academicYear &&
+        profile.gradYear &&
+        profile.phone &&
+        profile.city
+      );
+    } else if (req.user.role === 'recruiter') {
+      isProfileComplete = Boolean(
+        profile &&
+        profile.name &&
+        (profile.govId || profile.gov_id) &&
+        (profile.hrPosition || profile.hr_position) &&
+        (profile.hrContact || profile.hr_contact) &&
+        profile.phone &&
+        (profile.location || profile.city)
+      );
+    }
+
     return res.status(200).json({
       success: true,
       user: {
@@ -676,7 +875,8 @@ exports.getMe = async (req, res) => {
         name: resolvedName || (isActualPriya ? 'Priya Sharma' : 'Student'),
         avatar: req.user.avatar,
         githubUsername: req.user.githubUsername,
-        profile
+        profile,
+        profileComplete: isProfileComplete
       }
     });
   } catch (err) {
@@ -1717,6 +1917,27 @@ exports.handleGoogleAuth = async (req, res) => {
 
     const resolvedDisplayName = finalUser.name || googleUser.name || profile?.name || cleanEmail.split('@')[0];
 
+    let isProfileComplete = true;
+    if (finalUser.role === 'student') {
+      isProfileComplete = Boolean(
+        profile &&
+        profile.collegeName &&
+        profile.city &&
+        profile.phone &&
+        profile.studentNo &&
+        profile.academicYear
+      );
+    } else if (finalUser.role === 'recruiter') {
+      isProfileComplete = Boolean(
+        profile &&
+        profile.name &&
+        (profile.govId || profile.gov_id) &&
+        (profile.hrPosition || profile.hr_position) &&
+        profile.phone &&
+        (profile.location || profile.city)
+      );
+    }
+
     return res.status(200).json({
       success: true,
       message: 'Google authentication successful! Initializing placement workspace.',
@@ -1728,7 +1949,8 @@ exports.handleGoogleAuth = async (req, res) => {
         role: finalUser.role || 'student',
         avatar: finalUser.avatar || googleUser.avatar_url,
         authProvider: 'google',
-        profile: profile || null
+        profile: profile || null,
+        profileComplete: isProfileComplete
       }
     });
   } catch (err) {

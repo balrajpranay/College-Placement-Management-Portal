@@ -7,9 +7,9 @@
         <script>
       (function() {
         try {
-          var t = localStorage.getItem('campus_theme') || 'light';
-          document.documentElement.setAttribute('data-theme', t);
-          document.documentElement.style.colorScheme = t;
+          document.documentElement.setAttribute('data-theme', 'light');
+          document.documentElement.style.colorScheme = 'light';
+          localStorage.removeItem('campus_theme');
         } catch(e) {}
       })();
     </script>
