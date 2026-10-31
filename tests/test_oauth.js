@@ -461,14 +461,34 @@ async function runAll() {
       assert.strictEqual(recLogin.status, 200);
       assert.strictEqual(recLogin.body.user.role, 'recruiter');
 
-      // 3. Admin login
+      // 3. Authorized Admin login (with provisioned password)
+      const bcrypt = require('bcryptjs');
+      const hash = await bcrypt.hash('admin123', 10);
+      authController.memoryUsers.set('pranay.b9106@gmail.com', {
+        _id: '507f1f77bcf86cd799439011',
+        id: '507f1f77bcf86cd799439011',
+        email: 'pranay.b9106@gmail.com',
+        name: 'Pranay Balraj',
+        passwordHash: hash,
+        role: 'admin',
+        isActive: true
+      });
+
       const admLogin = await request('POST', '/api/auth/login', {
-        email: 'admin@college.edu',
+        email: 'pranay.b9106@gmail.com',
         password: 'admin123',
         role: 'admin'
       });
       assert.strictEqual(admLogin.status, 200);
       assert.strictEqual(admLogin.body.user.role, 'admin');
+
+      // 4. Unauthorized email attempting admin login is rejected
+      const unauthLogin = await request('POST', '/api/auth/login', {
+        email: 'admin@college.edu',
+        password: 'admin123',
+        role: 'admin'
+      });
+      assert.strictEqual(unauthLogin.status === 401 || unauthLogin.status === 403, true);
     });
 
   } finally {

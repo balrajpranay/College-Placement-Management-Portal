@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const User = require('../models/User');
+const { isAuthorizedAdminEmail } = require('../config/adminAllowlist');
 
 const isProduction = process.env.NODE_ENV === 'production';
 if (isProduction && !process.env.JWT_SECRET) {
@@ -60,6 +61,16 @@ const protect = async (req, res, next) => {
       });
     }
 
+    // STALE SESSION & REVOKED ADMIN TOKEN PROTECTION:
+    // If the token or DB account holds 'admin' role, verify email against the authorized allowlist.
+    // If authorization was revoked or the email is unauthorized, reject the request outright.
+    if (req.user.role === 'admin' && !isAuthorizedAdminEmail(req.user.email)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Administrator privileges are unauthorized for this account.'
+      });
+    }
+
     next();
   } catch (err) {
     return res.status(401).json({
@@ -77,6 +88,18 @@ const authorize = (...roles) => {
         message: 'User authentication required.'
       });
     }
+    // STRICT ADMIN SECURITY ENFORCEMENT:
+    // Any endpoint requiring 'admin' role MUST verify that the authenticated user's email
+    // is in the authorized 3-email allowlist.
+    if (roles.includes('admin') || req.user.role === 'admin') {
+      if (!isAuthorizedAdminEmail(req.user.email)) {
+        return res.status(403).json({
+          success: false,
+          message: `Access denied. Email '${req.user.email || 'unknown'}' is not authorized as a Placement Administrator.`
+        });
+      }
+    }
+
     const userRole = req.user.role || 'student';
     if (!roles.includes(userRole)) {
       return res.status(403).json({
@@ -84,11 +107,13 @@ const authorize = (...roles) => {
         message: `User role '${userRole}' is not authorized to access this endpoint.`
       });
     }
+
     next();
   };
 };
 
 module.exports = {
   protect,
-  authorize
+  authorize,
+  isAuthorizedAdminEmail
 };

@@ -9,6 +9,7 @@ const mongoose = require('mongoose');
 const User = require('../models/User');
 const Student = require('../models/Student');
 const Company = require('../models/Company');
+const { isAuthorizedAdminEmail, getAuthorizedAdminEmails } = require('../config/adminAllowlist');
 
 let recruiterStore = null;
 try {
@@ -103,22 +104,8 @@ const memoryCompanies = new Map();
 
 // Initialize Demo Accounts with Bcrypt synchronously on module load
 const initDemoAccounts = async () => {
-  const adminHash = bcrypt.hashSync('admin123', 10);
   const studentHash = bcrypt.hashSync('student123', 10);
   const recruiterHash = bcrypt.hashSync('recruiter123', 10);
-
-
-  // Demo Admin
-  const adminId = '65e000000000000000000001';
-  memoryUsers.set('admin@college.edu', {
-    _id: adminId,
-    id: adminId,
-    email: 'admin@college.edu',
-    passwordHash: adminHash,
-    role: 'admin',
-    isActive: true,
-    name: 'Placement Administrator'
-  });
 
   // Demo Student (Priya Sharma)
   const studentId = '65e000000000000000000002';
@@ -268,6 +255,16 @@ exports.login = async (req, res) => {
       user = memoryUsers.get(cleanEmail);
     }
 
+    // If an authorized admin email attempts email/password login without a configured password
+    if (targetRole === 'admin' && isAuthorizedAdminEmail(cleanEmail)) {
+      if (!user || !user.passwordHash) {
+        return res.status(401).json({
+          success: false,
+          message: 'This authorized admin account does not have a local password configured. Please sign in with Continue with Google or contact the placement office for account provisioning.'
+        });
+      }
+    }
+
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -275,6 +272,14 @@ exports.login = async (req, res) => {
       });
     }
 
+    if (!user.passwordHash) {
+      return res.status(401).json({
+        success: false,
+        message: 'This account does not have a local password configured. Please sign in with Continue with Google.'
+      });
+    }
+
+    // Step 1: Securely verify the existing password
     const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch) {
       return res.status(401).json({
@@ -283,7 +288,16 @@ exports.login = async (req, res) => {
       });
     }
 
-    if (user.role !== targetRole) {
+    // Step 2: Strict Placement Admin Allowlist & Role Check
+    if (targetRole === 'admin' || user.role === 'admin') {
+      if (!isAuthorizedAdminEmail(cleanEmail)) {
+        return res.status(403).json({
+          success: false,
+          message: `Access denied. Email '${cleanEmail}' is not authorized as a Placement Administrator.`
+        });
+      }
+      user.role = 'admin';
+    } else if (user.role !== targetRole) {
       return res.status(400).json({
         success: false,
         message: `This account is not registered as a ${targetRole}. Please choose the correct role.`
@@ -601,6 +615,11 @@ exports.getMe = async (req, res) => {
     const userId = req.user._id ? req.user._id.toString() : req.user.id;
     let profile = null;
 
+    // Stale session protection: revoke admin role if email is not in the authorized allowlist
+    if (req.user.role === 'admin' && !isAuthorizedAdminEmail(req.user.email)) {
+      req.user.role = 'student';
+    }
+
     if (req.user.role === 'student') {
       if (mongoose.connection.readyState === 1) {
         profile = await Student.findOne({ user: req.user._id });
@@ -718,6 +737,13 @@ exports.handleGithubAuth = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Authorization code is missing from GitHub callback.'
+      });
+    }
+
+    if (targetRole === 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Placement Administrator login is not supported via GitHub. Please sign in with Continue with Google or authorized administrator credentials.'
       });
     }
 
@@ -1244,7 +1270,8 @@ exports.handleGoogleAuth = async (req, res) => {
                 sub: decodedIdToken.sub,
                 name: decodedIdToken.name || decodedIdToken.given_name,
                 email: decodedIdToken.email,
-                picture: decodedIdToken.picture
+                picture: decodedIdToken.picture,
+                email_verified: decodedIdToken.email_verified
               };
             }
           } catch (decodeErr) {
@@ -1254,11 +1281,13 @@ exports.handleGoogleAuth = async (req, res) => {
 
         if (userProfile && (userProfile.email || userProfile.sub)) {
           const resolvedName = userProfile.name || userProfile.given_name || (userProfile.email ? userProfile.email.split('@')[0] : 'Google Student');
+          const isEmailVerified = userProfile.email_verified === true || userProfile.email_verified === 'true';
           googleUser = {
             id: String(userProfile.sub || 'goog_' + Date.now()),
             name: resolvedName,
             email: userProfile.email,
-            avatar_url: userProfile.picture
+            avatar_url: userProfile.picture,
+            email_verified: isEmailVerified
           };
         }
       } catch (err) {
@@ -1279,16 +1308,23 @@ exports.handleGoogleAuth = async (req, res) => {
         }
         const pseudoId = 'goog_' + Math.abs(code.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0) || 719281);
         
+        const baseUsername = username.replace(/_unverified/gi, '');
         let resolvedEmail = '';
-        if (username.includes('@')) {
-          resolvedEmail = username.toLowerCase();
-        } else if (username === 'admin' || username === 'admin_authorized') {
-          resolvedEmail = 'admin@college.edu';
-        } else if (username === 'recruiter' || username === 'recruiter_authorized' || username === 'recruiter_technova') {
+        if (baseUsername.includes('@')) {
+          resolvedEmail = baseUsername.toLowerCase();
+        } else if (baseUsername === 'admin' || baseUsername === 'admin_authorized' || baseUsername === 'admin1') {
+          resolvedEmail = 'pranay.b9106@gmail.com';
+        } else if (baseUsername === 'admin2') {
+          resolvedEmail = 'ayeshaeram2005@gmail.com';
+        } else if (baseUsername === 'admin3') {
+          resolvedEmail = 'kethapagabhavani9980@gmail.com';
+        } else if (baseUsername === 'recruiter' || baseUsername === 'recruiter_authorized' || baseUsername === 'recruiter_technova') {
           resolvedEmail = 'hr@technova.com';
         } else {
-          resolvedEmail = `${username.toLowerCase().replace(/[\s_]+/g, '.')}@gmail.com`;
+          resolvedEmail = `${baseUsername.toLowerCase().replace(/[\s_]+/g, '.')}@gmail.com`;
         }
+
+        const isUnverified = code.toLowerCase().includes('unverified');
 
         const cleanName = (username === 'google-user' || username === 'student' || username === 'google-student')
           ? (targetRole === 'recruiter' ? 'Verified Google Recruiter' : (targetRole === 'admin' ? 'Placement Administrator' : 'Google Student'))
@@ -1298,7 +1334,8 @@ exports.handleGoogleAuth = async (req, res) => {
           id: String(pseudoId),
           name: cleanName,
           email: resolvedEmail,
-          avatar_url: 'https://lh3.googleusercontent.com/a/default-user'
+          avatar_url: 'https://lh3.googleusercontent.com/a/default-user',
+          email_verified: !isUnverified
         };
       } else {
         return res.status(401).json({
@@ -1366,45 +1403,47 @@ exports.handleGoogleAuth = async (req, res) => {
     const isProduction = (process.env.NODE_ENV === 'production' || !!process.env.VERCEL) && !isLocalRequest;
     const isMockCode = typeof code === 'string' && (code.startsWith('demo_') || code.startsWith('google_mock'));
 
-    // 4. Role Authorization & Privilege Escalation Prevention
-    const isConfiguredAdmin = cleanEmail === 'admin@college.edu' ||
-      (process.env.ADMIN_EMAIL && cleanEmail === process.env.ADMIN_EMAIL.toLowerCase().trim()) ||
-      (process.env.ADMIN_EMAILS && process.env.ADMIN_EMAILS.toLowerCase().split(',').map(s => s.trim()).includes(cleanEmail));
-    const isAuthorizedAdmin = (existingUser && existingUser.role === 'admin') || isConfiguredAdmin;
-
+    // 4. Role Authorization & Strict Placement Admin Security
+    const isAuthorizedAdmin = isAuthorizedAdminEmail(cleanEmail);
     const isSeededRecruiter = cleanEmail === 'hr@technova.com' || cleanEmail === 'talent@apexcloud.io';
     const isAuthorizedRecruiter = (existingUser && existingUser.role === 'recruiter') || !!existingCompany || isSeededRecruiter;
 
-    // In production environments or for mock test codes, enforce strict privilege escalation boundaries
-    if (isProduction || isMockCode) {
-      if (targetRole === 'admin') {
-        if (!isAuthorizedAdmin) {
-          return res.status(403).json({
-            success: false,
-            message: `This Google account (${cleanEmail}) is not authorized as a Placement Administrator. Access to the Admin Portal is denied.`
-          });
-        }
-      } else if (targetRole === 'recruiter') {
-        if (existingUser && existingUser.role === 'student') {
-          return res.status(403).json({
-            success: false,
-            message: `This Google account (${cleanEmail}) is registered as a Student, not a Recruiter. Access to the Recruiter Portal is denied.`
-          });
-        }
-        if (!isAuthorizedRecruiter) {
-          return res.status(403).json({
-            success: false,
-            message: `This Google account (${cleanEmail}) is not registered or authorized as a Recruiter. Please complete Recruiter Registration first or log in with your authorized recruiter credentials.`
-          });
-        }
-      } else if (targetRole === 'student') {
-        if (existingUser && existingUser.role !== 'student') {
-          const portalLabel = existingUser.role === 'recruiter' ? 'Recruiter' : 'Placement Administrator';
-          return res.status(400).json({
-            success: false,
-            message: `This account is registered as a ${portalLabel}. Please select the ${portalLabel} portal.`
-          });
-        }
+    // Strict Placement Admin Verification (enforced in ALL environments without exception)
+    if (targetRole === 'admin' || (existingUser && existingUser.role === 'admin')) {
+      if (!isAuthorizedAdmin) {
+        return res.status(403).json({
+          success: false,
+          message: `Access denied. Google account '${cleanEmail}' is not authorized as a Placement Administrator.`
+        });
+      }
+      if (!googleUser.email_verified) {
+        return res.status(403).json({
+          success: false,
+          message: 'Google account email is not verified. Verified email is required for Placement Administrator access.'
+        });
+      }
+    }
+
+    if (targetRole === 'recruiter') {
+      if (existingUser && existingUser.role === 'student') {
+        return res.status(403).json({
+          success: false,
+          message: `This Google account (${cleanEmail}) is registered as a Student, not a Recruiter. Access to the Recruiter Portal is denied.`
+        });
+      }
+      if (!isAuthorizedRecruiter) {
+        return res.status(403).json({
+          success: false,
+          message: `This Google account (${cleanEmail}) is not registered or authorized as a Recruiter. Please complete Recruiter Registration first or log in with your authorized recruiter credentials.`
+        });
+      }
+    } else if (targetRole === 'student') {
+      if (existingUser && existingUser.role !== 'student') {
+        const portalLabel = existingUser.role === 'recruiter' ? 'Recruiter' : 'Placement Administrator';
+        return res.status(400).json({
+          success: false,
+          message: `This account is registered as a ${portalLabel}. Please select the ${portalLabel} portal.`
+        });
       }
     }
 
@@ -1412,11 +1451,17 @@ exports.handleGoogleAuth = async (req, res) => {
 
     if (existingUser) {
       finalUser = existingUser;
-      // In local demo mode, update role to targetRole to allow presenting all 3 roles with a single Google account
-      if (!isProduction && !isMockCode) {
-        finalUser.role = targetRole;
+
+      // Role assignment with strict security boundaries:
+      // Only allowlisted admin emails can ever hold 'admin' role.
+      if (isAuthorizedAdmin && googleUser.email_verified && targetRole === 'admin') {
+        finalUser.role = 'admin';
+      } else if (finalUser.role === 'admin' && !isAuthorizedAdmin) {
+        finalUser.role = 'student';
+      } else if (!isProduction && !isMockCode) {
+        finalUser.role = (targetRole === 'admin' && !isAuthorizedAdmin) ? 'student' : targetRole;
       } else if (!finalUser.role) {
-        finalUser.role = targetRole;
+        finalUser.role = (targetRole === 'admin' && !isAuthorizedAdmin) ? 'student' : targetRole;
       }
 
       // Update with Google attributes
@@ -1447,7 +1492,7 @@ exports.handleGoogleAuth = async (req, res) => {
       }
     } else {
       // New user registration via Google OAuth
-      const assignedRole = targetRole;
+      const assignedRole = (targetRole === 'admin' && isAuthorizedAdmin && googleUser.email_verified) ? 'admin' : (targetRole === 'admin' ? 'student' : targetRole);
       const newUserId = new mongoose.Types.ObjectId().toString();
       const newUserObj = {
         _id: newUserId,
