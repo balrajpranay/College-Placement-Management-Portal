@@ -1756,6 +1756,16 @@ table.data-table {
   border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.auth-visual .brand-name,
+.auth-visual .brand-title-main {
+  color: #FFFFFF !important;
+}
+
+.auth-visual .brand-sub,
+.auth-visual .brand-title-sub {
+  color: #38BDF8 !important;
+}
+
 .auth-visual-top {
   display: flex;
   flex-direction: column;
@@ -1768,15 +1778,17 @@ table.data-table {
   align-self: flex-start;
 }
 
-.auth-visual-body h2 {
+.auth-visual-body h2,
+.auth-visual h2 {
   font-size: 2.25rem;
   line-height: 1.2;
-  color: #FFFFFF;
+  color: #FFFFFF !important;
   margin-bottom: var(--space-4);
 }
 
-.auth-visual-body p {
-  color: #94A3B8;
+.auth-visual-body p,
+.auth-visual p {
+  color: #DCEBFA !important;
   font-size: 1.05rem;
   max-width: 440px;
 }
@@ -1793,17 +1805,22 @@ table.data-table {
   align-items: center;
   gap: 12px;
   font-size: 0.9375rem;
-  color: #E2E8F0;
+  color: #EAF4FF !important;
+}
+
+.auth-visual-feat span {
+  color: #EAF4FF !important;
 }
 
 .auth-visual-feat svg {
-  color: var(--accent-cyan-400);
+  color: var(--accent-cyan-400, #38BDF8) !important;
   flex-shrink: 0;
 }
 
 .auth-visual-footer {
   font-size: 0.8125rem;
-  color: #64748B;
+  color: #DCEBFA !important;
+  opacity: 0.85;
 }
 
 .auth-form-col {
@@ -3177,8 +3194,16 @@ html[data-theme="dark"] .theme-toggle-btn .theme-icon-sun {
   white-space: nowrap !important;
 }
 
-.sidebar .brand-name {
+.sidebar .brand-name,
+.auth-visual .brand-name,
+.auth-visual .brand-title-main {
   color: #FFFFFF !important;
+}
+
+.sidebar .brand-sub,
+.auth-visual .brand-sub,
+.auth-visual .brand-title-sub {
+  color: #38BDF8 !important;
 }
 
 .brand-sub,
@@ -4757,6 +4782,21 @@ h1, h2, h3, h4, h5, h6,
   color: var(--text-main) !important;
 }
 
+.auth-visual-body h2,
+.auth-visual h2 {
+  color: #FFFFFF !important;
+}
+
+.auth-visual-body p,
+.auth-visual p {
+  color: #DCEBFA !important;
+}
+
+.auth-visual-feat,
+.auth-visual-feat span {
+  color: #EAF4FF !important;
+}
+
 p, span, div {
   color: inherit;
 }
@@ -5531,7 +5571,9 @@ textarea:focus {
   white-space: nowrap !important;
 }
 
-.sidebar .brand-name {
+.sidebar .brand-name,
+.auth-visual .brand-name,
+.auth-visual .brand-title-main {
   color: #FFFFFF !important;
 }
 
@@ -5546,7 +5588,9 @@ textarea:focus {
   white-space: nowrap !important;
 }
 
-.sidebar .brand-sub {
+.sidebar .brand-sub,
+.auth-visual .brand-sub,
+.auth-visual .brand-title-sub {
   color: #38BDF8 !important;
 }
 
