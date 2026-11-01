@@ -383,9 +383,42 @@ async function resolveCompanyForUser(userId, email) {
       console.warn('[Recruiter resolveCompanyForUser Warning]:', err.message);
     }
   }
+
+  // Fallback to memoryCompanies from authController
+  if (!company) {
+    try {
+      const { memoryCompanies } = require('./authController');
+      if (memoryCompanies) {
+        if (userId && memoryCompanies.has(String(userId))) {
+          company = memoryCompanies.get(String(userId));
+        } else {
+          for (const [k, c] of memoryCompanies.entries()) {
+            if (
+              String(k) === String(userId) ||
+              String(c.user) === String(userId) ||
+              (email && String(c.email).toLowerCase() === String(email).toLowerCase())
+            ) {
+              company = c;
+              break;
+            }
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
   if (!company) {
     company = getCompanyByEmail(email);
+  } else if (email) {
+    // Keep recruiterStore.companies in sync with resolved company
+    const existing = recruiterStore.companies.get(email) || {};
+    recruiterStore.companies.set(email, {
+      ...existing,
+      ...(company.toObject ? company.toObject() : company),
+      approved: Boolean(company.approved)
+    });
   }
+
   return company;
 }
 
@@ -889,19 +922,7 @@ exports.getDashboard = async (req, res) => {
   try {
     const email = req.user?.email || 'hr@technova.com';
     const userId = req.user?._id || req.user?.id;
-    let company = null;
-
-    if (mongoose.connection.readyState === 1) {
-      try {
-        company = await getOrCreateMongoCompany(userId, email);
-      } catch (err) {
-        console.warn('[Recruiter Mongo Dashboard]: Fallback to memory store', err.message);
-      }
-    }
-
-    if (!company) {
-      company = getCompanyByEmail(email);
-    }
+    const company = await resolveCompanyForUser(userId, email);
 
     // Check Approval Status matching Flask
     if (!company.approved) {

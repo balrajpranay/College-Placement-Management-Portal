@@ -219,6 +219,90 @@ async function runAll() {
         authUrl.searchParams.get('redirect_uri'),
         'https://college-placement-management-portal.vercel.app/auth/google/callback'
       );
+      assert.strictEqual(
+        authUrl.searchParams.get('prompt'),
+        'select_account',
+        'Google OAuth URL must enforce prompt=select_account to show account chooser'
+      );
+    });
+
+    await runTest('Google OAuth URL configures prompt=select_account for Student, Recruiter, and Admin portals', async () => {
+      resetEnv();
+      for (const portalRole of ['student', 'recruiter', 'admin']) {
+        const req = {
+          query: { role: portalRole },
+          headers: { host: 'localhost:5173' }
+        };
+        let resData = null;
+        const res = {
+          status: (s) => ({ json: (d) => { resData = d; } })
+        };
+        await authController.getGoogleAuthUrl(req, res);
+        assert(resData && resData.url, `URL must be generated for role ${portalRole}`);
+        const parsed = new URL(resData.url);
+        assert.strictEqual(
+          parsed.searchParams.get('prompt'),
+          'select_account',
+          `Role ${portalRole} must configure prompt=select_account`
+        );
+        assert.ok(resData.state, 'State must be returned in response');
+        assert.strictEqual(resData.isConfigured, true, 'isConfigured must be true');
+
+        // Verify live HTTP endpoint returns identical valid Google OAuth authorization URL
+        const httpRes = await request('GET', `/api/auth/google/url?role=${portalRole}`);
+        assert.strictEqual(httpRes.status, 200);
+        assert.strictEqual(httpRes.body.success, true);
+        assert.strictEqual(httpRes.body.isConfigured, true);
+        const liveParsed = new URL(httpRes.body.url);
+        assert.strictEqual(liveParsed.hostname, 'accounts.google.com');
+        assert.strictEqual(liveParsed.pathname, '/o/oauth2/v2/auth');
+        assert.strictEqual(liveParsed.searchParams.get('prompt'), 'select_account');
+        assert.strictEqual(
+          liveParsed.searchParams.get('client_id'),
+          '582752422278-6vfhbc64qfrr34m6r2nqf285tq545l7k.apps.googleusercontent.com'
+        );
+      }
+    });
+
+    await runTest('Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET returns 500 configuration error and never triggers demo authentication', async () => {
+      // Test missing GOOGLE_CLIENT_ID on getGoogleAuthUrl
+      delete process.env.GOOGLE_CLIENT_ID;
+      process.env.GOOGLE_CLIENT_SECRET = 'sample-secret';
+
+      let resData = null;
+      let resStatus = null;
+      const res = {
+        status: (s) => { resStatus = s; return { json: (d) => { resData = d; } }; }
+      };
+      await authController.getGoogleAuthUrl({ query: { role: 'student' }, headers: { host: 'localhost:5173' } }, res);
+      assert.strictEqual(resStatus, 500);
+      assert.strictEqual(resData.success, false);
+      assert(resData.message.includes('not configured'));
+      assert.strictEqual(resData.url, undefined);
+
+      // Test missing GOOGLE_CLIENT_SECRET on getGoogleAuthUrl
+      process.env.GOOGLE_CLIENT_ID = 'sample-client-id';
+      delete process.env.GOOGLE_CLIENT_SECRET;
+      await authController.getGoogleAuthUrl({ query: { role: 'student' }, headers: { host: 'localhost:5173' } }, res);
+      assert.strictEqual(resStatus, 500);
+      assert.strictEqual(resData.success, false);
+      assert(resData.message.includes('not configured'));
+      assert.strictEqual(resData.url, undefined);
+
+      // Test missing credentials on live callback strictly rejects with 500 without demo fallback
+      delete process.env.GOOGLE_CLIENT_ID;
+      delete process.env.GOOGLE_CLIENT_SECRET;
+      const callbackRes = await request('POST', '/api/auth/google/callback', {
+        code: '4/0AbCdRealGoogleOAuthAuthorizationCode',
+        role: 'student'
+      });
+      assert.strictEqual(callbackRes.status, 500);
+      assert.strictEqual(callbackRes.body.success, false);
+      assert(callbackRes.body.message.includes('not configured'));
+      assert.strictEqual(callbackRes.body.token, undefined);
+      assert.strictEqual(callbackRes.body.user, undefined);
+
+      resetEnv();
     });
 
     // -------------------------------------------------------------------------
@@ -363,16 +447,24 @@ async function runAll() {
       assert.strictEqual(admDrivesRes.status, 200);
     });
 
-    await runTest('Student account attempting recruiter login is strictly denied (403)', async () => {
-      const deniedRes = await request('POST', '/api/auth/google/callback', {
+    await runTest('Student account attempting recruiter portal enters recruiter onboarding (role: recruiter, approved: false) and cannot access Admin APIs (403)', async () => {
+      const recRes = await request('POST', '/api/auth/google/callback', {
         code: 'demo_google_balraj_pranay',
         role: 'recruiter',
         state: Buffer.from(JSON.stringify({ role: 'recruiter' })).toString('base64')
       });
 
-      assert.strictEqual(deniedRes.status, 403);
-      assert.strictEqual(deniedRes.body.success, false);
-      assert(deniedRes.body.message.includes('registered as a Student'), 'Must clearly explain student role mismatch');
+      assert.strictEqual(recRes.status, 200);
+      assert.strictEqual(recRes.body.success, true);
+      assert.strictEqual(recRes.body.user.role, 'recruiter');
+      assert.strictEqual(recRes.body.user.profile.approved, false);
+      assert.ok(recRes.body.token);
+
+      // Verify the recruiter token cannot access Admin APIs
+      const forbiddenAdminRes = await request('GET', '/api/admin/drives', null, {
+        Authorization: `Bearer ${recRes.body.token}`
+      });
+      assert.strictEqual(forbiddenAdminRes.status, 403);
     });
 
     await runTest('Student account attempting admin login is strictly denied (403)', async () => {
@@ -399,16 +491,166 @@ async function runAll() {
       assert(deniedRes.body.message.includes('not authorized'));
     });
 
-    await runTest('Unregistered account attempting recruiter login is strictly denied (403)', async () => {
-      const deniedRes = await request('POST', '/api/auth/google/callback', {
-        code: 'demo_google_random_stranger_unauthorized',
+    await runTest('New Recruiter Google account enters recruiter onboarding with approved: false and profileComplete: false', async () => {
+      const newRecRes = await request('POST', '/api/auth/google/callback', {
+        code: 'demo_google_new_corporate_partner',
         role: 'recruiter',
         state: Buffer.from(JSON.stringify({ role: 'recruiter' })).toString('base64')
       });
 
+      assert.strictEqual(newRecRes.status, 200);
+      assert.strictEqual(newRecRes.body.success, true);
+      assert.ok(newRecRes.body.token);
+      assert.strictEqual(newRecRes.body.user.role, 'recruiter');
+      assert.strictEqual(newRecRes.body.user.profile.approved, false);
+      assert.strictEqual(newRecRes.body.user.profileComplete, false);
+    });
+
+    await runTest('Existing pending Recruiter preserves approved: false upon re-login and session restore', async () => {
+      const pendingRecRes = await request('POST', '/api/auth/google/callback', {
+        code: 'demo_google_new_corporate_partner',
+        role: 'recruiter',
+        state: Buffer.from(JSON.stringify({ role: 'recruiter' })).toString('base64')
+      });
+
+      assert.strictEqual(pendingRecRes.status, 200);
+      assert.strictEqual(pendingRecRes.body.success, true);
+      assert.strictEqual(pendingRecRes.body.user.role, 'recruiter');
+      assert.strictEqual(pendingRecRes.body.user.profile.approved, false);
+      assert.strictEqual(pendingRecRes.body.user.profileComplete, false);
+
+      const meRes = await request('GET', '/api/auth/me', null, {
+        Authorization: `Bearer ${pendingRecRes.body.token}`
+      });
+      assert.strictEqual(meRes.status, 200);
+      assert.strictEqual(meRes.body.user.role, 'recruiter');
+      assert.strictEqual(meRes.body.user.profile.approved, false);
+      assert.strictEqual(meRes.body.user.profileComplete, false);
+    });
+
+    await runTest('All configured authorized admin accounts (Admin 1, 2, 3) succeed via Google auth', async () => {
+      for (const adminCode of ['demo_google_admin1', 'demo_google_admin2', 'demo_google_admin3']) {
+        const admRes = await request('POST', '/api/auth/google/callback', {
+          code: adminCode,
+          role: 'admin',
+          state: Buffer.from(JSON.stringify({ role: 'admin' })).toString('base64')
+        });
+        assert.strictEqual(admRes.status, 200, `Admin code ${adminCode} should succeed`);
+        assert.strictEqual(admRes.body.user.role, 'admin');
+        assert.ok(admRes.body.token);
+      }
+    });
+
+    await runTest('All three authorized Admin accounts succeed through Student portal (role: student) and cannot access Admin APIs (403)', async () => {
+      for (const adminCode of ['demo_google_admin1', 'demo_google_admin2', 'demo_google_admin3']) {
+        const stuRes = await request('POST', '/api/auth/google/callback', {
+          code: adminCode,
+          role: 'student',
+          state: Buffer.from(JSON.stringify({ role: 'student' })).toString('base64')
+        });
+        assert.strictEqual(stuRes.status, 200, `Admin code ${adminCode} should succeed on student portal`);
+        assert.strictEqual(stuRes.body.user.role, 'student');
+        assert.ok(stuRes.body.token);
+
+        // Verify token carries student role in session restore
+        const meRes = await request('GET', '/api/auth/me', null, {
+          Authorization: `Bearer ${stuRes.body.token}`
+        });
+        assert.strictEqual(meRes.status, 200);
+        assert.strictEqual(meRes.body.user.role, 'student');
+
+        // Verify the student token CANNOT access Admin APIs
+        const adminAccessRes = await request('GET', '/api/admin/drives', null, {
+          Authorization: `Bearer ${stuRes.body.token}`
+        });
+        assert.strictEqual(adminAccessRes.status, 403, 'Student token must be strictly denied access to Admin APIs');
+      }
+    });
+
+    await runTest('Allowlisted Admin email with prior student state recovers full admin role while safely preserving student profile data', async () => {
+      // Simulate an allowlisted admin who also has an existing student record in the database
+      const adminEmail = 'pranay.b9106@gmail.com';
+      const fakeAdminId = '507f191e810c19729de860ea';
+      authController.memoryUsers.set(adminEmail, {
+        _id: fakeAdminId,
+        id: fakeAdminId,
+        email: adminEmail,
+        name: 'Pranay Balraj',
+        role: 'student',
+        isActive: true
+      });
+      authController.memoryStudents.set(fakeAdminId, {
+        user: fakeAdminId,
+        studentNo: 'STU202699',
+        name: 'Pranay Balraj',
+        department: 'Computer Science',
+        cgpa: 9.2
+      });
+
+      // Authenticate via the Placement Admin portal
+      const recoverRes = await request('POST', '/api/auth/google/callback', {
+        code: 'demo_google_admin1',
+        role: 'admin',
+        state: Buffer.from(JSON.stringify({ role: 'admin' })).toString('base64')
+      });
+
+      assert.strictEqual(recoverRes.status, 200);
+      assert.strictEqual(recoverRes.body.success, true);
+      assert.strictEqual(recoverRes.body.user.role, 'admin');
+      assert.strictEqual(recoverRes.body.user.profileComplete, true);
+      // User role must be updated to admin
+      assert.strictEqual(authController.memoryUsers.get(adminEmail).role, 'admin');
+      // Existing student profile record must be preserved non-destructively
+      assert.strictEqual(authController.memoryStudents.has(fakeAdminId), true);
+      assert.strictEqual(authController.memoryStudents.get(fakeAdminId).studentNo, 'STU202699');
+      assert.strictEqual(authController.memoryStudents.get(fakeAdminId).cgpa, 9.2);
+
+      // Verify session restoration (/api/auth/me) reflects admin without mounting student profile
+      const meRes = await request('GET', '/api/auth/me', null, {
+        Authorization: `Bearer ${recoverRes.body.token}`
+      });
+      assert.strictEqual(meRes.status, 200);
+      assert.strictEqual(meRes.body.user.role, 'admin');
+      assert.strictEqual(meRes.body.user.profile, null);
+    });
+
+    await runTest('All three authorized Admin accounts succeed through Recruiter portal (role: recruiter, approved: false) and cannot access Admin APIs (403)', async () => {
+      for (const adminCode of ['demo_google_admin1', 'demo_google_admin2', 'demo_google_admin3']) {
+        const recRes = await request('POST', '/api/auth/google/callback', {
+          code: adminCode,
+          role: 'recruiter',
+          state: Buffer.from(JSON.stringify({ role: 'recruiter' })).toString('base64')
+        });
+        assert.strictEqual(recRes.status, 200, `Admin code ${adminCode} should succeed on recruiter portal`);
+        assert.strictEqual(recRes.body.user.role, 'recruiter');
+        assert.strictEqual(recRes.body.user.profile.approved, false, 'Non-seeded recruiter must be pending approval');
+        assert.ok(recRes.body.token);
+
+        // Verify session restore
+        const meRes = await request('GET', '/api/auth/me', null, {
+          Authorization: `Bearer ${recRes.body.token}`
+        });
+        assert.strictEqual(meRes.status, 200);
+        assert.strictEqual(meRes.body.user.role, 'recruiter');
+        assert.strictEqual(meRes.body.user.profile.approved, false);
+
+        // Verify the recruiter token CANNOT access Admin APIs
+        const adminAccessRes = await request('GET', '/api/admin/drives', null, {
+          Authorization: `Bearer ${recRes.body.token}`
+        });
+        assert.strictEqual(adminAccessRes.status, 403, 'Recruiter token must be strictly denied access to Admin APIs');
+      }
+    });
+
+    await runTest('Recruiter account attempting admin login is strictly denied (403)', async () => {
+      const deniedRes = await request('POST', '/api/auth/google/callback', {
+        code: 'demo_google_recruiter_authorized',
+        role: 'admin',
+        state: Buffer.from(JSON.stringify({ role: 'admin' })).toString('base64')
+      });
       assert.strictEqual(deniedRes.status, 403);
       assert.strictEqual(deniedRes.body.success, false);
-      assert(deniedRes.body.message.includes('not registered or authorized as a Recruiter'));
+      assert(deniedRes.body.message.includes('not authorized as a Placement Administrator'));
     });
 
     await runTest('Missing, invalid, or tampered role in callback/state is rejected safely (400)', async () => {

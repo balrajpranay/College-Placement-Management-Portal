@@ -332,6 +332,19 @@ exports.login = async (req, res) => {
       if (!profile && memoryCompanies.has(userId)) {
         profile = memoryCompanies.get(userId);
       }
+      if (profile) {
+        try {
+          const { recruiterStore } = require('./recruiterController');
+          if (recruiterStore && recruiterStore.companies) {
+            const existing = recruiterStore.companies.get(cleanEmail) || {};
+            recruiterStore.companies.set(cleanEmail, {
+              ...existing,
+              ...(profile.toObject ? profile.toObject() : profile),
+              approved: Boolean(profile.approved)
+            });
+          }
+        } catch (_) {}
+      }
     }
 
     const token = generateToken(user);
@@ -736,6 +749,12 @@ exports.registerRecruiter = async (req, res) => {
 
     memoryUsers.set(companyEmail, newUserObj);
     memoryCompanies.set(newUserId, newCompanyObj);
+    try {
+      const { recruiterStore } = require('./recruiterController');
+      if (recruiterStore && recruiterStore.companies) {
+        recruiterStore.companies.set(companyEmail, { ...newCompanyObj, approved: false });
+      }
+    } catch (_) {}
 
     if (mongoose.connection.readyState === 1) {
       const dbUser = await User.create({
@@ -1332,22 +1351,32 @@ exports.getGoogleAuthUrl = async (req, res) => {
       });
     }
 
-    const clientId = process.env.GOOGLE_CLIENT_ID || '582752422278-6vfhbc64qfrr34m6r2nqf285tq545l7k.apps.googleusercontent.com';
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+    if (!clientId || !clientSecret) {
+      return res.status(500).json({
+        success: false,
+        message: 'Google OAuth credentials are not configured on the server. Please ensure GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are defined in environment variables.'
+      });
+    }
     
     // Resolve dynamic callback URL from query, env, or request headers with environment awareness
     const callbackUrl = resolveGoogleCallbackUrl(req, req.query.redirect_uri);
-    const isCustom = !!(clientId && process.env.GOOGLE_CLIENT_SECRET && !clientId.includes('mock'));
+    const isCustom = !clientId.includes('mock');
 
     const stateObj = { role, isCustom: !!isCustom, callbackUrl, ts: Date.now() };
     const state = Buffer.from(JSON.stringify(stateObj)).toString('base64');
 
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(callbackUrl)}&response_type=code&scope=${encodeURIComponent('openid email profile')}&access_type=offline&prompt=consent&state=${state}`;
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(callbackUrl)}&response_type=code&scope=${encodeURIComponent('openid email profile')}&access_type=offline&prompt=select_account&state=${encodeURIComponent(state)}`;
 
     return res.status(200).json({
       success: true,
       url: authUrl,
       clientId,
-      isConfigured: !!isCustom,
+      state,
+      role,
+      isConfigured: true,
       callbackUrl
     });
   } catch (err) {
@@ -1363,17 +1392,28 @@ exports.handleGoogleAuth = async (req, res) => {
   try {
     const code = req.body?.code || req.query?.code;
     const stateParam = req.body?.state || req.query?.state;
-    let targetRole = req.body?.role || 'student';
+    let targetRole = req.body?.role || req.query?.role || 'student';
     let stateCallbackUrl = null;
 
     if (stateParam) {
       try {
-        const decoded = JSON.parse(Buffer.from(stateParam, 'base64').toString('utf8'));
-        if (decoded.role) targetRole = decoded.role;
+        const rawState = decodeURIComponent(stateParam);
+        const base64Str = rawState.replace(/-/g, '+').replace(/_/g, '/');
+        const decoded = JSON.parse(Buffer.from(base64Str, 'base64').toString('utf8'));
+        if (decoded.role && ['student', 'recruiter', 'admin'].includes(decoded.role)) {
+          targetRole = decoded.role;
+        }
         if (decoded.callbackUrl) stateCallbackUrl = decoded.callbackUrl;
-      } catch (e) {
-        if (stateParam === 'recruiter' || stateParam === 'student' || stateParam === 'admin') {
-          targetRole = stateParam;
+      } catch (_) {
+        try {
+          const decoded = JSON.parse(Buffer.from(stateParam, 'base64').toString('utf8'));
+          if (decoded.role && ['student', 'recruiter', 'admin'].includes(decoded.role)) {
+            targetRole = decoded.role;
+          }
+        } catch (__) {
+          if (['recruiter', 'student', 'admin'].includes(stateParam)) {
+            targetRole = stateParam;
+          }
         }
       }
     }
@@ -1400,7 +1440,17 @@ exports.handleGoogleAuth = async (req, res) => {
     let googleUser = null;
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const isCustom = clientId && clientSecret;
+    const isCustom = !!(clientId && clientSecret && !clientId.includes('mock'));
+
+    // Check configuration for live code authentication
+    if (!code.startsWith('demo_') && !code.startsWith('google_mock')) {
+      if (!clientId || !clientSecret) {
+        return res.status(500).json({
+          success: false,
+          message: 'Google OAuth credentials are not configured on the server. Please ensure GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are defined in environment variables.'
+        });
+      }
+    }
 
     // 1. Live Google Token exchange if live code provided
     if (isCustom && !code.startsWith('demo_') && !code.startsWith('google_mock')) {
@@ -1592,6 +1642,12 @@ exports.handleGoogleAuth = async (req, res) => {
         }
       }
     }
+    if (!existingCompany && cleanEmail && recruiterStore && recruiterStore.companies) {
+      const storeComp = recruiterStore.companies.get(cleanEmail);
+      if (storeComp) {
+        existingCompany = storeComp;
+      }
+    }
 
     // Determine whether request is local or production, and whether this is a mock test code
     let isLocalRequest = false;
@@ -1606,10 +1662,10 @@ exports.handleGoogleAuth = async (req, res) => {
     // 4. Role Authorization & Strict Placement Admin Security
     const isAuthorizedAdmin = isAuthorizedAdminEmail(cleanEmail);
     const isSeededRecruiter = cleanEmail === 'hr@technova.com' || cleanEmail === 'talent@apexcloud.io';
-    const isAuthorizedRecruiter = (existingUser && existingUser.role === 'recruiter') || !!existingCompany || isSeededRecruiter;
 
     // Strict Placement Admin Verification (enforced in ALL environments without exception)
-    if (targetRole === 'admin' || (existingUser && existingUser.role === 'admin')) {
+    // The Admin allowlist strictly controls access to the Admin portal only.
+    if (targetRole === 'admin') {
       if (!isAuthorizedAdmin) {
         return res.status(403).json({
           success: false,
@@ -1620,29 +1676,6 @@ exports.handleGoogleAuth = async (req, res) => {
         return res.status(403).json({
           success: false,
           message: 'Google account email is not verified. Verified email is required for Placement Administrator access.'
-        });
-      }
-    }
-
-    if (targetRole === 'recruiter') {
-      if (existingUser && existingUser.role === 'student') {
-        return res.status(403).json({
-          success: false,
-          message: `This Google account (${cleanEmail}) is registered as a Student, not a Recruiter. Access to the Recruiter Portal is denied.`
-        });
-      }
-      if (!isAuthorizedRecruiter) {
-        return res.status(403).json({
-          success: false,
-          message: `This Google account (${cleanEmail}) is not registered or authorized as a Recruiter. Please complete Recruiter Registration first or log in with your authorized recruiter credentials.`
-        });
-      }
-    } else if (targetRole === 'student') {
-      if (existingUser && existingUser.role !== 'student') {
-        const portalLabel = existingUser.role === 'recruiter' ? 'Recruiter' : 'Placement Administrator';
-        return res.status(400).json({
-          success: false,
-          message: `This account is registered as a ${portalLabel}. Please select the ${portalLabel} portal.`
         });
       }
     }
@@ -1658,10 +1691,8 @@ exports.handleGoogleAuth = async (req, res) => {
         finalUser.role = 'admin';
       } else if (finalUser.role === 'admin' && !isAuthorizedAdmin) {
         finalUser.role = 'student';
-      } else if (!isProduction && !isMockCode) {
-        finalUser.role = (targetRole === 'admin' && !isAuthorizedAdmin) ? 'student' : targetRole;
       } else if (!finalUser.role) {
-        finalUser.role = (targetRole === 'admin' && !isAuthorizedAdmin) ? 'student' : targetRole;
+        finalUser.role = targetRole;
       }
 
       // Update with Google attributes
@@ -1745,36 +1776,66 @@ exports.handleGoogleAuth = async (req, res) => {
           finalUser = newUserObj;
         }
       } else if (assignedRole === 'recruiter') {
+        const isPreApproved = isSeededRecruiter;
         if (mongoose.connection.readyState === 1) {
           try {
             const created = await User.create(newUserObj);
             let comp = null;
             if (existingCompany) {
-              comp = await Company.findByIdAndUpdate(existingCompany._id, { user: created._id, approved: true }, { new: true });
+              const keepApproved = isPreApproved ? true : Boolean(existingCompany.approved);
+              comp = await Company.findByIdAndUpdate(
+                existingCompany._id,
+                { user: created._id, approved: keepApproved },
+                { new: true }
+              );
             } else {
               const compName = (googleUser.name && googleUser.name !== 'Google User' && googleUser.name !== 'Verified Google Student')
-                ? `${googleUser.name} Tech`
-                : 'Apex Tech Solutions';
+                ? `${googleUser.name} Corporate`
+                : 'Partner Organization';
               comp = await Company.create({
                 user: created._id,
                 name: compName,
-                industry: 'Software & Cloud Engineering',
-                website: `https://${cleanEmail.split('@')[1] || 'technova.com'}`,
+                industry: 'Corporate Partner',
+                website: `https://${cleanEmail.split('@')[1] || 'company.com'}`,
                 hrContact: googleUser.name || 'Hiring Lead',
                 email: cleanEmail,
-                phone: '+91 98765 43210',
-                location: 'Bengaluru, India',
+                phone: '',
+                location: '',
                 description: 'Campus recruitment partner organization.',
-                approved: true
+                approved: isPreApproved
               });
             }
             finalUser = created;
             profile = comp;
           } catch (dbErr) {
+            console.warn('[MongoDB Create Warning]: Continuing with memory provisioned record:', dbErr.message);
             finalUser = newUserObj;
           }
         } else {
           finalUser = newUserObj;
+          let comp = null;
+          if (existingCompany) {
+            existingCompany.user = newUserId;
+            existingCompany.approved = isPreApproved ? true : Boolean(existingCompany.approved);
+            comp = existingCompany;
+          } else {
+            comp = {
+              _id: new mongoose.Types.ObjectId().toString(),
+              user: newUserId,
+              name: (googleUser.name && googleUser.name !== 'Google User' && googleUser.name !== 'Verified Google Student')
+                ? `${googleUser.name} Corporate`
+                : 'Partner Organization',
+              industry: 'Corporate Partner',
+              website: `https://${cleanEmail.split('@')[1] || 'company.com'}`,
+              hrContact: googleUser.name || 'Hiring Lead',
+              email: cleanEmail,
+              phone: '',
+              location: '',
+              approved: isPreApproved
+            };
+            memoryCompanies.set(newUserId, comp);
+          }
+          profile = comp;
         }
       } else {
         // Admin
@@ -1793,9 +1854,9 @@ exports.handleGoogleAuth = async (req, res) => {
 
     const finalUserIdStr = (finalUser._id || finalUser.id).toString();
 
-    // 5. Retrieve or create linked profile
+    // 5. Retrieve or create linked profile based on selected portal targetRole
     if (mongoose.connection.readyState === 1) {
-      if (finalUser.role === 'student') {
+      if (targetRole === 'student') {
         profile = await Student.findOne({ user: finalUser._id || finalUser.id });
         if (profile) {
           // Auto-heal student profile name if it was corrupted as 'Verified Google Student' or 'Priya Sharma'
@@ -1819,32 +1880,33 @@ exports.handleGoogleAuth = async (req, res) => {
             console.warn('[Student Create in handleGoogleAuth]:', e.message);
           }
         }
-      } else if (finalUser.role === 'recruiter') {
+      } else if (targetRole === 'recruiter') {
         profile = await Company.findOne({ $or: [{ user: finalUser._id || finalUser.id }, { email: cleanEmail }] });
         if (profile) {
-          if (!profile.user || profile.user.toString() !== finalUserIdStr || !profile.approved) {
+          const keepApproved = isSeededRecruiter ? true : Boolean(profile.approved);
+          if (!profile.user || profile.user.toString() !== finalUserIdStr || profile.approved !== keepApproved) {
             profile = await Company.findByIdAndUpdate(
               profile._id,
-              { user: finalUser._id || finalUser.id, approved: true },
+              { user: finalUser._id || finalUser.id, approved: keepApproved },
               { new: true }
             );
           }
         } else {
           const compName = (finalUser.name && finalUser.name !== 'Google User' && finalUser.name !== 'Verified Google Student')
-            ? `${finalUser.name} Tech`
-            : 'TechNova Partner Solutions';
+            ? `${finalUser.name} Corporate`
+            : 'Partner Organization';
           try {
             profile = await Company.create({
               user: finalUser._id || finalUser.id,
               name: compName,
-              industry: 'Software & Cloud Engineering',
-              website: `https://${cleanEmail.split('@')[1] || 'technova.com'}`,
+              industry: 'Corporate Partner',
+              website: `https://${cleanEmail.split('@')[1] || 'company.com'}`,
               hrContact: finalUser.name || 'Hiring Lead',
               email: cleanEmail,
-              phone: '+91 98765 43210',
-              location: 'Bengaluru, India',
+              phone: '',
+              location: '',
               description: 'Campus recruitment partner organization.',
-              approved: true
+              approved: isSeededRecruiter
             });
           } catch (e) {
             console.warn('[Company Create in handleGoogleAuth]:', e.message);
@@ -1854,7 +1916,7 @@ exports.handleGoogleAuth = async (req, res) => {
     }
 
     if (!profile) {
-      if (finalUser.role === 'student') {
+      if (targetRole === 'student') {
         profile = memoryStudents.get(finalUserIdStr);
         if (!profile) {
           profile = {
@@ -1872,7 +1934,7 @@ exports.handleGoogleAuth = async (req, res) => {
         } else if (cleanEmail !== 'priya.sharma@student.edu' && (profile.name === 'Verified Google Student' || profile.name === 'Priya Sharma')) {
           profile.name = finalUser.name || googleUser.name;
         }
-      } else if (finalUser.role === 'recruiter') {
+      } else if (targetRole === 'recruiter') {
         profile = memoryCompanies.get(finalUserIdStr);
         if (!profile && existingCompany) {
           profile = existingCompany;
@@ -1880,45 +1942,52 @@ exports.handleGoogleAuth = async (req, res) => {
         if (!profile) {
           profile = {
             user: finalUserIdStr,
-            name: `${finalUser.name || 'TechNova'} Solutions`,
-            industry: 'Software & Cloud Engineering',
+            name: `${finalUser.name || 'Partner'} Organization`,
+            industry: 'Corporate Partner',
             email: cleanEmail,
-            approved: true
+            approved: isSeededRecruiter
           };
         }
-        profile.approved = true;
+        if (isSeededRecruiter) {
+          profile.approved = true;
+        } else {
+          profile.approved = Boolean(profile.approved);
+        }
         memoryCompanies.set(finalUserIdStr, profile);
       }
     }
 
-    // Ensure recruiter profile is marked approved in in-memory caches
-    if (finalUser.role === 'recruiter') {
-      if (profile) profile.approved = true;
+    // Ensure recruiter profile is synced in in-memory recruiterStore preserving approval status
+    if (targetRole === 'recruiter') {
+      const isApprovedStatus = isSeededRecruiter ? true : Boolean(profile?.approved);
+      if (profile) profile.approved = isApprovedStatus;
       if (recruiterStore && recruiterStore.companies) {
+        const existingStoreComp = recruiterStore.companies.get(cleanEmail);
+        const resolvedApproved = isSeededRecruiter ? true : (existingStoreComp ? Boolean(existingStoreComp.approved) : isApprovedStatus);
         recruiterStore.companies.set(cleanEmail, {
-          id: Date.now(),
-          name: profile?.name || 'TechNova Solutions',
-          industry: profile?.industry || 'Software / IT',
-          website: profile?.website || 'https://technova.example.com',
-          hr_contact: profile?.hrContact || finalUser.name,
-          hrContact: profile?.hrContact || finalUser.name,
+          id: existingStoreComp?.id || Date.now(),
+          name: profile?.name || existingStoreComp?.name || `${finalUser.name || 'Partner'} Organization`,
+          industry: profile?.industry || existingStoreComp?.industry || 'Corporate Partner',
+          website: profile?.website || existingStoreComp?.website || `https://${cleanEmail.split('@')[1] || 'company.com'}`,
+          hr_contact: profile?.hrContact || profile?.hr_contact || existingStoreComp?.hrContact || finalUser.name,
+          hrContact: profile?.hrContact || profile?.hr_contact || existingStoreComp?.hrContact || finalUser.name,
           email: cleanEmail,
-          phone: '+91 98765 43210',
-          location: 'Bengaluru, India',
-          description: 'Campus recruitment partner organization.',
-          approved: true,
-          created_at: new Date().toISOString()
+          phone: profile?.phone || existingStoreComp?.phone || '',
+          location: profile?.location || existingStoreComp?.location || '',
+          description: profile?.description || existingStoreComp?.description || 'Campus recruitment partner organization.',
+          approved: resolvedApproved,
+          created_at: existingStoreComp?.created_at || new Date().toISOString()
         });
       }
     }
 
-    // 5. Generate signed JWT token with valid user ID and role
-    const token = generateToken(finalUser);
+    // 5. Generate signed JWT token with valid user ID and portal role
+    const token = generateToken({ ...finalUser, role: targetRole }, targetRole);
 
     const resolvedDisplayName = finalUser.name || googleUser.name || profile?.name || cleanEmail.split('@')[0];
 
     let isProfileComplete = true;
-    if (finalUser.role === 'student') {
+    if (targetRole === 'student') {
       isProfileComplete = Boolean(
         profile &&
         profile.collegeName &&
@@ -1927,12 +1996,13 @@ exports.handleGoogleAuth = async (req, res) => {
         profile.studentNo &&
         profile.academicYear
       );
-    } else if (finalUser.role === 'recruiter') {
+    } else if (targetRole === 'recruiter') {
       isProfileComplete = Boolean(
         profile &&
         profile.name &&
         (profile.govId || profile.gov_id) &&
         (profile.hrPosition || profile.hr_position) &&
+        (profile.hrContact || profile.hr_contact) &&
         profile.phone &&
         (profile.location || profile.city)
       );
@@ -1946,7 +2016,7 @@ exports.handleGoogleAuth = async (req, res) => {
         id: finalUserIdStr,
         name: resolvedDisplayName,
         email: finalUser.email,
-        role: finalUser.role || 'student',
+        role: targetRole,
         avatar: finalUser.avatar || googleUser.avatar_url,
         authProvider: 'google',
         profile: profile || null,

@@ -37,6 +37,18 @@ export default function AdminDrives({ defaultApprovalStatus }) {
     loadDrives();
   }, [search, jobTypeFilter, statusFilter, approvalFilter]);
 
+  // Handle Escape key to close modals
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setSelectedDrive(null);
+        setRejectModalDrive(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const handleApprovalFilterChange = (status) => {
     setApprovalFilter(status);
     const newParams = new URLSearchParams(searchParams);
@@ -85,7 +97,7 @@ export default function AdminDrives({ defaultApprovalStatus }) {
       const res = await getAdminDriveDetailApi(id);
       const detail = res?.data || res?.drive || res;
       if (detail && typeof detail === 'object') {
-        setSelectedDrive(detail);
+        setSelectedDrive(prev => ({ ...(prev || {}), ...detail }));
       }
     } catch (err) {
       console.warn('Using existing drive details on API warning:', err.message);
@@ -551,7 +563,8 @@ export default function AdminDrives({ defaultApprovalStatus }) {
                     <div className="text-xs text-muted">COMPENSATION</div>
                     <div className="font-bold text-brand" style={{ fontSize: '1.15rem' }}>
                       {selectedDrive.ctc > 0
-                        ? (selectedDrive.jobType?.toLowerCase().includes('intern') || (selectedDrive.opportunityType || '').toLowerCase().includes('intern')
+                        ? (((selectedDrive.jobType || selectedDrive.job_type || '').toLowerCase().includes('intern') ||
+                            (selectedDrive.opportunityType || selectedDrive.opportunity_type || '').toLowerCase().includes('intern'))
                           ? `₹${selectedDrive.ctc} LPA Stipend`
                           : `₹${selectedDrive.ctc} LPA`)
                         : 'Competitive Compensation'}
@@ -654,13 +667,20 @@ export default function AdminDrives({ defaultApprovalStatus }) {
               <div className="mb-4">
                 <div className="text-xs text-muted mb-1 font-semibold uppercase tracking-wider">ELIGIBLE ACADEMIC DEPARTMENTS</div>
                 <div className="flex" style={{ flexWrap: 'wrap', gap: '0.4rem' }}>
-                  {selectedDrive.branches && selectedDrive.branches.length > 0 ? (
-                    selectedDrive.branches.map(b => (
-                      <span key={b} className="badge badge-neutral" style={{ fontSize: '0.8rem', padding: '4px 10px' }}>{b}</span>
-                    ))
-                  ) : (
-                    <span className="text-xs text-muted italic">Open to all university academic streams and engineering departments.</span>
-                  )}
+                  {(() => {
+                    const branchList = Array.isArray(selectedDrive.branches)
+                      ? selectedDrive.branches
+                      : (typeof selectedDrive.branches === 'string' && selectedDrive.branches.trim()
+                          ? selectedDrive.branches.split(',').map(s => s.trim()).filter(Boolean)
+                          : []);
+                    return branchList.length > 0 ? (
+                      branchList.map(b => (
+                        <span key={b} className="badge badge-neutral" style={{ fontSize: '0.8rem', padding: '4px 10px' }}>{b}</span>
+                      ))
+                    ) : (
+                      <span className="text-xs text-muted italic">Open to all university academic streams and engineering departments.</span>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -668,27 +688,41 @@ export default function AdminDrives({ defaultApprovalStatus }) {
               <div className="mb-4">
                 <div className="text-xs text-muted mb-1 font-semibold uppercase tracking-wider">REQUIRED SKILLS & COMPETENCIES</div>
                 <div className="flex" style={{ flexWrap: 'wrap', gap: '0.4rem' }}>
-                  {selectedDrive.skills && selectedDrive.skills.length > 0 ? (
-                    selectedDrive.skills.map(s => (
-                      <span key={s} className="badge badge-brand" style={{ background: 'rgba(0,150,255,0.08)', fontSize: '0.8rem', padding: '4px 10px' }}>{s}</span>
-                    ))
-                  ) : (
-                    <span className="text-xs text-muted italic">Core domain fundamentals, technical aptitude, and problem solving.</span>
-                  )}
+                  {(() => {
+                    const skillList = Array.isArray(selectedDrive.skills)
+                      ? selectedDrive.skills
+                      : (typeof selectedDrive.skills === 'string' && selectedDrive.skills.trim()
+                          ? selectedDrive.skills.split(',').map(s => s.trim()).filter(Boolean)
+                          : []);
+                    return skillList.length > 0 ? (
+                      skillList.map(s => (
+                        <span key={s} className="badge badge-brand" style={{ background: 'rgba(0,150,255,0.08)', fontSize: '0.8rem', padding: '4px 10px' }}>{s}</span>
+                      ))
+                    ) : (
+                      <span className="text-xs text-muted italic">Core domain fundamentals, technical aptitude, and problem solving.</span>
+                    );
+                  })()}
                 </div>
               </div>
 
               {/* Responsibilities */}
-              {selectedDrive.responsibilities && selectedDrive.responsibilities.length > 0 && (
-                <div className="mb-4">
-                  <div className="text-xs text-muted mb-1 font-semibold uppercase tracking-wider">KEY RESPONSIBILITIES</div>
-                  <ul style={{ margin: 0, paddingLeft: 20, fontSize: '0.85rem', lineHeight: 1.5 }}>
-                    {selectedDrive.responsibilities.map((r, idx) => (
-                      <li key={idx} style={{ marginBottom: 4 }}>{r}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {(() => {
+                const respList = Array.isArray(selectedDrive.responsibilities)
+                  ? selectedDrive.responsibilities
+                  : (typeof selectedDrive.responsibilities === 'string' && selectedDrive.responsibilities.trim()
+                      ? selectedDrive.responsibilities.split('\n').map(s => s.trim()).filter(Boolean)
+                      : []);
+                return respList.length > 0 ? (
+                  <div className="mb-4">
+                    <div className="text-xs text-muted mb-1 font-semibold uppercase tracking-wider">KEY RESPONSIBILITIES</div>
+                    <ul style={{ margin: 0, paddingLeft: 20, fontSize: '0.85rem', lineHeight: 1.5 }}>
+                      {respList.map((r, idx) => (
+                        <li key={idx} style={{ marginBottom: 4 }}>{r}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null;
+              })()}
 
               {/* Role Description */}
               <div className="mb-4">

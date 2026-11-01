@@ -533,12 +533,32 @@ function formatAdminDrive(d) {
   if (!d) return null;
   const idStr = (d._id || d.id || '').toString();
   const companyObj = d.company && typeof d.company === 'object' ? d.company : null;
-  const compName = companyObj?.name || d.companyName || d.company_name || 'Corporate Partner';
-  const compEmail = companyObj?.email || d.companyEmail || d.company_email || '';
-  const compWebsite = companyObj?.website || '';
-  const compLocation = companyObj?.location || '';
-  const compHrContact = companyObj?.hrContact || '';
-  const compPhone = companyObj?.phone || '';
+  let compName = companyObj?.name || d.companyName || d.company_name || '';
+  let compEmail = companyObj?.email || d.companyEmail || d.company_email || '';
+  let compWebsite = companyObj?.website || d.companyWebsite || '';
+  let compLocation = companyObj?.location || d.companyLocation || '';
+  let compHrContact = companyObj?.hrContact || d.hrContact || '';
+  let compPhone = companyObj?.phone || d.companyPhone || '';
+  let companyApproved = companyObj?.approved !== undefined ? Boolean(companyObj.approved) : (d.companyApproved !== undefined ? Boolean(d.companyApproved) : false);
+
+  // If company details missing, resolve from recruiterStore or memoryCompanies
+  if ((!compName || compName === 'Corporate Partner') && (compEmail || d.company_id || d.company)) {
+    try {
+      const { recruiterStore } = require('./recruiterController');
+      const storeComp = (compEmail && recruiterStore?.companies?.get(compEmail)) ||
+        (d.company_id && Array.from(recruiterStore?.companies?.values() || []).find(c => String(c.id) === String(d.company_id) || String(c._id) === String(d.company_id)));
+      if (storeComp) {
+        compName = compName || storeComp.name;
+        compEmail = compEmail || storeComp.email;
+        compWebsite = compWebsite || storeComp.website;
+        compLocation = compLocation || storeComp.location;
+        compHrContact = compHrContact || storeComp.hrContact || storeComp.hr_contact;
+        compPhone = compPhone || storeComp.phone;
+        companyApproved = Boolean(storeComp.approved);
+      }
+    } catch (_) {}
+  }
+  if (!compName) compName = 'Corporate Partner';
 
   const deadlineStr = d.deadline instanceof Date
     ? d.deadline.toISOString().split('T')[0]
@@ -589,7 +609,7 @@ function formatAdminDrive(d) {
     companyPhone: compPhone,
     companyIndustry: companyObj?.industry || '',
     companyDescription: companyObj?.description || '',
-    companyApproved: Boolean(companyObj?.approved),
+    companyApproved: Boolean(companyApproved),
     companyLocation: compLocation || d.location || 'Bengaluru',
     recruiter: recruiter,
     recruiterName: recruiterName,
@@ -629,11 +649,19 @@ function formatAdminDrive(d) {
     approved_by: approvedBy,
     approvedAt: approvedAt,
     approved_at: approvedAt,
-    branches: Array.isArray(d.branches) ? d.branches : [],
-    skills: Array.isArray(d.skills) ? d.skills : [],
+    branches: Array.isArray(d.branches) && d.branches.length > 0
+      ? d.branches
+      : (typeof d.branches === 'string' && d.branches.trim()
+          ? d.branches.split(',').map(s => s.trim()).filter(Boolean)
+          : ['Computer Science', 'Information Technology', 'Electronics & Comm.']),
+    skills: Array.isArray(d.skills) && d.skills.length > 0
+      ? d.skills
+      : (typeof d.skills === 'string' && d.skills.trim()
+          ? d.skills.split(',').map(s => s.trim()).filter(Boolean)
+          : ['Python', 'Java', 'Problem Solving']),
     responsibilities: responsibilities,
     graduationYear: graduationYear,
-    description: d.description || ''
+    description: d.description || `Exciting campus recruitment opportunity with ${compName}.`
   };
 }
 
@@ -1085,12 +1113,13 @@ exports.getCompanyById = async (req, res) => {
 
     if (mongoose.connection.readyState === 1) {
       try {
+        const conditions = [];
         if (mongoose.Types.ObjectId.isValid(compId)) {
-          company = await Company.findById(compId).lean();
+          conditions.push({ _id: compId });
+          conditions.push({ user: compId });
         }
-        if (!company) {
-          company = await Company.findOne({ email: compId }).lean();
-        }
+        conditions.push({ email: compId });
+        company = await Company.findOne(conditions.length === 1 ? conditions[0] : { $or: conditions }).lean();
         if (company) {
           const compDrives = await Drive.find({ company: company._id }).populate('company').sort({ createdAt: -1 }).lean();
           if (compDrives && compDrives.length > 0) {
@@ -1100,11 +1129,50 @@ exports.getCompanyById = async (req, res) => {
       } catch (e) {
         console.warn('[Admin Mongo getCompanyById Warning]:', e.message);
       }
-    } else {
+    }
+
+    if (!company) {
       try {
         const { memoryCompanies } = require('./authController');
-        if (memoryCompanies && (memoryCompanies.has(compId) || memoryCompanies.has(rawId))) {
-          company = memoryCompanies.get(compId) || memoryCompanies.get(rawId);
+        if (memoryCompanies) {
+          if (memoryCompanies.has(compId) || memoryCompanies.has(rawId)) {
+            company = memoryCompanies.get(compId) || memoryCompanies.get(rawId);
+          } else {
+            for (const [k, c] of memoryCompanies.entries()) {
+              if (
+                String(k) === compId ||
+                String(c._id) === compId ||
+                String(c.user) === compId ||
+                String(c.email).toLowerCase() === compId.toLowerCase()
+              ) {
+                company = c;
+                break;
+              }
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    if (!company) {
+      try {
+        const { recruiterStore } = require('./recruiterController');
+        if (recruiterStore && recruiterStore.companies) {
+          if (recruiterStore.companies.has(compId)) {
+            company = recruiterStore.companies.get(compId);
+          } else {
+            for (const [em, rc] of recruiterStore.companies.entries()) {
+              if (
+                String(em).toLowerCase() === compId.toLowerCase() ||
+                String(rc.id) === compId ||
+                String(rc._id) === compId ||
+                String(rc.user) === compId
+              ) {
+                company = rc;
+                break;
+              }
+            }
+          }
         }
       } catch (_) {}
     }
@@ -1131,25 +1199,92 @@ exports.approveCompany = async (req, res) => {
     // 1. Update in MongoDB if connected
     if (mongoose.connection.readyState === 1) {
       try {
+        const conditions = [];
         if (mongoose.Types.ObjectId.isValid(compId)) {
-          found = await Company.findByIdAndUpdate(compId, { approved: true }, { new: true }).lean();
+          conditions.push({ _id: compId });
+          conditions.push({ user: compId });
         }
-        if (!found) {
-          found = await Company.findOneAndUpdate({ email: compId }, { approved: true }, { new: true }).lean();
-        }
+        conditions.push({ email: compId });
+        found = await Company.findOneAndUpdate(
+          conditions.length === 1 ? conditions[0] : { $or: conditions },
+          { approved: true },
+          { new: true }
+        ).lean();
       } catch (err) {
         console.warn('[Admin Mongo Approve Company Warning]:', err.message);
       }
-    } else {
-      try {
-        const { memoryCompanies } = require('./authController');
-        if (memoryCompanies && memoryCompanies.has(compId)) {
+    }
+
+    // 2. Synchronize in memoryCompanies
+    try {
+      const { memoryCompanies } = require('./authController');
+      if (memoryCompanies) {
+        if (memoryCompanies.has(compId)) {
           const c = memoryCompanies.get(compId);
           c.approved = true;
-          found = c;
+          if (!found) found = c;
+        } else {
+          for (const [k, c] of memoryCompanies.entries()) {
+            if (
+              String(k) === String(compId) ||
+              String(c._id) === String(compId) ||
+              String(c.user) === String(compId) ||
+              String(c.email).toLowerCase() === String(compId).toLowerCase() ||
+              (found?.email && String(c.email).toLowerCase() === String(found.email).toLowerCase())
+            ) {
+              c.approved = true;
+              if (!found) found = c;
+              break;
+            }
+          }
         }
-      } catch (_) {}
-    }
+      }
+    } catch (_) {}
+
+    // 3. Synchronize in recruiterStore.companies
+    try {
+      const { recruiterStore } = require('./recruiterController');
+      if (recruiterStore && recruiterStore.companies) {
+        const targetEmail = found?.email || (String(compId).includes('@') ? compId : null);
+        if (targetEmail && recruiterStore.companies.has(targetEmail)) {
+          const rc = recruiterStore.companies.get(targetEmail);
+          rc.approved = true;
+          if (!found) found = rc;
+        } else {
+          for (const [em, rc] of recruiterStore.companies.entries()) {
+            if (
+              String(em).toLowerCase() === String(compId).toLowerCase() ||
+              String(rc.id) === String(compId) ||
+              String(rc._id) === String(compId) ||
+              String(rc.user) === String(compId) ||
+              (targetEmail && String(em).toLowerCase() === String(targetEmail).toLowerCase())
+            ) {
+              rc.approved = true;
+              if (!found) found = rc;
+              break;
+            }
+          }
+        }
+        // If found but missing in recruiterStore, register it
+        if (found && found.email && !recruiterStore.companies.has(found.email)) {
+          recruiterStore.companies.set(found.email, {
+            id: found._id ? String(found._id) : (found.id || Date.now()),
+            _id: found._id ? String(found._id) : (found.id || String(Date.now())),
+            name: found.name,
+            industry: found.industry || 'Corporate Recruitment',
+            website: found.website || '',
+            hr_contact: found.hrContact || found.hr_contact || 'Recruiter Lead',
+            hrContact: found.hrContact || found.hr_contact || 'Recruiter Lead',
+            email: found.email,
+            phone: found.phone || '',
+            location: found.location || 'Bengaluru',
+            description: found.description || '',
+            approved: true,
+            created_at: found.createdAt || new Date().toISOString()
+          });
+        }
+      }
+    } catch (_) {}
 
     // Recruiter Notification
     try {
@@ -1190,25 +1325,74 @@ exports.rejectCompany = async (req, res) => {
 
     if (mongoose.connection.readyState === 1) {
       try {
+        const conditions = [];
         if (mongoose.Types.ObjectId.isValid(compId)) {
-          found = await Company.findByIdAndUpdate(compId, { approved: false }, { new: true }).lean();
+          conditions.push({ _id: compId });
+          conditions.push({ user: compId });
         }
-        if (!found) {
-          found = await Company.findOneAndUpdate({ email: compId }, { approved: false }, { new: true }).lean();
-        }
+        conditions.push({ email: compId });
+        found = await Company.findOneAndUpdate(
+          conditions.length === 1 ? conditions[0] : { $or: conditions },
+          { approved: false },
+          { new: true }
+        ).lean();
       } catch (err) {
         console.warn('[Admin Mongo Reject Company Warning]:', err.message);
       }
-    } else {
-      try {
-        const { memoryCompanies } = require('./authController');
-        if (memoryCompanies && memoryCompanies.has(compId)) {
+    }
+
+    // Synchronize in memoryCompanies
+    try {
+      const { memoryCompanies } = require('./authController');
+      if (memoryCompanies) {
+        if (memoryCompanies.has(compId)) {
           const c = memoryCompanies.get(compId);
           c.approved = false;
-          found = c;
+          if (!found) found = c;
+        } else {
+          for (const [k, c] of memoryCompanies.entries()) {
+            if (
+              String(k) === String(compId) ||
+              String(c._id) === String(compId) ||
+              String(c.user) === String(compId) ||
+              String(c.email).toLowerCase() === String(compId).toLowerCase() ||
+              (found?.email && String(c.email).toLowerCase() === String(found.email).toLowerCase())
+            ) {
+              c.approved = false;
+              if (!found) found = c;
+              break;
+            }
+          }
         }
-      } catch (_) {}
-    }
+      }
+    } catch (_) {}
+
+    // Synchronize in recruiterStore.companies
+    try {
+      const { recruiterStore } = require('./recruiterController');
+      if (recruiterStore && recruiterStore.companies) {
+        const targetEmail = found?.email || (String(compId).includes('@') ? compId : null);
+        if (targetEmail && recruiterStore.companies.has(targetEmail)) {
+          const rc = recruiterStore.companies.get(targetEmail);
+          rc.approved = false;
+          if (!found) found = rc;
+        } else {
+          for (const [em, rc] of recruiterStore.companies.entries()) {
+            if (
+              String(em).toLowerCase() === String(compId).toLowerCase() ||
+              String(rc.id) === String(compId) ||
+              String(rc._id) === String(compId) ||
+              String(rc.user) === String(compId) ||
+              (targetEmail && String(em).toLowerCase() === String(targetEmail).toLowerCase())
+            ) {
+              rc.approved = false;
+              if (!found) found = rc;
+              break;
+            }
+          }
+        }
+      }
+    } catch (_) {}
 
     if (!found) {
       return res.status(404).json({ success: false, message: 'Company not found.' });

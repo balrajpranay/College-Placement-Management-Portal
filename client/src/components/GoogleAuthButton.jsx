@@ -16,6 +16,11 @@ export default function GoogleAuthButton({
       setLoading(true);
       if (onInitiate) onInitiate();
 
+      // Clear any prior cached session so the user connects cleanly with the selected Google account
+      localStorage.removeItem('campus_jwt_token');
+      localStorage.removeItem('cc_token');
+      localStorage.removeItem('campus_user');
+
       // Preserve explicit redirect path if initiated from a protected page flow
       const fromPath = location.state?.from?.pathname || (typeof location.state?.from === 'string' ? location.state.from : null);
       if (fromPath && !fromPath.includes('/login') && !fromPath.includes('/auth/')) {
@@ -24,23 +29,23 @@ export default function GoogleAuthButton({
         sessionStorage.removeItem('post_auth_redirect');
       }
 
+      // Explicitly record user's selected portal role in session storage for secure callback resolution
+      sessionStorage.setItem('oauth_target_role', role);
+
       // Retrieve Google OAuth endpoint config from backend
       const res = await getGoogleAuthUrlApi(role);
 
-      if (res && res.isConfigured && res.url) {
-        // Redirect directly to official Google OAuth consent screen
+      if (res && res.url) {
+        // Redirect directly to official Google OAuth authorization endpoint with prompt=select_account
         window.location.href = res.url;
-      } else {
-        // Fast development fallback route
-        setTimeout(() => {
-          navigate(`/auth/google/callback?code=demo_google_${role}&role=${role}`);
-        }, 300);
+        return;
       }
+
+      throw new Error(res?.message || 'Google OAuth authorization URL could not be generated.');
     } catch (err) {
-      console.warn('Could not fetch Google Auth URL, initiating local fallback:', err);
-      navigate(`/auth/google/callback?code=demo_google_${role}&role=${role}`);
-    } finally {
-      setTimeout(() => setLoading(false), 1000);
+      console.error('Could not initiate Google Auth:', err);
+      alert('Unable to connect to Google authentication service. Please check your connection and try again.');
+      setLoading(false);
     }
   };
 

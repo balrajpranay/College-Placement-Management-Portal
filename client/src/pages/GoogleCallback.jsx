@@ -69,13 +69,31 @@ export default function GoogleCallback() {
       }
 
       const authCode = code;
-      let targetRole = 'student';
+      const savedRole = sessionStorage.getItem('oauth_target_role');
+      if (savedRole) {
+        sessionStorage.removeItem('oauth_target_role');
+      }
+
+      let targetRole = searchParams.get('role') || savedRole || 'student';
       if (state) {
         try {
-          const decoded = JSON.parse(atob(state));
-          if (decoded.role) targetRole = decoded.role;
-        } catch (e) {
-          if (state === 'recruiter' || state === 'student' || state === 'admin') targetRole = state;
+          const rawState = decodeURIComponent(state);
+          const base64Str = rawState.replace(/-/g, '+').replace(/_/g, '/');
+          const decoded = JSON.parse(atob(base64Str));
+          if (decoded.role && ['student', 'recruiter', 'admin'].includes(decoded.role)) {
+            targetRole = decoded.role;
+          }
+        } catch (_) {
+          try {
+            const decoded = JSON.parse(atob(state));
+            if (decoded.role && ['student', 'recruiter', 'admin'].includes(decoded.role)) {
+              targetRole = decoded.role;
+            }
+          } catch (__) {
+            if (['student', 'recruiter', 'admin'].includes(state)) {
+              targetRole = state;
+            }
+          }
         }
       }
 
@@ -145,13 +163,27 @@ export default function GoogleCallback() {
         onClick: () => {
           const searchParams = new URLSearchParams(location.search);
           const state = searchParams.get('state');
-          let targetRole = 'student';
+          const savedRole = sessionStorage.getItem('oauth_target_role');
+          let targetRole = searchParams.get('role') || savedRole || 'student';
           if (state) {
             try {
-              const decoded = JSON.parse(atob(state));
-              if (decoded.role) targetRole = decoded.role;
-            } catch (e) {
-              if (state === 'recruiter' || state === 'student' || state === 'admin') targetRole = state;
+              const rawState = decodeURIComponent(state);
+              const base64Str = rawState.replace(/-/g, '+').replace(/_/g, '/');
+              const decoded = JSON.parse(atob(base64Str));
+              if (decoded.role && ['student', 'recruiter', 'admin'].includes(decoded.role)) {
+                targetRole = decoded.role;
+              }
+            } catch (_) {
+              try {
+                const decoded = JSON.parse(atob(state));
+                if (decoded.role && ['student', 'recruiter', 'admin'].includes(decoded.role)) {
+                  targetRole = decoded.role;
+                }
+              } catch (__) {
+                if (['student', 'recruiter', 'admin'].includes(state)) {
+                  targetRole = state;
+                }
+              }
             }
           }
           const dest = targetRole === 'recruiter' ? '/recruiter/dashboard' : (targetRole === 'admin' ? '/admin/dashboard' : '/student/dashboard');

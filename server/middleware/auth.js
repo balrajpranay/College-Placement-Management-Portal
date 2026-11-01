@@ -46,8 +46,11 @@ const protect = async (req, res, next) => {
         isActive: true
       };
     } else {
-      if (!req.user.role) {
-        req.user.role = decoded.role || 'student';
+      // Respect the cryptographically verified session role from the JWT token
+      if (decoded.role && ['student', 'recruiter', 'admin'].includes(decoded.role)) {
+        req.user.role = decoded.role;
+      } else if (!req.user.role) {
+        req.user.role = 'student';
       }
       if (!req.user.name && decoded.name) {
         req.user.name = decoded.name;
