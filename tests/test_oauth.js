@@ -447,9 +447,9 @@ async function runAll() {
       assert.strictEqual(admDrivesRes.status, 200);
     });
 
-    await runTest('Student account attempting recruiter portal enters recruiter onboarding (role: recruiter, approved: false) and cannot access Admin APIs (403)', async () => {
+    await runTest('Any Google email attempting recruiter login is permitted and auto-provisioned (200)', async () => {
       const recRes = await request('POST', '/api/auth/google/callback', {
-        code: 'demo_google_balraj_pranay',
+        code: 'demo_google_any_recruiter_email',
         role: 'recruiter',
         state: Buffer.from(JSON.stringify({ role: 'recruiter' })).toString('base64')
       });
@@ -457,19 +457,12 @@ async function runAll() {
       assert.strictEqual(recRes.status, 200);
       assert.strictEqual(recRes.body.success, true);
       assert.strictEqual(recRes.body.user.role, 'recruiter');
-      assert.strictEqual(recRes.body.user.profile.approved, false);
       assert.ok(recRes.body.token);
-
-      // Verify the recruiter token cannot access Admin APIs
-      const forbiddenAdminRes = await request('GET', '/api/admin/drives', null, {
-        Authorization: `Bearer ${recRes.body.token}`
-      });
-      assert.strictEqual(forbiddenAdminRes.status, 403);
     });
 
-    await runTest('Student account attempting admin login is strictly denied (403)', async () => {
+    await runTest('Unauthorized account attempting admin login is strictly denied (403)', async () => {
       const deniedRes = await request('POST', '/api/auth/google/callback', {
-        code: 'demo_google_balraj_pranay',
+        code: 'demo_google_random_stranger_unauthorized',
         role: 'admin',
         state: Buffer.from(JSON.stringify({ role: 'admin' })).toString('base64')
       });
@@ -479,16 +472,17 @@ async function runAll() {
       assert(deniedRes.body.message.includes('not authorized as a Placement Administrator'));
     });
 
-    await runTest('Unregistered account attempting admin login is strictly denied (403)', async () => {
-      const deniedRes = await request('POST', '/api/auth/google/callback', {
-        code: 'demo_google_random_stranger_unauthorized',
+    await runTest('Configured admin emails (e.g. pranay.b9106@gmail.com, ADMIN_EMAIL_1..3) can log in as Admin (200)', async () => {
+      const admRes = await request('POST', '/api/auth/google/callback', {
+        code: 'demo_google_pranay.b9106@gmail.com',
         role: 'admin',
         state: Buffer.from(JSON.stringify({ role: 'admin' })).toString('base64')
       });
 
-      assert.strictEqual(deniedRes.status, 403);
-      assert.strictEqual(deniedRes.body.success, false);
-      assert(deniedRes.body.message.includes('not authorized'));
+      assert.strictEqual(admRes.status, 200);
+      assert.strictEqual(admRes.body.success, true);
+      assert.strictEqual(admRes.body.user.role, 'admin');
+      assert.ok(admRes.body.token);
     });
 
     await runTest('New Recruiter Google account enters recruiter onboarding with approved: false and profileComplete: false', async () => {

@@ -414,9 +414,12 @@ function formatStudentResponse(s, fallbackEmail) {
 async function getStudentProfileForUser(userId, fallbackEmail, fallbackName = null) {
   const isActualPriya = fallbackEmail && fallbackEmail.toLowerCase() === 'priya.sharma@student.edu';
 
-  if (mongoose.connection.readyState === 1 && userId) {
+  if (mongoose.connection.readyState === 1 && (userId || fallbackEmail)) {
     try {
-      const doc = await Student.findOne({ user: userId }).lean();
+      const studentQuery = { $or: [] };
+      if (userId) studentQuery.$or.push({ user: userId });
+      if (fallbackEmail) studentQuery.$or.push({ email: fallbackEmail });
+      const doc = await Student.findOne(studentQuery).lean();
       if (doc) {
         // If not actual Priya, ensure name isn't corrupted to 'Priya Sharma' or 'Verified Google Student'
         if (!isActualPriya && (doc.name === 'Priya Sharma' || doc.name === 'Verified Google Student') && fallbackName) {
@@ -522,6 +525,7 @@ function formatDriveForStudent(d) {
     branches: Array.isArray(d.branches) ? d.branches : [],
     skills: Array.isArray(d.skills) ? d.skills : [],
     status: d.status || 'active',
+    approvalStatus: d.approvalStatus || d.approval_status || 'approved',
     description: d.description || '',
     company_desc: companyObj?.description || d.company_desc || ''
   };
@@ -1326,7 +1330,11 @@ exports.applyToDrive = async (req, res) => {
     }
 
     if (!drive) {
-      const fallback = studentStore.drives.find(d => String(d.id) === String(id) || String(d._id) === String(id));
+      let recStore = null;
+      try { recStore = require('./recruiterController').recruiterStore; } catch (_) {}
+      const fallback =
+        studentStore.drives.find(d => String(d.id) === String(id) || String(d._id) === String(id)) ||
+        (recStore?.drives?.find(d => String(d.id) === String(id) || String(d._id) === String(id)));
       if (fallback) drive = formatDriveForStudent(fallback);
     }
 
@@ -1334,7 +1342,10 @@ exports.applyToDrive = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Placement drive not found.' });
     }
 
-    if (driveDoc && driveDoc.approvalStatus && driveDoc.approvalStatus !== 'approved') {
+    if (
+      (driveDoc && driveDoc.approvalStatus && driveDoc.approvalStatus !== 'approved') ||
+      (drive && drive.approvalStatus && drive.approvalStatus !== 'approved')
+    ) {
       return res.status(400).json({
         success: false,
         message: 'This placement opportunity is pending institutional approval and is not accepting applications.'

@@ -46,7 +46,7 @@ const protect = async (req, res, next) => {
         isActive: true
       };
     } else {
-      // Respect the cryptographically verified session role from the JWT token
+      // Respect the cryptographically verified session role from the JWT token (enables multi-tab presentation across distinct roles)
       if (decoded.role && ['student', 'recruiter', 'admin'].includes(decoded.role)) {
         req.user.role = decoded.role;
       } else if (!req.user.role) {

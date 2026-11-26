@@ -449,7 +449,7 @@ async function getOrCreateMongoCompany(userId, email) {
         phone: fallback.phone || '9363328006',
         location: fallback.location || 'Bengaluru',
         description: fallback.description || 'TechNova Solutions is a premier technology consulting firm.',
-        approved: isDemoApproved
+        approved: true
       });
     }
     return comp;
