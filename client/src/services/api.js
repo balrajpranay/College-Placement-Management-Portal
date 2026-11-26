@@ -3,9 +3,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 function getAuthHeader() {
   const token =
     sessionStorage.getItem('campus_jwt_token') ||
-    sessionStorage.getItem('cc_token') ||
-    localStorage.getItem('campus_jwt_token') ||
-    localStorage.getItem('cc_token');
+    sessionStorage.getItem('cc_token');
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 }
 

@@ -6,10 +6,15 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     try {
+      // Clean up legacy localStorage tokens to guarantee strict per-tab/window session isolation
+      try {
+        localStorage.removeItem('campus_jwt_token');
+        localStorage.removeItem('cc_token');
+        localStorage.removeItem('campus_user');
+      } catch (_) {}
+
       const sessionUser = sessionStorage.getItem('campus_user');
-      if (sessionUser) return JSON.parse(sessionUser);
-      const savedUser = localStorage.getItem('campus_user');
-      return savedUser ? JSON.parse(savedUser) : null;
+      return sessionUser ? JSON.parse(sessionUser) : null;
     } catch (e) {
       return null;
     }
@@ -19,8 +24,6 @@ export const AuthProvider = ({ children }) => {
     return (
       sessionStorage.getItem('campus_jwt_token') ||
       sessionStorage.getItem('cc_token') ||
-      localStorage.getItem('campus_jwt_token') ||
-      localStorage.getItem('cc_token') ||
       null
     );
   });
@@ -31,9 +34,7 @@ export const AuthProvider = ({ children }) => {
     const verifyUserSession = async () => {
       const activeToken =
         sessionStorage.getItem('campus_jwt_token') ||
-        sessionStorage.getItem('cc_token') ||
-        localStorage.getItem('campus_jwt_token') ||
-        localStorage.getItem('cc_token');
+        sessionStorage.getItem('cc_token');
       if (activeToken) {
         try {
           const res = await getMeApi();
@@ -42,7 +43,6 @@ export const AuthProvider = ({ children }) => {
             try {
               sessionStorage.setItem('campus_user', JSON.stringify(res.user));
               sessionStorage.setItem('campus_jwt_token', activeToken);
-              localStorage.setItem('campus_user', JSON.stringify(res.user));
             } catch (e) {}
           }
         } catch (err) {
@@ -67,9 +67,9 @@ export const AuthProvider = ({ children }) => {
         sessionStorage.setItem('campus_jwt_token', res.token);
         sessionStorage.setItem('cc_token', res.token);
         sessionStorage.setItem('campus_user', JSON.stringify(res.user));
-        localStorage.setItem('campus_jwt_token', res.token);
-        localStorage.setItem('cc_token', res.token);
-        localStorage.setItem('campus_user', JSON.stringify(res.user));
+        localStorage.removeItem('campus_jwt_token');
+        localStorage.removeItem('cc_token');
+        localStorage.removeItem('campus_user');
       } catch (e) {}
       return res;
     }
@@ -105,9 +105,9 @@ export const AuthProvider = ({ children }) => {
       sessionStorage.setItem('campus_jwt_token', authToken);
       sessionStorage.setItem('cc_token', authToken);
       sessionStorage.setItem('campus_user', JSON.stringify(authUser));
-      localStorage.setItem('campus_jwt_token', authToken);
-      localStorage.setItem('cc_token', authToken);
-      localStorage.setItem('campus_user', JSON.stringify(authUser));
+      localStorage.removeItem('campus_jwt_token');
+      localStorage.removeItem('cc_token');
+      localStorage.removeItem('campus_user');
     } catch (e) {}
   };
 

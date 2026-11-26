@@ -198,19 +198,19 @@ export default function Landing() {
               Campus Connect brings students, corporate recruiters, and college placement teams into one verified ecosystem—combining automated eligibility checks, live opportunity feeds, and AI career coaching.
             </p>
 
-            <div className="landing-hero-cta-row">
+            <div className="landing-hero-cta-row" style={{ flexWrap: 'wrap', gap: 10 }}>
               <Link to="/jobs" className="btn btn-primary btn-lg">
                 <Icon name="briefcase" size={18} /> Explore Opportunities
               </Link>
-              {isAuthenticated && user ? (
-                <Link to={`/${user.role}/dashboard`} className="btn btn-outline btn-lg">
-                  <Icon name="user" size={18} /> Enter {user.role.charAt(0).toUpperCase() + user.role.slice(1)} Portal
-                </Link>
-              ) : (
-                <Link to="/login?role=student" className="btn btn-outline btn-lg">
-                  <Icon name="user" size={18} /> Enter Student Portal
-                </Link>
-              )}
+              <Link to="/login?role=student" className="btn btn-outline btn-lg" title="Open Student Workspace">
+                <Icon name="user" size={18} /> Student Portal
+              </Link>
+              <Link to="/login?role=recruiter" className="btn btn-outline btn-lg" title="Open Recruiter Workspace">
+                <Icon name="briefcase" size={18} /> Recruiter Portal
+              </Link>
+              <Link to="/login?role=admin" className="btn btn-outline btn-lg" title="Open Placement Cell Admin Portal">
+                <Icon name="settings" size={18} /> Placement Admin
+              </Link>
             </div>
 
             <div className="hero-trust-micro">

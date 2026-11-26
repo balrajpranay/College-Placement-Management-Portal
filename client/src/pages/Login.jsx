@@ -9,7 +9,7 @@ import AuthLoadingScreen from '../components/AuthLoadingScreen';
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, isAuthenticated, user } = useAuth();
+  const { login, isAuthenticated, user, logout } = useAuth();
 
   const [role, setRole] = useState(() => {
     const params = new URLSearchParams(location.search);
@@ -31,9 +31,26 @@ export default function Login() {
     }
   }, [location.state]);
 
-  // If already authenticated, redirect to appropriate role portal or previous location
+  // If already authenticated: allow switching roles, otherwise redirect to appropriate portal
   useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const targetRole = params.get('role');
+    const isSwitching = params.get('switch') === 'true';
+
     if (isAuthenticated && user) {
+      // If user explicitly navigated to log in with a different role in this tab, reset this tab's session
+      if (targetRole && ['student', 'recruiter', 'admin'].includes(targetRole) && targetRole !== user.role) {
+        logout();
+        setRole(targetRole);
+        return;
+      }
+
+      // If user explicitly navigated with ?switch=true, allow choosing another account in this tab
+      if (isSwitching) {
+        return;
+      }
+
+      // If no different role requested, redirect to user's current portal
       const redirectPath = {
         student: location.state?.from || '/student/dashboard',
         recruiter: '/recruiter/dashboard',
@@ -41,7 +58,7 @@ export default function Login() {
       }[user.role] || '/';
       navigate(redirectPath, { replace: true });
     }
-  }, [isAuthenticated, user, navigate, location.state]);
+  }, [isAuthenticated, user, navigate, location.search, location.state, logout]);
 
   // Sync role with query param if it changes
   useEffect(() => {

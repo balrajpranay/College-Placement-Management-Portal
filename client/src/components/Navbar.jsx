@@ -69,7 +69,7 @@ export default function Navbar() {
 
         <div className="nav-actions">
           {isAuthenticated && user ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               {user.role === 'student' && (
                 <Link to="/student/dashboard" className="btn btn-primary btn-sm">
                   <Icon name="user" size={14} /> Student Portal
@@ -85,14 +85,19 @@ export default function Navbar() {
                   <Icon name="settings" size={14} /> Admin Cell
                 </Link>
               )}
+              <Link to="/login?switch=true" className="btn btn-ghost btn-sm" title="Sign in as a different role">
+                Switch Portal
+              </Link>
               <button onClick={handleLogout} className="btn btn-outline btn-sm">
                 Sign Out
               </button>
             </div>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Link to="/login" className="btn btn-outline btn-sm">Sign In</Link>
-              <Link to="/register/student" className="btn btn-primary btn-sm">Student Register</Link>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <Link to="/login?role=student" className="btn btn-ghost btn-sm">Student</Link>
+              <Link to="/login?role=recruiter" className="btn btn-ghost btn-sm">Recruiter</Link>
+              <Link to="/login?role=admin" className="btn btn-ghost btn-sm">Placement Admin</Link>
+              <Link to="/login" className="btn btn-primary btn-sm">Sign In</Link>
             </div>
           )}
 
