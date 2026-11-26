@@ -1204,12 +1204,30 @@ exports.approveCompany = async (req, res) => {
           conditions.push({ _id: compId });
           conditions.push({ user: compId });
         }
-        conditions.push({ email: compId });
+        const cleanCompId = String(compId).trim().toLowerCase();
+        conditions.push({ email: cleanCompId });
+        conditions.push({ email: new RegExp('^' + cleanCompId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
+
         found = await Company.findOneAndUpdate(
           conditions.length === 1 ? conditions[0] : { $or: conditions },
           { approved: true },
           { new: true }
         ).lean();
+
+        if (found) {
+          if (found.user) {
+            await Company.updateMany({ user: found.user }, { approved: true });
+          }
+          if (found.email) {
+            const cleanFoundEmail = found.email.toLowerCase().trim();
+            await Company.updateMany({
+              $or: [
+                { email: cleanFoundEmail },
+                { email: new RegExp('^' + cleanFoundEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') }
+              ]
+            }, { approved: true });
+          }
+        }
       } catch (err) {
         console.warn('[Admin Mongo Approve Company Warning]:', err.message);
       }
@@ -1264,6 +1282,18 @@ exports.approveCompany = async (req, res) => {
               break;
             }
           }
+        }
+        // If linked user has an email, sync that email in recruiterStore too
+        if (found?.user && mongoose.connection.readyState === 1) {
+          try {
+            const linkedUser = await User.findById(found.user).lean();
+            if (linkedUser?.email) {
+              const uEmail = linkedUser.email.toLowerCase().trim();
+              if (recruiterStore.companies.has(uEmail)) {
+                recruiterStore.companies.get(uEmail).approved = true;
+              }
+            }
+          } catch (_) {}
         }
         // If found but missing in recruiterStore, register it
         if (found && found.email && !recruiterStore.companies.has(found.email)) {
@@ -1330,12 +1360,30 @@ exports.rejectCompany = async (req, res) => {
           conditions.push({ _id: compId });
           conditions.push({ user: compId });
         }
-        conditions.push({ email: compId });
+        const cleanCompId = String(compId).trim().toLowerCase();
+        conditions.push({ email: cleanCompId });
+        conditions.push({ email: new RegExp('^' + cleanCompId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
+
         found = await Company.findOneAndUpdate(
           conditions.length === 1 ? conditions[0] : { $or: conditions },
           { approved: false },
           { new: true }
         ).lean();
+
+        if (found) {
+          if (found.user) {
+            await Company.updateMany({ user: found.user }, { approved: false });
+          }
+          if (found.email) {
+            const cleanFoundEmail = found.email.toLowerCase().trim();
+            await Company.updateMany({
+              $or: [
+                { email: cleanFoundEmail },
+                { email: new RegExp('^' + cleanFoundEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') }
+              ]
+            }, { approved: false });
+          }
+        }
       } catch (err) {
         console.warn('[Admin Mongo Reject Company Warning]:', err.message);
       }
@@ -1390,6 +1438,18 @@ exports.rejectCompany = async (req, res) => {
               break;
             }
           }
+        }
+        // If linked user has an email, sync that email in recruiterStore too
+        if (found?.user && mongoose.connection.readyState === 1) {
+          try {
+            const linkedUser = await User.findById(found.user).lean();
+            if (linkedUser?.email) {
+              const uEmail = linkedUser.email.toLowerCase().trim();
+              if (recruiterStore.companies.has(uEmail)) {
+                recruiterStore.companies.get(uEmail).approved = false;
+              }
+            }
+          } catch (_) {}
         }
       }
     } catch (_) {}

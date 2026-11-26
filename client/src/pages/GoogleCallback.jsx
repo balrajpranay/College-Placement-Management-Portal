@@ -106,8 +106,9 @@ export default function GoogleCallback() {
         const res = await loginWithGoogle(authCode, state, targetRole);
         const userRole = res?.user?.role || targetRole;
         const profileComplete = res?.user?.profileComplete;
+        const isRecruiterApproved = res?.user?.profile?.approved === true || res?.user?.approved === true;
         const defaultDest = userRole === 'recruiter'
-          ? (profileComplete === false ? '/recruiter/profile?complete=true' : '/recruiter/dashboard')
+          ? (isRecruiterApproved || profileComplete !== false ? '/recruiter/dashboard' : '/recruiter/profile?complete=true')
           : (userRole === 'admin'
               ? '/admin/dashboard'
               : (profileComplete === false ? '/student/profile?complete=true' : '/student/dashboard')

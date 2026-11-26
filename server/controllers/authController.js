@@ -842,6 +842,7 @@ exports.getMe = async (req, res) => {
         if (!profile && req.user.email) {
           try {
             const compName = (req.user.name && req.user.name !== 'Google User') ? `${req.user.name} Tech` : 'Campus Recruitment Partner';
+            const isDemoApproved = req.user.email === 'hr@technova.com' || req.user.email === 'talent@apexcloud.io';
             profile = await Company.create({
               user: req.user._id,
               name: compName,
@@ -852,7 +853,7 @@ exports.getMe = async (req, res) => {
               phone: '+91 98765 43210',
               location: 'Bengaluru, India',
               description: 'Campus recruitment partner organization.',
-              approved: true
+              approved: isDemoApproved
             });
           } catch (_) {}
         }
@@ -1642,20 +1643,42 @@ exports.handleGoogleAuth = async (req, res) => {
 
     if (mongoose.connection.readyState === 1) {
       if (googleUser.id) {
-        existingUser = await User.findOne({ googleId: googleUser.id });
+        existingUser = await User.findOne({ googleId: String(googleUser.id) });
       }
       if (!existingUser && cleanEmail) {
-        existingUser = await User.findOne({ email: cleanEmail });
+        existingUser = await User.findOne({
+          $or: [
+            { email: cleanEmail },
+            { email: new RegExp('^' + cleanEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') }
+          ]
+        });
+      }
+
+      // Robust Company lookup matching by linked user or verified email (case-insensitive)
+      const companyQueryConditions = [];
+      if (existingUser) {
+        companyQueryConditions.push({ user: existingUser._id || existingUser.id });
       }
       if (cleanEmail) {
-        existingCompany = await Company.findOne({ email: cleanEmail });
+        companyQueryConditions.push({ email: cleanEmail });
+        companyQueryConditions.push({ email: new RegExp('^' + cleanEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
+      }
+      if (companyQueryConditions.length > 0) {
+        existingCompany = await Company.findOne({ $or: companyQueryConditions });
+      }
+
+      // If existingCompany was found with a linked user, but existingUser wasn't matched yet, recover user link
+      if (!existingUser && existingCompany?.user) {
+        try {
+          existingUser = await User.findById(existingCompany.user);
+        } catch (_) {}
       }
     }
 
     if (!existingUser) {
       if (googleUser.id) {
         for (const u of memoryUsers.values()) {
-          if (u.googleId === googleUser.id) {
+          if (String(u.googleId) === String(googleUser.id)) {
             existingUser = u;
             break;
           }
@@ -1904,15 +1927,34 @@ exports.handleGoogleAuth = async (req, res) => {
           }
         }
       } else if (targetRole === 'recruiter') {
-        profile = await Company.findOne({ $or: [{ user: finalUser._id || finalUser.id }, { email: cleanEmail }] });
+        const profileConditions = [];
+        if (finalUser._id || finalUser.id) {
+          profileConditions.push({ user: finalUser._id || finalUser.id });
+        }
+        if (cleanEmail) {
+          profileConditions.push({ email: cleanEmail });
+          profileConditions.push({ email: new RegExp('^' + cleanEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
+        }
+        if (existingCompany?._id) {
+          profileConditions.push({ _id: existingCompany._id });
+        }
+        profile = await Company.findOne({ $or: profileConditions });
+
         if (profile) {
           const keepApproved = isSeededRecruiter ? true : Boolean(profile.approved);
-          if (!profile.user || profile.user.toString() !== finalUserIdStr || profile.approved !== keepApproved) {
-            profile = await Company.findByIdAndUpdate(
-              profile._id,
-              { user: finalUser._id || finalUser.id, approved: keepApproved },
-              { new: true }
-            );
+          const updates = {};
+          if (!profile.user || profile.user.toString() !== finalUserIdStr) {
+            updates.user = finalUser._id || finalUser.id;
+          }
+          if (profile.approved !== keepApproved) {
+            updates.approved = keepApproved;
+          }
+          if (Object.keys(updates).length > 0) {
+            try {
+              profile = await Company.findByIdAndUpdate(profile._id, updates, { new: true });
+            } catch (updateErr) {
+              console.warn('[Company Update Warning]:', updateErr.message);
+            }
           }
         } else {
           const compName = (finalUser.name && finalUser.name !== 'Google User' && finalUser.name !== 'Verified Google Student')
@@ -1933,6 +1975,14 @@ exports.handleGoogleAuth = async (req, res) => {
             });
           } catch (e) {
             console.warn('[Company Create in handleGoogleAuth]:', e.message);
+            try {
+              profile = await Company.findOne({
+                $or: [
+                  { user: finalUser._id || finalUser.id },
+                  { email: cleanEmail }
+                ]
+              });
+            } catch (_) {}
           }
         }
       }
@@ -1982,13 +2032,16 @@ exports.handleGoogleAuth = async (req, res) => {
 
     // Ensure recruiter profile is synced in in-memory recruiterStore preserving approval status
     if (targetRole === 'recruiter') {
-      const isApprovedStatus = isSeededRecruiter ? true : Boolean(profile?.approved);
+      const existingStoreComp = (recruiterStore && recruiterStore.companies) ? recruiterStore.companies.get(cleanEmail) : null;
+      const isApprovedStatus = isSeededRecruiter
+        ? true
+        : (profile?.approved !== undefined ? Boolean(profile.approved) : (existingStoreComp ? Boolean(existingStoreComp.approved) : false));
+
       if (profile) profile.approved = isApprovedStatus;
       if (recruiterStore && recruiterStore.companies) {
-        const existingStoreComp = recruiterStore.companies.get(cleanEmail);
-        const resolvedApproved = isSeededRecruiter ? true : (existingStoreComp ? Boolean(existingStoreComp.approved) : isApprovedStatus);
         recruiterStore.companies.set(cleanEmail, {
-          id: existingStoreComp?.id || Date.now(),
+          id: existingStoreComp?.id || profile?._id || Date.now(),
+          _id: profile?._id ? String(profile._id) : (existingStoreComp?._id || String(Date.now())),
           name: profile?.name || existingStoreComp?.name || `${finalUser.name || 'Partner'} Organization`,
           industry: profile?.industry || existingStoreComp?.industry || 'Corporate Partner',
           website: profile?.website || existingStoreComp?.website || `https://${cleanEmail.split('@')[1] || 'company.com'}`,
@@ -1998,7 +2051,7 @@ exports.handleGoogleAuth = async (req, res) => {
           phone: profile?.phone || existingStoreComp?.phone || '',
           location: profile?.location || existingStoreComp?.location || '',
           description: profile?.description || existingStoreComp?.description || 'Campus recruitment partner organization.',
-          approved: resolvedApproved,
+          approved: isApprovedStatus,
           created_at: existingStoreComp?.created_at || new Date().toISOString()
         });
       }

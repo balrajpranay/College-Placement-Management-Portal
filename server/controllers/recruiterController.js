@@ -371,13 +371,19 @@ function getCompanyByEmail(email) {
 // Helper: Resolve company from MongoDB or fallback store with accurate approval status
 async function resolveCompanyForUser(userId, email) {
   let company = null;
+  const cleanEmail = email ? String(email).trim().toLowerCase() : '';
   if (mongoose.connection.readyState === 1) {
     try {
       if (userId && mongoose.Types.ObjectId.isValid(userId)) {
         company = await Company.findOne({ user: userId }).lean();
       }
-      if (!company && email) {
-        company = await Company.findOne({ email }).lean();
+      if (!company && cleanEmail) {
+        company = await Company.findOne({
+          $or: [
+            { email: cleanEmail },
+            { email: new RegExp('^' + cleanEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') }
+          ]
+        }).lean();
       }
     } catch (err) {
       console.warn('[Recruiter resolveCompanyForUser Warning]:', err.message);
@@ -396,7 +402,7 @@ async function resolveCompanyForUser(userId, email) {
             if (
               String(k) === String(userId) ||
               String(c.user) === String(userId) ||
-              (email && String(c.email).toLowerCase() === String(email).toLowerCase())
+              (cleanEmail && String(c.email).toLowerCase() === cleanEmail)
             ) {
               company = c;
               break;
@@ -408,11 +414,11 @@ async function resolveCompanyForUser(userId, email) {
   }
 
   if (!company) {
-    company = getCompanyByEmail(email);
-  } else if (email) {
+    company = getCompanyByEmail(cleanEmail || email);
+  } else if (cleanEmail) {
     // Keep recruiterStore.companies in sync with resolved company
-    const existing = recruiterStore.companies.get(email) || {};
-    recruiterStore.companies.set(email, {
+    const existing = recruiterStore.companies.get(cleanEmail) || {};
+    recruiterStore.companies.set(cleanEmail, {
       ...existing,
       ...(company.toObject ? company.toObject() : company),
       approved: Boolean(company.approved)
@@ -425,17 +431,23 @@ async function resolveCompanyForUser(userId, email) {
 // Helper: Get or create Mongoose Company document for authenticated recruiter
 async function getOrCreateMongoCompany(userId, email) {
   if (mongoose.connection.readyState !== 1) return null;
+  const cleanEmail = email ? String(email).trim().toLowerCase() : '';
   try {
     let comp = null;
     if (userId && mongoose.Types.ObjectId.isValid(userId)) {
       comp = await Company.findOne({ user: userId });
     }
-    if (!comp && email) {
-      comp = await Company.findOne({ email });
+    if (!comp && cleanEmail) {
+      comp = await Company.findOne({
+        $or: [
+          { email: cleanEmail },
+          { email: new RegExp('^' + cleanEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') }
+        ]
+      });
     }
     if (!comp) {
-      const fallback = getCompanyByEmail(email);
-      const isDemoApproved = email === 'hr@technova.com';
+      const fallback = getCompanyByEmail(cleanEmail || email);
+      const isDemoApproved = cleanEmail === 'hr@technova.com' || cleanEmail === 'talent@apexcloud.io';
       const userObjId = userId && mongoose.Types.ObjectId.isValid(userId)
         ? new mongoose.Types.ObjectId(userId)
         : new mongoose.Types.ObjectId('65e000000000000000000003');
@@ -445,11 +457,11 @@ async function getOrCreateMongoCompany(userId, email) {
         industry: fallback.industry || 'Software / IT',
         website: fallback.website || 'https://technova.example.com',
         hrContact: fallback.hrContact || fallback.hr_contact || 'Anita Rao',
-        email: email,
+        email: cleanEmail || email,
         phone: fallback.phone || '9363328006',
         location: fallback.location || 'Bengaluru',
         description: fallback.description || 'TechNova Solutions is a premier technology consulting firm.',
-        approved: true
+        approved: fallback.approved !== undefined ? Boolean(fallback.approved) : isDemoApproved
       });
     }
     return comp;
