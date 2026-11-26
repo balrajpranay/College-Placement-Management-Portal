@@ -1692,24 +1692,8 @@ exports.handleGoogleAuth = async (req, res) => {
     const isMockCode = typeof code === 'string' && (code.startsWith('demo_') || code.startsWith('google_mock'));
 
     // 4. Role Authorization & Strict Placement Admin Security
-    const configuredAdminEmails = [
-      'admin@college.edu',
-      'pranay.b9106@gmail.com',
-      'ayeshaeram2005@gmail.com',
-      'kethapagabhavani9980@gmail.com',
-      'balraj.pranay@gmail.com',
-      process.env.ADMIN_EMAIL,
-      process.env.ADMIN_EMAIL_1,
-      process.env.ADMIN_EMAIL_2,
-      process.env.ADMIN_EMAIL_3,
-      ...(process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',') : [])
-    ]
-      .filter(Boolean)
-      .map(s => s.toLowerCase().trim());
-
-    const isAuthorizedAdmin = isAuthorizedAdminEmail(cleanEmail) ||
-      configuredAdminEmails.includes(cleanEmail) ||
-      (existingUser && existingUser.role === 'admin');
+    const isAuthorizedAdmin = isAuthorizedAdminEmail(cleanEmail);
+    const isSeededRecruiter = cleanEmail === 'hr@technova.com' || cleanEmail === 'talent@apexcloud.io';
 
     // Strict privilege escalation check: ONLY authorized admin emails can access the Placement Admin Portal
     if (targetRole === 'admin') {
@@ -1717,6 +1701,12 @@ exports.handleGoogleAuth = async (req, res) => {
         return res.status(403).json({
           success: false,
           message: `This Google account (${cleanEmail}) is not authorized as a Placement Administrator. Access to the Admin Portal is denied.`
+        });
+      }
+      if (googleUser.email_verified === false) {
+        return res.status(403).json({
+          success: false,
+          message: 'Google account email is not verified. Verified email is required for Placement Administrator access.'
         });
       }
     }
