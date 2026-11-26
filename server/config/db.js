@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 // Global connection caching across Vercel serverless invocations
 let cached = global.mongoose;
 if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
+  cached = global.mongoose = { conn: null, promise: null, lastFailure: 0 };
 }
 
 const connectDB = async () => {
@@ -24,19 +24,27 @@ const connectDB = async () => {
     return cached.conn;
   }
 
+  // Back off if a connection attempt recently failed (prevent request stampede in fallback mode)
+  if (Date.now() - (cached.lastFailure || 0) < 30000) {
+    return null;
+  }
+
   if (!cached.promise) {
     const opts = {
-      serverSelectionTimeoutMS: isProduction ? 5000 : 1500,
-      bufferCommands: false
+      serverSelectionTimeoutMS: 3000,
+      bufferCommands: false,
+      dbName: 'test'
     };
 
     cached.promise = mongoose.connect(uri, opts)
       .then((mongooseInstance) => {
         console.log(`[MongoDB] Connected successfully to host: ${mongooseInstance.connection.host}`);
+        cached.lastFailure = 0;
         return mongooseInstance;
       })
       .catch((error) => {
         cached.promise = null;
+        cached.lastFailure = Date.now();
         console.warn(`[MongoDB Notice] Database connection unavailable: ${error.message}. Running with in-memory fallback stores.`);
         return null;
       });

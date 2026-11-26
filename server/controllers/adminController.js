@@ -1040,8 +1040,8 @@ exports.getCompanies = async (req, res) => {
             name: c.name,
             industry: c.industry || 'Technology',
             website: c.website || '',
-            hr_contact: c.hrContact || 'HR Lead',
-            hrContact: c.hrContact || 'HR Lead',
+            hr_contact: c.hrContact || c.hr_contact || 'HR Lead',
+            hrContact: c.hrContact || c.hr_contact || 'HR Lead',
             email: c.email || '',
             phone: c.phone || '',
             location: c.location || 'Bengaluru, India',
@@ -1053,30 +1053,61 @@ exports.getCompanies = async (req, res) => {
       } catch (dbErr) {
         console.warn('[Admin Mongo getCompanies Warning]:', dbErr.message);
       }
-    } else {
-      try {
-        const { memoryCompanies } = require('./authController');
-        if (memoryCompanies) {
-          for (const [id, c] of memoryCompanies.entries()) {
-            companies.push({
-              id: String(id),
-              _id: String(id),
-              name: c.name,
-              industry: c.industry || 'Technology',
-              website: c.website || '',
-              hr_contact: c.hrContact || 'HR Lead',
-              hrContact: c.hrContact || 'HR Lead',
-              email: c.email || '',
-              phone: c.phone || '',
-              location: c.location || 'Bengaluru, India',
-              description: c.description || '',
-              approved: Boolean(c.approved),
-              created_at: new Date().toISOString()
-            });
-          }
-        }
-      } catch (_) {}
     }
+
+    // 2. Synchronize and merge with in-memory stores (memoryCompanies & recruiterStore)
+    try {
+      const { memoryCompanies } = require('./authController');
+      const { recruiterStore } = require('./recruiterController');
+
+      const seenEmails = new Set(companies.map(c => (c.email || '').toLowerCase().trim()).filter(Boolean));
+      const seenIds = new Set(companies.map(c => String(c.id || c._id)).filter(Boolean));
+
+      const addMemoryComp = (c, keyId) => {
+        if (!c) return;
+        const cEmail = (c.email || '').toLowerCase().trim();
+        const cid = String(c.id || c._id || keyId);
+        if (cEmail && seenEmails.has(cEmail)) {
+          const existing = companies.find(item => (item.email || '').toLowerCase().trim() === cEmail);
+          if (existing && c.approved !== undefined) {
+            existing.approved = Boolean(c.approved);
+          }
+          return;
+        }
+        if (cid && seenIds.has(cid)) return;
+
+        if (cEmail) seenEmails.add(cEmail);
+        if (cid) seenIds.add(cid);
+
+        companies.push({
+          id: cid,
+          _id: cid,
+          name: c.name || 'Corporate Partner',
+          industry: c.industry || c.domain || 'Technology',
+          website: c.website || '',
+          hr_contact: c.hrContact || c.hr_contact || 'HR Lead',
+          hrContact: c.hrContact || c.hr_contact || 'HR Lead',
+          email: c.email || '',
+          phone: c.phone || c.mobile || '',
+          location: c.location || 'Bengaluru, India',
+          description: c.description || '',
+          approved: Boolean(c.approved),
+          created_at: c.created_at || c.createdAt || new Date().toISOString()
+        });
+      };
+
+      if (memoryCompanies) {
+        for (const [id, c] of memoryCompanies.entries()) {
+          addMemoryComp(c, id);
+        }
+      }
+
+      if (recruiterStore && recruiterStore.companies) {
+        for (const [em, c] of recruiterStore.companies.entries()) {
+          addMemoryComp(c, em);
+        }
+      }
+    } catch (_) {}
 
     if (q) {
       const queryStr = q.toLowerCase();
@@ -1217,10 +1248,17 @@ exports.approveCompany = async (req, res) => {
         if (found) {
           if (found.user) {
             await Company.updateMany({ user: found.user }, { approved: true });
+            await User.updateMany({ _id: found.user }, { approved: true });
           }
           if (found.email) {
             const cleanFoundEmail = found.email.toLowerCase().trim();
             await Company.updateMany({
+              $or: [
+                { email: cleanFoundEmail },
+                { email: new RegExp('^' + cleanFoundEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') }
+              ]
+            }, { approved: true });
+            await User.updateMany({
               $or: [
                 { email: cleanFoundEmail },
                 { email: new RegExp('^' + cleanFoundEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') }
@@ -1316,6 +1354,34 @@ exports.approveCompany = async (req, res) => {
       }
     } catch (_) {}
 
+    // Ensure company is persisted to MongoDB if connected
+    if (found && mongoose.connection.readyState === 1) {
+      try {
+        const foundEmail = (found.email || '').toLowerCase().trim();
+        if (foundEmail) {
+          await Company.findOneAndUpdate(
+            { email: foundEmail },
+            {
+              $set: {
+                name: found.name || 'Corporate Partner',
+                industry: found.industry || found.domain || 'Technology',
+                website: found.website || '',
+                hrContact: found.hrContact || found.hr_contact || 'Recruiter Lead',
+                email: foundEmail,
+                phone: found.phone || found.mobile || '',
+                location: found.location || 'Bengaluru, India',
+                description: found.description || '',
+                approved: true
+              }
+            },
+            { new: true, upsert: true }
+          );
+        }
+      } catch (upsertErr) {
+        console.warn('[Admin Approve Mongo Upsert Warning]:', upsertErr.message);
+      }
+    }
+
     // Recruiter Notification
     try {
       if (found?.email && Notification && mongoose.connection.readyState === 1) {
@@ -1373,10 +1439,17 @@ exports.rejectCompany = async (req, res) => {
         if (found) {
           if (found.user) {
             await Company.updateMany({ user: found.user }, { approved: false });
+            await User.updateMany({ _id: found.user }, { approved: false });
           }
           if (found.email) {
             const cleanFoundEmail = found.email.toLowerCase().trim();
             await Company.updateMany({
+              $or: [
+                { email: cleanFoundEmail },
+                { email: new RegExp('^' + cleanFoundEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') }
+              ]
+            }, { approved: false });
+            await User.updateMany({
               $or: [
                 { email: cleanFoundEmail },
                 { email: new RegExp('^' + cleanFoundEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') }
@@ -1453,6 +1526,22 @@ exports.rejectCompany = async (req, res) => {
         }
       }
     } catch (_) {}
+
+    // Ensure company rejection is persisted to MongoDB if connected
+    if (found && mongoose.connection.readyState === 1) {
+      try {
+        const foundEmail = (found.email || '').toLowerCase().trim();
+        if (foundEmail) {
+          await Company.findOneAndUpdate(
+            { email: foundEmail },
+            { $set: { approved: false } },
+            { new: true }
+          );
+        }
+      } catch (rejectErr) {
+        console.warn('[Admin Reject Mongo Persistence Warning]:', rejectErr.message);
+      }
+    }
 
     if (!found) {
       return res.status(404).json({ success: false, message: 'Company not found.' });

@@ -47,6 +47,11 @@ export default function AdminRecruiters() {
   const handleApprove = async (id) => {
     try {
       setActionLoading(true);
+      setCompanies(prev => prev.map(c =>
+        (String(c.id) === String(id) || String(c._id) === String(id))
+          ? { ...c, approved: true }
+          : c
+      ));
       const res = await approveRecruiterApi(id);
       setMsg({ type: 'success', text: res.message || 'Corporate partner approved.' });
       loadCompanies();
@@ -55,6 +60,7 @@ export default function AdminRecruiters() {
       }
     } catch (err) {
       setMsg({ type: 'error', text: err.message || 'Action failed.' });
+      loadCompanies();
     } finally {
       setActionLoading(false);
     }
@@ -63,6 +69,11 @@ export default function AdminRecruiters() {
   const handleReject = async (id) => {
     try {
       setActionLoading(true);
+      setCompanies(prev => prev.map(c =>
+        (String(c.id) === String(id) || String(c._id) === String(id))
+          ? { ...c, approved: false }
+          : c
+      ));
       const res = await rejectRecruiterApi(id);
       setMsg({ type: 'info', text: res.message || 'Corporate partner verification revoked.' });
       loadCompanies();
@@ -71,6 +82,7 @@ export default function AdminRecruiters() {
       }
     } catch (err) {
       setMsg({ type: 'error', text: err.message || 'Action failed.' });
+      loadCompanies();
     } finally {
       setActionLoading(false);
     }

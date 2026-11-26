@@ -1136,11 +1136,33 @@ exports.updateProfile = async (req, res) => {
     };
     recruiterStore.companies.set(email, updated);
 
+    // Sync in memoryCompanies
+    try {
+      const { memoryCompanies } = require('./authController');
+      if (memoryCompanies) {
+        if (req.user?._id || req.user?.id) {
+          memoryCompanies.set(String(req.user._id || req.user.id), updated);
+        }
+        memoryCompanies.set(email, updated);
+      }
+    } catch (_) {}
+
     // Update MongoDB if connected
     if (mongoose.connection.readyState === 1) {
       try {
+        const queryConditions = [{ email }];
+        const cleanEm = String(email).trim().toLowerCase();
+        queryConditions.push({ email: cleanEm });
+        queryConditions.push({ email: new RegExp('^' + cleanEm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
+        if (req.user?._id && mongoose.Types.ObjectId.isValid(req.user._id)) {
+          queryConditions.push({ user: req.user._id });
+        }
+        if (req.user?.id && mongoose.Types.ObjectId.isValid(req.user.id)) {
+          queryConditions.push({ user: req.user.id });
+        }
+
         await Company.findOneAndUpdate(
-          { email },
+          { $or: queryConditions },
           {
             $set: {
               name: compName,
